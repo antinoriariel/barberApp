@@ -1,0 +1,67 @@
+/* Componente: barberos, avatares y botones chicos. */
+
+/* --- Barberos: tarjetas con banda de color --- */
+.crew-intro { color: var(--ink-soft); margin: -6px 0 18px; }
+.crew { display: grid; gap: 16px; }
+.barber { position: relative; isolation: isolate; overflow: hidden; border-radius: 16px; background: var(--paper); border: 1px solid var(--line); }
+.barber-top {
+  position: relative; height: 84px; padding: 12px 14px; display: flex; justify-content: flex-end; align-items: flex-start;
+  background: var(--tone);
+}
+.barber-top::after { /* franjas de poste muy suaves sobre el color del barbero */
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(135deg, rgba(255,255,255,.1) 0 14px, transparent 14px 28px);
+}
+.barber .rating { position: relative; z-index: 1; padding: 5px 10px; border-radius: 99px; background: var(--paper); color: var(--ink); }
+.barber-avatar { position: absolute; top: 40px; left: 18px; width: 72px; height: 72px; margin: 0; font-size: 28px; box-shadow: 0 0 0 4px var(--paper); z-index: 2; }
+.barber-body { display: grid; gap: 4px; padding: 44px 18px 18px; }
+.barber-info { display: grid; gap: 4px; min-width: 0; }
+/* Con imagen: texto (nombre, especialidad, años) en la columna izquierda e imagen en la derecha,
+   ocupando esas tres filas y centrada con ellas; queda dentro del relleno de la tarjeta. */
+.barber.has-photo .barber-info { grid-template-columns: minmax(0, 1fr) auto; column-gap: 14px; align-items: center; }
+.barber.has-photo .barber-info > :not(.barber-photo) { grid-column: 1; }
+.barber-photo { grid-column: 2; grid-row: 1 / span 3; align-self: center; width: clamp(84px, 28vw, 128px); height: auto; aspect-ratio: 1; object-fit: contain; } /* fluida: 84px en celulares chicos, 128px máx. */
+.barber-body h2 { font-family: var(--display); font-weight: 900; font-size: 28px; line-height: 1; }
+.barber-role { align-self: start; justify-self: start; margin-top: 4px; padding: 3px 10px; border-radius: 99px; background: var(--lather); font-size: 13px; font-weight: 700; }
+.barber-years { color: var(--ink-soft); font-size: 14px; }
+.barber-years b { color: var(--ink); }
+.barber .btn-primary { margin-top: 12px; }
+.avatar { /* círculo con iniciales; --tone define el color */
+  flex: none; width: 52px; height: 52px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--tone, var(--dark)); color: #fff;
+  font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: .02em;
+  box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--tone, var(--dark));
+  margin: 4px;
+}
+.avatar.big { width: 68px; height: 68px; font-size: 28px; }
+.rating { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 14px; }
+.rating .ic { width: 16px; height: 16px; color: var(--red); fill: currentColor; }
+
+.me { display: flex; align-items: center; gap: 16px; margin-bottom: 6px; }
+
+/* Barbero con 5 estrellas: toda la tarjeta lleva el fondo de la banda (su color + franjas de poste).
+   El patrón arranca en la misma esquina que el de .barber-top, así que la banda se funde con el resto. */
+.barber.is-top {
+  background: repeating-linear-gradient(135deg, rgba(255,255,255,.1) 0 14px, transparent 14px 28px), var(--tone);
+  border-color: transparent; color: #fff;
+}
+.barber.is-top .barber-role { background: rgba(255,255,255,.16); color: #fff; }
+.barber.is-top .barber-years { color: rgba(255,255,255,.75); }
+.barber.is-top .barber-years b { color: #fff; }
+.barber.is-top .btn-primary { background: #fff; color: #111; } /* contrasta con cualquier color de fondo */
+.barber.is-top .barber-top { background: transparent; } /* la banda ya la pinta la tarjeta: sin franjas dobles */
+.barber.is-top .barber-top::after { display: none; }
+
+/* Avatar ilustrado (components/face-avatar.php): imagen del barbero con aro rojo + iniciales centradas en el
+   rostro. --s es el tamaño; la letra escala con él (proporción de la ilustración de referencia). */
+.face-avatar { --s: 52px; position: relative; flex: none; display: block; width: var(--s); height: var(--s); border-radius: 50%; transition: transform .15s; }
+.face-avatar img { display: block; width: 100%; height: 100%; }
+.face-initials {
+  position: absolute; left: 0; right: 0; top: 52%; transform: translateY(-50%);
+  text-align: center; font-family: var(--body); font-weight: 700; font-size: calc(var(--s) * .27); line-height: 1;
+  letter-spacing: .02em; color: #1F2326;
+}
+a.face-avatar:active { transform: scale(.94); }
+.face-avatar.home-avatar { --s: clamp(60px, 17vw, 74px); } /* Inicio: acompaña el alto del saludo + subtítulo (el título usa clamp(36px, 11vw, 46px)) */
+.face-avatar.big { --s: 72px; }         /* tarjeta de Perfil */

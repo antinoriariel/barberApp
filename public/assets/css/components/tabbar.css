@@ -1,0 +1,55 @@
+/* Componente: barra inferior con círculo central (móvil). */
+
+/* ========== 4. Barra inferior con círculo central (móvil) ========== */
+.tabbar {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 30;
+  width: 100%; max-width: 480px;
+  height: calc(var(--tabbar-h) + var(--safe-b)); padding-bottom: var(--safe-b);
+  display: grid; grid-template-columns: 1fr 1fr 92px 1fr 1fr; align-items: center; /* 92px = hueco del círculo */
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+}
+.tab {
+  display: grid; justify-items: center; gap: 3px; padding: 8px 0;
+  color: var(--ink-soft); font-size: 12px; font-weight: 600;
+}
+.tab .ic { width: 25px; height: 25px; }
+.tab[aria-current="page"] { color: var(--ink); }
+.tab[aria-current="page"] .ic { color: var(--red); }
+
+.fab { position: relative; height: 100%; display: grid; place-items: start center; }
+.fab-disc { /* círculo con rayas de poste que giran; sobresale de la barra */
+  position: absolute; top: -30px;
+  width: 72px; height: 72px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: repeating-linear-gradient(135deg, var(--red) 0 12px, #fff 12px 24px, var(--blue) 24px 36px, #fff 36px 48px);
+  background-size: 68px 68px;
+  animation: spin-pole 3s linear infinite;
+  border: 6px solid var(--lather); /* anillo del color de fondo: "recorta" la barra */
+  box-shadow: 0 0 0 1px var(--line), 0 10px 22px -8px rgba(0,0,0,.55);
+  transition: transform .15s;
+}
+.fab-disc::before { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: var(--dark); }
+.fab-disc .ic { position: relative; width: 28px; height: 28px; color: #fff; stroke-width: 2.4; transition: transform .25s; }
+@keyframes spin-pole { to { background-position: 68px 68px; } }
+.fab:active .fab-disc { transform: scale(.93); }
+.fab { width: 100%; padding: 0; } /* es un <button>: ocupa su celda como los enlaces */
+
+/* Aviso flotante sobre el círculo (mismo estilo que .toast); solo con mouse o foco de teclado */
+.fab-tip {
+  position: absolute; bottom: calc(100% + 52px); left: 50%; z-index: 41;
+  transform: translate(-50%, 8px); opacity: 0; pointer-events: none;
+  padding: 8px 14px; border-radius: 12px; white-space: nowrap;
+  background: var(--dark); color: #fff; font-weight: 600; font-size: 14px;
+  box-shadow: 0 10px 22px -8px rgba(0,0,0,.55);
+  transition: opacity .2s, transform .2s;
+}
+.fab-tip::after { /* piquito apuntando al círculo */
+  content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 6px solid transparent; border-top-color: var(--dark);
+}
+@media (hover: hover) { .fab:hover .fab-tip { opacity: 1; transform: translate(-50%, 0); } }
+.fab:focus-visible .fab-tip { opacity: 1; transform: translate(-50%, 0); }
+
+/* Elementos que solo existen en escritorio (ver desktop.css) */
+.fab-label, .side-user { display: none; }

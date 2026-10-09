@@ -1,0 +1,30 @@
+/* Componente: tarjeta principal de Inicio (próximo turno o invitación a reservar). */
+
+.ticket { position: relative; overflow: hidden; border-radius: 16px; background: var(--dark); color: #fff; }
+.ticket::before { /* franja de poste en el borde superior */
+  content: ""; display: block; height: 8px;
+  background: repeating-linear-gradient(135deg, var(--red) 0 14px, #fff 14px 28px, var(--blue) 28px 42px, #fff 42px 56px);
+}
+.ticket-main { padding: 20px 18px 18px; }
+.ticket-label { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; opacity: .7; }
+.ticket-when { font-family: var(--display); font-weight: 900; font-size: 48px; line-height: 1; margin: 6px 0 10px; }
+.ticket-when span { display: inline-block; margin-left: 8px; padding: 2px 12px 4px; border-radius: 10px; background: var(--red); font-size: 36px; vertical-align: 4px; }
+.ticket-title { font-family: var(--display); font-weight: 900; font-size: 34px; line-height: 1; margin: 6px 0 8px; }
+.ticket-what { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 500; }
+.ticket-what .ic { width: 18px; height: 18px; opacity: .8; }
+.ticket-empty .ticket-what { opacity: .8; }
+/* Con imagen del barbero: imagen a la izquierda y datos del turno a su derecha, centrados con ella
+   (misma idea que la tarjeta del barbero en crew.css); queda dentro del relleno del ticket. */
+.ticket.has-photo .ticket-main { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; align-items: center; }
+.ticket.has-photo .ticket-main > :not(.ticket-photo) { grid-column: 2; }
+.ticket-photo { grid-column: 1; grid-row: 1 / span 3; align-self: center; width: clamp(84px, 28vw, 128px); height: auto; aspect-ratio: 1; object-fit: contain; } /* fluida: 84px en celulares chicos, 128px máx. */
+.ticket-actions { display: flex; gap: 10px; padding: 0 18px 18px; }
+.ticket-btn {
+  flex: 1; padding: 12px 14px; border-radius: 12px; text-align: center; font-weight: 700; font-size: 15px;
+  background: rgba(255,255,255,.14); color: #fff;
+}
+.ticket-btn.primary { background: var(--red); }
+.ticket-btn.quiet { flex: none; background: transparent; border: 1.5px solid rgba(255,255,255,.28); }
+.ticket-btn:active { transform: scale(.97); }
+.ticket.has-photo .ticket-when { font-size: 36px; margin: 4px 0 8px; } /* deja lugar a la imagen sin cortar "Miércoles 15" */
+.ticket.has-photo .ticket-when span { font-size: 28px; margin-left: 6px; padding: 2px 10px 3px; }

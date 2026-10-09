@@ -1,0 +1,66 @@
+/* Tokens de diseño (colores, tipografías) y reset base. */
+
+/* ========== 1. Tokens y reset ========== */
+:root {
+  --lather: #111111;   /* fondo de la app */
+  --paper: #1A1A1A;    /* tarjetas */
+  --ink: #FFFFFF;      /* texto */
+  --ink-soft: #A6A6A6; /* texto secundario */
+  --line: #2E2E2E;     /* bordes */
+  --red: #EB1716;      /* color de marca / acento */
+  --red-dark: #B51212; /* hover del rojo */
+  --blue: #EB1716;     /* antes azul: ahora el acento rojo (enlaces, barras, rayas) */
+  --dark: #070707;     /* superficies oscuras en ambos temas (cabecera, tickets, íconos) */
+  --frame: #070707;    /* fondo de la página fuera de la columna de la app */
+  --ok: #4ADE80;       /* verde de estados positivos */
+  --ok-bg: #12301F;    /* fondo de avisos/estados positivos */
+  --bad-bg: #3A1010;   /* fondo de avisos/estados negativos (el texto usa --red) */
+  --skel-a: #1A1A1A;   /* skeleton: base */
+  --skel-b: #262626;   /* skeleton: brillo */
+  color-scheme: dark;  /* scrollbars y controles nativos */
+  --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif; /* títulos (móvil) */
+  --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --tabbar-h: 68px;
+  --safe-b: env(safe-area-inset-bottom, 0px); /* zona segura del iPhone */
+  --sidebar-w: 272px; /* solo escritorio */
+}
+
+/* Tema claro: lo activa <html data-theme="light"> (theme-init.js / theme.js). Solo se
+   redefinen los tokens; cabecera, tickets e íconos siguen sobre --dark como acento. */
+:root[data-theme="light"] {
+  --lather: #F4F4F2;
+  --paper: #FFFFFF;
+  --ink: #141414;
+  --ink-soft: #5E5E5E;
+  --line: #DEDEDA;
+  --frame: #E4E4E0;
+  --ok: #15803D;
+  --ok-bg: #DCFCE7;
+  --bad-bg: #FDE2E2;
+  --skel-a: #E8E8E4;
+  --skel-b: #F6F6F3;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; margin: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--body);
+  color: var(--ink);
+  background: var(--frame); /* "marco" fuera de la columna de la app */
+  line-height: 1.45;
+  -webkit-tap-highlight-color: transparent;
+}
+input, select, textarea { color: inherit; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; text-align: inherit; }
+a { color: inherit; text-decoration: none; }
+ul { padding: 0; list-style: none; }
+.inline-form { display: contents; } /* <form> de un solo botón (logout) que no altera el layout */
+[hidden] { display: none !important; }
+:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+.ic { width: 24px; height: 24px; flex: none; }
+
+/* Fluidez en celular: sin la demora del doble toque para zoom en lo que se toca, y desplazamiento con inercia. */
+a, button, label, summary, input, select, textarea, [role="tab"] { touch-action: manipulation; }
+html { -webkit-overflow-scrolling: touch; }

@@ -1,0 +1,6 @@
+.env
+storage/ratelimit/*
+.phpunit.cache/
+vendor/
+storage/backups/
+storage/mail.log

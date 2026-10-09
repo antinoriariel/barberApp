@@ -1,0 +1,12 @@
+/* Componente: aviso breve (toast). */
+
+/* ========== 5. Toast ========== */
+.toast {
+  position: fixed; left: 50%; bottom: calc(var(--tabbar-h) + var(--safe-b) + 90px); z-index: 40;
+  transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+  max-width: min(440px, calc(100vw - 32px));
+  padding: 12px 18px; border-radius: 12px;
+  background: var(--dark); color: #fff; font-weight: 600; font-size: 15px;
+  transition: opacity .2s, transform .2s;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }

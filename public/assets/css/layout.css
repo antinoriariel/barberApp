@@ -1,0 +1,81 @@
+/* Layout móvil: marco de la app, cabecera, tipografía de títulos. */
+
+/* ========== 2. Layout móvil ========== */
+.app {
+  position: relative;
+  max-width: 480px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  background: var(--lather);
+  padding-bottom: calc(var(--tabbar-h) + var(--safe-b) + 40px); /* espacio para la barra inferior */
+}
+
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; /* separación mínima logo ↔ estado */
+  padding: 12px 16px;
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  background: var(--dark);
+  color: #fff;
+}
+.brand { display: flex; align-items: center; gap: 8px; min-width: 0; text-decoration: none; }
+a.brand { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.brand-name { font-family: var(--display); font-weight: 800; font-size: clamp(21px, 6.4vw, 26px); letter-spacing: -.4px; line-height: 1; color: #fff; white-space: nowrap; } /* "BARBERSHOP" entra en una línea aun en celulares angostos */
+
+/* Logo: navaja roja (SVG inline) */
+.barber-logo-icon { display: inline-block; width: 32px; height: 32px; flex-shrink: 0; transition: transform .2s ease; background-color: var(--red); -webkit-mask: url("/img/maquinilla-de-afeitar.png") center / contain no-repeat; mask: url("/img/maquinilla-de-afeitar.png") center / contain no-repeat; }
+.brand:hover .barber-logo-icon { transform: scale(1.05); }
+@media (min-width: 769px) { .barber-logo-icon { width: 38px; height: 38px; } } /* mobile first: base 32px, más grande en pantallas anchas */
+
+.open-pill {
+  display: inline-flex; align-items: center; gap: 7px; flex: none;
+  padding: 5px 11px; border-radius: 12px;
+  background: rgba(255,255,255,.1);
+}
+/* Dos renglones cortos: "Abierto" / "hasta las 21:30" */
+.open-text { display: grid; line-height: 1.15; white-space: nowrap; }
+.open-text b { font-size: 13px; font-weight: 700; }
+.open-text small { font-size: 11px; font-weight: 500; color: rgba(255,255,255,.7); }
+.open-pill i { width: 8px; height: 8px; border-radius: 50%; background: #4ADE80; }
+.open-pill.closed i { background: var(--red); }
+
+main { padding: 24px 20px 0; }
+.view { animation: swap .16s ease-out; }
+@keyframes swap { from { opacity: 0; transform: translateY(4px); } } /* entrada corta: se siente instantánea */
+
+/* Títulos */
+.hero-title, .page-title {
+  font-family: var(--display);
+  font-weight: 900;
+  line-height: .98;
+  letter-spacing: .005em;
+}
+.hero-title { font-size: clamp(40px, 12vw, 54px); margin-bottom: 22px; }
+.page-title { font-size: 40px; margin-bottom: 18px; }
+.page-title.tight { font-size: 32px; margin: 0; }
+.home-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.home-title .hero-title { margin-bottom: 4px; font-size: clamp(36px, 11vw, 46px); }
+.home-sub { color: var(--ink-soft); }
+.home-avatar { width: 52px; height: 52px; margin: 0; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 30px 0 12px; }
+.section-head h2 { font-family: var(--display); font-weight: 800; font-size: 26px; line-height: 1; }
+.link { font-size: 14px; font-weight: 600; color: var(--blue); }
+.muted { color: var(--ink-soft); font-size: 15px; }
+
+
+/* Lado derecho de la cabecera: estado del local + selector de tema */
+.topbar-end { display: flex; align-items: center; gap: 8px; flex: none; }
+.theme-toggle { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.1); color: #fff; }
+.theme-toggle .ic { width: 20px; height: 20px; }
+.theme-toggle:active { transform: scale(.92); }
+/* Se muestra el ícono del tema al que se va a cambiar */
+.theme-ic-moon { display: none; }
+:root[data-theme="light"] .theme-ic-sun { display: none; }
+:root[data-theme="light"] .theme-ic-moon { display: block; }
+
+/* Inicio: ritmo vertical único entre recuadros (los márgenes propios de cada
+   componente se anulan acá para que todos queden a la misma distancia). */
+#view-inicio:not([hidden]) { display: flex; flex-direction: column; gap: 16px; }
+#view-inicio > * { margin-top: 0; margin-bottom: 0; }
+#view-inicio > .home-title { margin-bottom: 4px; }
+#view-inicio > .section-head { margin-top: 12px; margin-bottom: -6px; } /* título pegado a su carrusel */

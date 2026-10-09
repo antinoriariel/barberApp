@@ -1,0 +1,51 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+"Navaja & Co.": a barbershop booking PWA in plain PHP 8.2+ (no framework, no build step, no linter; Composer is dev-only for PHPUnit). UI text and docs are in Spanish (rioplatense). Data lives in MySQL/MariaDB via PDO (`DB_DRIVER=db` in `.env`); with `DB_DRIVER=files` the models fall back to the hardcoded `data/*.php` (read-only, booking returns 503). Auth is DNI + password (Argon2id), with `/registro` and `/recuperar` (email token; `MAIL_DRIVER=log` writes `storage/mail.log`), DB-backed sessions and an `audit_log`. Demo accounts seeded from `data/users.php` use `auth.demo_password`; the list (admin, barber, two clients) is in `users.md`.
+
+DB setup: create the `navaja` DB + credentials in `.env` (see README), then `php bin/migrate.php` and `php bin/seed.php` (both idempotent). Schema changes = new `database/migrations/NNN_*.sql`. The local `.env` uses root because the XAMPP MariaDB privilege tables are corrupt.
+
+## Run
+
+Requires PHP 8.2+ with the GD extension (bundled with XAMPP). Web root is `public/`:
+
+```bash
+php -S 0.0.0.0:8000 -t public public/router.php
+```
+
+`public/router.php` is required with the built-in server so dynamic routes (`/login`, `/manifest.webmanifest`, `/icon.png`) reach the front controller. Unauthenticated requests redirect to `/login`.
+
+## Architecture
+
+Request path: `public/index.php` → `app/bootstrap.php` (PSR-4-style autoload of `App\` → `app/`, helpers, session) → `Core\Router` using `config/routes.php` → Controller → Models → View. See `docs/arquitectura.md` for full detail.
+
+- **Models** (`app/Models`) are the only boundary to the data source: each branches on `Database::enabled()` (PDO via `Core\Database`, prepared statements only) or falls back to `Core\Data::get('<name>')`. Keep public signatures identical in both modes. Booking rules (validation, transactions, anti double-booking) live in `Services\Booking`, exposed as JSON by `AppointmentController` (`/api/disponibilidad`, `/turnos`, `/turnos/cancelar`, `/turnos/reprogramar`; CSRF via `_csrf` or `X-CSRF-Token`).
+- **Views** are plain PHP, layered `layouts/` → `pages/` → `screens/` → `components/`. Components receive everything via parameters (`partial('components/x', [...])`); they must not query models or read the session. Always escape data with `e()` (helpers in `app/Support/helpers.php`).
+- **Single-page front end**: `ShellController::index` gathers all model data and renders every screen (`inicio`, `servicios`, `reservar`, `barberos`, `perfil`) into one page. `public/assets/js/navigation.js` toggles screens by URL hash. Each screen is `<section class="view" id="view-<name>" data-title data-skel hidden>`. Screens show instantly (the simulated skeleton delays in `navigation.js` are set to 0; raise them or swap in real fetches when an API exists).
+- **JS**: ES modules, `main.js` only initializes the others.
+- **CSS**: one file per module; load order is defined in `config/app.php` → `assets.styles`. The UI is mobile first and single-layout: on PC it is shown as a centered phone-width column (`.app` max 480px). The old sidebar/desktop layout was archived in `docs/archivo/desktop.css` and is no longer loaded.
+
+- **Admin panel**: `GET /admin?fecha=YYYY-MM-DD` (`AdminController` + `Models\Dashboard` + `pages/admin.php`), only for `users.is_admin = 1` (grant with `php bin/make-admin.php <dni> [--quitar]`). Revenue = sum of `price` of `done` appointments per day; compared with the previous day. Services are edited at `GET /admin/servicios` (`POST /admin/servicios/guardar` create/update, `/estado` hide/show; never deleted because appointments reference them; `Service::validate` holds the limits; duration stays editable because the schedule uses it, but is not shown to clients). Appointments are closed from the panel (`POST /admin/turnos/estado`: `done` / `no_show`). Expenses (gasto + observación) are loaded at `GET /admin/egresos` (`POST /admin/egresos`, `/borrar`; `Models\Expense`) and subtracted from revenue in the day and month results.
+- **Walk-in queue** ("tome su número"): a QR printed at the counter (`GET /admin/fila`, SVG from the dependency-free `ServicesQr`) points to `/fila?c=<queue.code>`; the client confirms with a POST and gets the next number of the day (`ModelsQueueTicket`, numbers restart daily). Inicio shows the number, who they are after and who is being served (`components/queue-ticket.php`, polled via `GET /api/fila` by `queue.js`); the center tab button opens the camera (`scanner.js`, `BarcodeDetector`; needs HTTPS or localhost, otherwise the phone camera app opens the same link). `Permissions-Policy` allows `camera=(self)` for this. The QR URL uses `APP_URL`, so set it to an address phones can reach.
+- **Roles**: client (default), admin (`users.is_admin`) and barber (`users.barber_id` → `barbers.id`, `User::isBarber()`; no barber panel yet). Seed staff via `'admin' => true` / `'barber' => '<slug>'` in `data/users.php`; staff get no sample appointments. Test accounts: `users.md`.
+
+## Security rules (see `docs/seguridad.md`)
+
+- Every `<form method="post">` needs `<?= csrf_field() ?>` and its action starts with `$this->requireCsrf($request)`. Nothing that changes state goes over GET (logout is POST).
+- Escape with `e()`; colors going into `style=""` go through `css_color()`. The CSP forbids inline scripts and external origins other than Google Fonts; widen it deliberately if needed.
+- `Auth::attempt($dni, $password, $ip)` rate-limits via `Core\RateLimiter` (table `login_attempts`; files in `storage/ratelimit/` with the files driver) and always returns the same error for a bad DNI or password. Record notable events with `Audit::log()`. Never log passwords or tokens.
+- Errors are logged, not shown, unless `APP_DEBUG=1`. Use `Response::error()` for error pages (`pages/error.php`).
+- DB plan and status: `docs/plan-base-de-datos.md` (all phases done). Never interpolate input into SQL. Tests: `vendor/bin/phpunit` (separate `navaja_test` DB, auto-created). Backups: `php bin/backup.php`, verify with `php bin/restore-check.php`. New migrations start at 011 (two 002 files exist; 007 = barber `photo`, 008 = `appointment_services` for multi-service bookings, 009 = `queue_tickets`, 010 = `expenses.notes`).
+
+## Gotchas
+
+- **Service worker cache**: after changing any CSS/JS, bump `CACHE` in `public/sw.js`; new static files must also be added to its `SHELL` list. Pages are network-first and intentionally not precached (they depend on the session); `login.js` tells the worker to purge cached pages (`purge-pages`). `/api/*` is never cached.
+- Every method/function carries a Spanish docblock explaining its logic; keep that when editing.
+- Adding a CSS component: create `assets/css/components/<name>.css`, register it in `config/app.php` and in `SHELL` in `public/sw.js`.
+- Adding a screen: new `screens/<name>.php`, include it in `pages/shell.php`, add a tab in `components/tabbar.php` (`data-tab="<name>"`), and fetch any new data in `ShellController::index`.
+- Adding a route: method in a controller + view in `pages/` + entry in `config/routes.php`.
+- Adding a service/barber only requires editing `data/services.php` / `data/barbers.php`.
+- PWA manifest and PNG icons are generated at runtime (`PwaController`, `Services\IconGenerator` using GD).

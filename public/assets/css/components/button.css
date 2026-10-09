@@ -1,0 +1,11 @@
+/* Componente: botones primario, fantasma y chico. */
+
+.btn-primary { flex: none; padding: 13px 18px; border-radius: 12px; background: var(--red); color: #fff; font-weight: 700; font-size: 15px; text-align: center; }
+.btn-primary:disabled { background: var(--line); color: #6B6B6B; cursor: not-allowed; }
+.btn-primary:not(:disabled):active { transform: scale(.97); }
+.btn-primary.block { display: block; width: 100%; padding: 15px; font-size: 16px; }
+.btn-small { padding: 9px 14px; border-radius: 99px; background: var(--dark); color: #fff; font-weight: 600; font-size: 14px; }
+.btn-small:active { transform: scale(.96); }
+.btn-ghost { flex: 1; padding: 14px; text-align: center; font-weight: 600; font-size: 15px; }
+.btn-ghost + .btn-ghost { border-left: 1px dashed var(--line); color: var(--red); }
+.btn-ghost:active { background: var(--lather); }

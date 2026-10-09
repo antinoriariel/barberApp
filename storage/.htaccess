@@ -1,0 +1,7 @@
+# Datos internos (contadores de intentos): nunca públicos.
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Deny from all
+</IfModule>

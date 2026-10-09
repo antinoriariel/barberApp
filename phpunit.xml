@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Pruebas de Navaja & Co. Correr: vendor/bin/phpunit  (instalar antes con: composer install).
+     Las de integración usan una base aparte, navaja_test, que el arranque crea y siembra solo. -->
+<phpunit bootstrap="tests/bootstrap.php" colors="true" cacheDirectory=".phpunit.cache" failOnWarning="true" failOnRisky="true">
+  <testsuites>
+    <testsuite name="Unit"><directory>tests/Unit</directory></testsuite>
+    <testsuite name="Integration"><directory>tests/Integration</directory></testsuite>
+  </testsuites>
+</phpunit>

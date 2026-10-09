@@ -1,0 +1,94 @@
+/* Componente: formulario de reserva (chips, días, horarios, resumen) y botón primario. */
+
+/* --- Reserva: chips, días, horarios y resumen ---
+   Los <input type=radio> están ocultos encima de cada etiqueta; el estado
+   seleccionado se estiliza con `input:checked + span`. */
+.step { border: 0; padding: 0; min-width: 0; margin-bottom: 22px; }
+.step legend { font-family: var(--display); font-weight: 800; font-size: 24px; margin-bottom: 10px; padding: 0; }
+.step-hint { margin-left: 6px; font-family: var(--body); font-weight: 500; font-size: 14px; color: var(--ink-soft); } /* "podés elegir hasta 4" */
+.step-note { margin: -4px 0 10px; font-size: 13px; color: var(--ink-soft); } /* aviso de los miércoles por orden de llegada */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip, .day, .slot { position: relative; cursor: pointer; }
+.chip input, .day input, .slot input { position: absolute; opacity: 0; inset: 0; }
+.chip span {
+  display: block; padding: 10px 16px; border-radius: 99px;
+  background: var(--paper); border: 1.5px solid var(--line); font-weight: 600; font-size: 15px;
+}
+.days { display: flex; gap: 8px; overflow-x: auto; margin: 0 -20px; padding: 2px 20px 4px; scrollbar-width: none; }
+.days::-webkit-scrollbar { display: none; }
+.day { flex: none; }
+.day span {
+  display: grid; justify-items: center; gap: 2px; width: 58px; padding: 10px 0;
+  border-radius: 12px; background: var(--paper); border: 1.5px solid var(--line);
+}
+.day small { font-size: 13px; color: var(--ink-soft); font-weight: 600; }
+.day b { font-family: var(--display); font-weight: 900; font-size: 28px; line-height: 1; }
+.slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.slot span {
+  display: block; text-align: center; padding: 11px 0; border-radius: 12px;
+  background: var(--paper); border: 1.5px solid var(--line); font-weight: 600; font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.slot input:disabled + span { color: #6B6B6B; text-decoration: line-through; background: transparent; border-style: dashed; }
+.chip input:checked + span,
+.day input:checked + span,
+.slot input:checked + span { background: var(--red); border-color: var(--red); color: #fff; }
+.day input:checked + span small { color: rgba(255,255,255,.7); }
+.chip input:focus-visible + span, .day input:focus-visible + span, .slot input:focus-visible + span { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+.summary { /* barra fija sobre la barra inferior (móvil) */
+  position: sticky; bottom: calc(var(--tabbar-h) + var(--safe-b) + 22px); z-index: 10; /* por encima del contenido que pasa por detrás */
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 12px 12px 18px; border-radius: 12px;
+  background: var(--paper); border: 1px solid var(--line);
+  box-shadow: 0 10px 30px -12px rgba(0,0,0,.35);
+}
+.summary-line { font-weight: 700; font-size: 15px; }
+.summary-sub { font-size: 13px; color: var(--ink-soft); }
+
+
+/* --- Reserva: elegir barbero (radio oculto) ---
+   Grilla 2×2 de fichas chicas con el lenguaje de la ficha .barber de crew.css: banda de su color con franjas y
+   valoración, imagen del barbero (o sus iniciales si no tiene) encima de la banda, nombre, especialidad y años.
+   La elegida se marca con borde rojo y ✓; el tamaño no cambia. */
+.barber-picks { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 10px; isolation: isolate; } /* sus z-index internos no se cruzan con los paneles fijos */
+.barber-pick { position: relative; display: block; cursor: pointer; min-width: 0; }
+.barber-pick > input { position: absolute; opacity: 0; inset: 0; z-index: 3; cursor: pointer; }
+.barber-pick-body {
+  position: relative; height: 100%; display: flex; flex-direction: column; align-items: center; text-align: center;
+  overflow: hidden; padding-bottom: 12px; border-radius: 16px;
+  background: var(--paper); border: 1.5px solid var(--line); transition: border-color .15s;
+}
+.barber-pick-top {
+  align-self: stretch; display: flex; justify-content: flex-end; align-items: flex-start; height: 44px; padding: 7px 8px;
+  background: repeating-linear-gradient(135deg, rgba(255,255,255,.1) 0 12px, transparent 12px 24px), var(--tone, var(--dark));
+}
+.barber-pick .rating { padding: 3px 8px; border-radius: 99px; background: var(--paper); color: var(--ink); font-size: 12px; }
+.barber-pick .rating .ic { width: 13px; height: 13px; }
+/* Cara: iniciales (o ícono) montadas sobre la banda; la imagen ocupa su lugar al elegir */
+.barber-pick-face { display: grid; place-items: center; height: 60px; margin: -30px 0 6px; position: relative; z-index: 1; }
+.barber-pick-avatar { width: 56px; height: 56px; margin: 0; font-size: 22px; box-shadow: 0 0 0 4px var(--paper); }
+/* Sillón de "Cualquiera": fondo transparente; es negro, así que en modo oscuro se invierte a blanco para que se vea */
+.barber-pick-any { display: block; width: 64px; height: 64px; object-fit: contain; margin-top: -6px; }
+:root:not([data-theme="light"]) .barber-pick-any { filter: invert(1); }
+.barber-pick-any-opt { --tone: var(--line); } /* banda neutra (clara u oscura según el tema): el sillón contrasta en ambos */
+.barber-pick-photo { display: block; width: 76px; height: 76px; object-fit: contain; margin-top: -10px; } /* proporción original de la imagen */
+.barber-pick-name { padding: 0 8px; font-family: var(--display); font-weight: 900; font-size: 20px; line-height: 1.05; }
+.barber-pick .barber-role { justify-self: auto; align-self: center; margin-top: 6px; padding: 2px 9px; font-size: 12px; }
+.barber-pick-years { margin-top: 4px; padding: 0 8px; color: var(--ink-soft); font-size: 12px; line-height: 1.25; }
+.barber-pick-years b { color: var(--ink); }
+.barber-pick:hover .barber-pick-body { border-color: var(--ink-soft); }
+.barber-pick > input:focus-visible + .barber-pick-body { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+/* Elegida */
+.barber-pick > input:checked + .barber-pick-body { border: 1.5px solid var(--red); box-shadow: 0 0 0 2px color-mix(in srgb, var(--red) 25%, transparent); }
+.barber-pick > input:checked + .barber-pick-body::after {
+  content: "✓"; position: absolute; top: 7px; left: 8px; width: 22px; height: 22px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--red); color: #fff; font-size: 13px; font-weight: 800;
+}
+/* 5 estrellas elegido: toda la ficha con el fondo de la banda, como en Barberos */
+.barber-pick.is-top > input:checked + .barber-pick-body { background: repeating-linear-gradient(135deg, rgba(255,255,255,.1) 0 12px, transparent 12px 24px), var(--tone); color: #fff; }
+.barber-pick.is-top > input:checked + .barber-pick-body .barber-pick-top { background: transparent; }
+.barber-pick.is-top > input:checked + .barber-pick-body .barber-role { background: rgba(255,255,255,.16); color: #fff; }
+.barber-pick.is-top > input:checked + .barber-pick-body .barber-pick-years,
+.barber-pick.is-top > input:checked + .barber-pick-body .barber-pick-years b { color: rgba(255,255,255,.85); }

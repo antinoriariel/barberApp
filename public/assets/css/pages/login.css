@@ -1,0 +1,47 @@
+/* Páginas de cuenta: login, registro y recuperación de contraseña. */
+
+/* ========== 7. Login ========== */
+body.login-page { background: var(--dark); min-height: 100dvh; }
+.login { min-height: 100dvh; display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; }
+.login-side {
+  color: #fff; padding: calc(48px + env(safe-area-inset-top, 0px)) 28px 64px;
+}
+.login-side .brand-name { font-size: 34px; }
+.login-side .barber-logo-icon { width: 46px; height: 46px; }
+.login-tagline { margin-top: 22px; font-family: var(--display); font-weight: 800; font-size: 40px; line-height: 1; max-width: 12ch; }
+.login-main { flex: 1; display: flex; }
+.login-card {
+  flex: 1; padding: 30px 28px calc(30px + var(--safe-b));
+  background: var(--lather); border-radius: 12px 12px 0 0;
+}
+.login-card h1 { font-family: var(--display); font-weight: 900; font-size: 34px; line-height: 1; margin-bottom: 6px; }
+.field { display: block; margin: 26px 0 8px; font-weight: 600; font-size: 15px; }
+.login-card input[type="text"], .login-card input[type="password"], .login-card input[type="email"] {
+  width: 100%; padding: 15px 16px; border-radius: 12px;
+  border: 1.5px solid var(--line); background: var(--paper);
+  font: inherit; font-size: 18px; font-weight: 500;
+}
+.login-card input#dni { font-size: 22px; font-weight: 600; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
+.login-card input[aria-invalid="true"] { border-color: var(--red); }
+.auth-links { margin-top: 20px; display: flex; justify-content: space-between; gap: 12px; }
+.auth-ok { margin: 14px 0 0; color: var(--ok); font-size: 14px; font-weight: 600; }
+.login-card a.btn-primary { display: block; text-align: center; margin-top: 18px; }
+.field-error { margin: 8px 0 0; color: var(--red); font-size: 14px; font-weight: 600; }
+.login-card .btn-primary { margin-top: 18px; }
+
+/* Portada del login: la imagen es el fondo del bloque (no un <img>), así no se puede guardar ni copiar al mantenerla
+   apretada, y una máscara con degradado en los cuatro bordes la funde con el negro de la página (sin recorte duro).
+   La frase ya viene dentro de la imagen; para lectores de pantalla va en aria-label.
+   Ancho: el de la columna, pero nunca más alta que ~30% de la pantalla (1.79 = proporción 1024/572). */
+.login-hero {
+  width: min(100%, calc(30dvh * 1.79)); aspect-ratio: 1024 / 572; margin: clamp(14px, 2.5dvh, 22px) auto 0;
+  background: url("/img/login.webp") center / cover no-repeat;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent), linear-gradient(to bottom, transparent, #000 10%, #000 88%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent), linear-gradient(to bottom, transparent, #000 10%, #000 88%, transparent);
+  mask-composite: intersect;
+  -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; pointer-events: none; /* sin menú de imagen */
+}
+.login-side:has(.login-hero) { padding-top: calc(clamp(20px, 5dvh, 48px) + env(safe-area-inset-top, 0px)); padding-bottom: clamp(20px, 4dvh, 32px); } /* menos aire en pantallas bajas */
+.login-side:has(.login-hero) { padding-left: 16px; padding-right: 16px; } /* mobile first: la imagen gana ancho en celulares angostos */
+@media (min-width: 381px) { .login-side:has(.login-hero) { padding-left: 28px; padding-right: 28px; } }

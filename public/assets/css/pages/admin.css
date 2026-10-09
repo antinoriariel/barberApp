@@ -1,0 +1,140 @@
+/* Panel de administración (/admin). Mobile first: las reglas base son las del celular y los @media (min-width)
+   del final lo amplían para tablet/escritorio (tablas como tabla desde 720px). */
+
+body.admin-page { background: var(--lather); min-height: 100dvh; }
+.admin { max-width: 1080px; margin: 0 auto; padding: calc(20px + env(safe-area-inset-top, 0px)) 16px calc(32px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; min-width: 0; }
+.admin-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+.admin-head h1 { font-family: var(--display); font-weight: 900; font-size: clamp(30px, 9vw, 38px); line-height: 1; }
+.admin-sub { color: var(--ink-soft); font-weight: 600; }
+.admin-nav { display: flex; flex-wrap: wrap; gap: 8px; }
+.admin-nav .btn-small { flex: 1 1 auto; text-align: center; } /* en celular los botones de anterior/siguiente se reparten el ancho */
+.admin-back { background: var(--blue); }
+
+.admin-flash { padding: 12px 14px; border-radius: 12px; font-weight: 600; font-size: 14px; }
+.admin-flash.ok { background: var(--ok-bg); color: var(--ok); }
+.admin-flash.bad { background: var(--bad-bg); color: var(--red); }
+.admin-verdict { padding: 16px; border-radius: 12px; background: var(--dark); color: #fff; font-weight: 500; line-height: 1.5; }
+
+.admin-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+.kpi, .admin-card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.kpi h2, .admin-card h2 { font-size: 14px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .06em; }
+.kpi-value { margin-top: 6px; font-family: var(--display); font-weight: 900; font-size: clamp(34px, 10vw, 44px); line-height: 1; font-variant-numeric: tabular-nums; }
+.kpi-delta { margin-top: 6px; font-weight: 700; font-size: 14px; }
+.kpi-delta.up { color: var(--ok); }
+.kpi-delta.down { color: var(--red); }
+.kpi-delta.flat { color: var(--ink-soft); }
+.kpi-prev { margin-top: 2px; color: var(--ink-soft); font-size: 13px; }
+
+.table-wrap { margin-top: 12px; overflow-x: auto; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.admin-table th, .admin-table td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; white-space: nowrap; }
+.admin-table thead th { font-size: 12px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .05em; }
+.admin-table tbody th { font-weight: 600; }
+.admin-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.admin-table small { color: var(--ink-soft); }
+.dot { display: inline-block; width: 12px; height: 12px; margin-right: 8px; border-radius: 50%; background: var(--tone, var(--ink-soft)); }
+.bar { display: block; height: 4px; margin-top: 6px; border-radius: 99px; background: var(--lather); }
+.bar i { display: block; height: 100%; border-radius: 99px; background: var(--blue); }
+
+.status { padding: 3px 10px; border-radius: 99px; font-size: 13px; font-weight: 700; background: var(--lather); }
+.status.done { background: var(--ok-bg); color: var(--ok); }
+.status.no_show, .status.cancelled { background: var(--bad-bg); color: var(--red); }
+.status.booked { background: var(--line); color: var(--ink); }
+.status.toggle { border: 0; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; } /* badge que además es botón (servicio visible/oculto) */
+.status.toggle:hover { filter: brightness(.95); }
+.status.toggle:active { transform: scale(.96); }
+.actions { text-align: right; }
+.actions form { display: inline-flex; gap: 6px; }
+.btn-small.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
+.admin-empty { margin-top: 10px; color: var(--ink-soft); }
+
+/* Editor de servicios (/admin/servicios). */
+.svc-edit { display: grid; gap: 12px; }
+.svc-edit.off { opacity: .65; }
+.svc-edit-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.svc-edit-head strong { font-size: 17px; }
+.svc-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } /* celular: 2 columnas (precio y duración juntos) */
+.svc-fields .wide { grid-column: 1 / -1; }
+.svc-fields label { display: grid; gap: 4px; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+.svc-fields input { width: 100%; min-width: 0; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 16px; color: var(--ink); background: var(--paper); }
+.svc-fields input:focus, .svc-fields textarea:focus { border-color: var(--blue); outline: none; }
+.svc-row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Pestañas de las vistas del panel. */
+.admin-tabs { display: flex; gap: 2px; overflow-x: auto; padding-bottom: 2px; border-bottom: 1px solid var(--line); scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.admin-tabs::-webkit-scrollbar { display: none; }
+.admin-tabs a { flex: none; padding: 10px 12px; font-weight: 700; font-size: 15px; color: var(--ink-soft); border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.admin-tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--red); }
+.admin-tabs a:hover { color: var(--ink); }
+
+.kpi-value.neg { color: var(--red); }
+.admin-table td.zero { color: var(--ink-soft); opacity: .5; }
+.svc-fields select, .svc-fields textarea { width: 100%; min-width: 0; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 16px; color: var(--ink); background: var(--paper); }
+.svc-fields textarea { resize: vertical; min-height: 64px; } /* observación del egreso */
+.svc-fields input[type="date"] { color-scheme: inherit; } /* el calendario nativo sigue al tema (claro/oscuro) */
+
+/* Barras agrupadas: ingresos (rojo) y egresos (gris) por mes. */
+.chart { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin: 14px 0 10px; padding: 0; list-style: none; }
+.chart li { display: grid; grid-template-rows: auto 110px auto; gap: 4px; justify-items: center; min-width: 0; }
+.chart-val { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.chart-bars { width: 100%; height: 100%; display: flex; align-items: end; justify-content: center; gap: 4px; }
+.chart-bars i { display: block; width: 40%; max-width: 26px; min-height: 2px; border-radius: 4px 4px 0 0; }
+.chart-bars .rev, .chart-legend .rev { background: var(--red); }
+.chart-bars .exp, .chart-legend .exp { background: #6B6B6B; }
+.chart-name { font-size: 12px; color: var(--ink-soft); font-weight: 600; text-transform: capitalize; }
+.chart-legend { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); }
+.chart-legend span { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-left: 8px; }
+.chart-legend span:first-child { margin-left: 0; }
+
+/* ===== Mobile first: celular como base ===== */
+.admin > * { min-width: 0; } /* que una tabla ancha no estire la grilla del panel */
+
+/* Tablas .stack: en celular cada fila es una tarjeta. La celda .cell-main es el título (hora, fecha o
+   barbero) y las demás muestran su columna (data-label) a la izquierda y el valor a la derecha. */
+.admin-table.stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.admin-table.stack, .admin-table.stack tbody { display: block; }
+.admin-table.stack tr { display: grid; gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.admin-table.stack tr:last-child { border-bottom: 0; }
+.admin-table.stack th, .admin-table.stack td {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 0; border: 0; white-space: normal; text-align: right;
+}
+.admin-table.stack td[data-label]::before { content: attr(data-label); flex: none; text-align: left; font-size: 12px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .05em; }
+.admin-table.stack .cell-main { display: block; text-align: left; font-size: 17px; }
+.admin-table.stack .cell-main .bar { margin-top: 8px; }
+.admin-table.stack .actions:empty { display: none; }
+.admin-table.stack .actions { justify-content: stretch; margin-top: 4px; }
+.admin-table.stack .actions form { display: flex; gap: 8px; width: 100%; }
+.admin-table.stack .actions .btn-small { flex: 1; text-align: center; padding: 11px 14px; } /* botones cómodos para el dedo */
+
+/* Tabla semanal (9 columnas): se desliza de costado con el nombre del barbero fijo a la izquierda. */
+.admin-table.sticky-first th:first-child { position: sticky; left: 0; z-index: 1; background: var(--paper); min-width: 120px; }
+.admin-table.sticky-first td { padding-left: 10px; padding-right: 10px; }
+
+/* ===== Tablet / escritorio ===== */
+@media (min-width: 720px) {
+  .admin { padding-left: 24px; padding-right: 24px; gap: 16px; }
+  .admin-nav .btn-small { flex: none; }
+  .svc-fields { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .chart { gap: 8px; }
+  .chart li { grid-template-rows: auto 140px auto; }
+  .chart-val { font-size: 11px; }
+
+  /* .stack vuelve a ser una tabla común */
+  .admin-table.stack { display: table; }
+  .admin-table.stack thead { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+  .admin-table.stack thead { display: table-header-group; }
+  .admin-table.stack tbody { display: table-row-group; }
+  .admin-table.stack tr { display: table-row; padding: 0; }
+  .admin-table.stack th, .admin-table.stack td {
+    display: table-cell; padding: 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; text-align: left;
+  }
+  .admin-table.stack .num { text-align: right; }
+  .admin-table.stack td[data-label]::before { content: none; }
+  .admin-table.stack .cell-main { font-size: inherit; }
+  .admin-table.stack .cell-main .bar { margin-top: 6px; }
+  .admin-table.stack .actions { text-align: right; margin-top: 0; }
+  .admin-table.stack .actions:empty { display: table-cell; }
+  .admin-table.stack .actions form { display: inline-flex; gap: 6px; width: auto; }
+  .admin-table.stack .actions .btn-small { flex: none; padding: 9px 14px; }
+}

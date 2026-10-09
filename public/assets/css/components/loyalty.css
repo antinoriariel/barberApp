@@ -1,0 +1,17 @@
+/* Componente: tarjeta de fidelidad en formato sellos. */
+
+.loyalty { margin-top: 14px; padding: 18px; border-radius: 16px; background: var(--paper); border: 1px solid var(--line); }
+.loyalty-head { display: grid; gap: 2px; margin-bottom: 14px; }
+.loyalty-head h2 { font-family: var(--display); font-weight: 800; font-size: 24px; line-height: 1.05; }
+.loyalty-head p { font-size: 14px; color: var(--ink-soft); }
+.stamps { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; padding: 0; list-style: none; } /* <ol>: sin la sangría por defecto del navegador, que corría la fila */
+.stamp {
+  aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center;
+  border: 2px dashed var(--line); color: var(--ink-soft); font-weight: 700; font-size: 15px;
+}
+.stamp .ic { display: block; width: 45%; height: auto; aspect-ratio: 1; transform: translateX(1%); } /* el dibujo de la tijera es apenas más pesado a la izquierda */
+.stamp.on { border: 0; background: var(--ink); color: var(--lather); }
+.stamp.prize { border-color: var(--red); color: var(--red); }
+.stamp.prize.on { background: var(--red); color: #fff; }
+.loyalty-foot { margin-top: 12px; font-size: 14px; color: var(--ink-soft); }
+.loyalty-foot b { font-weight: 700; color: var(--ink); }

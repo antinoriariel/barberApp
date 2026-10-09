@@ -1,0 +1,13 @@
+/* Componente: listas (servicios, historial, ajustes). */
+
+/* --- Listas (servicios, historial, ajustes) --- */
+.menu { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.menu + .menu { margin-top: 16px; }
+.menu li + li { border-top: 1px solid var(--line); }
+.menu-row { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 18px; }
+button.menu-row:active, a.menu-row:active { background: var(--lather); }
+.menu-text { display: grid; gap: 2px; min-width: 0; }
+.menu-text strong { font-weight: 700; font-size: 17px; }
+.menu-text small, .menu-meta small { color: var(--ink-soft); font-size: 14px; }
+.menu-meta { display: grid; text-align: right; gap: 2px; flex: none; }
+.menu-meta b { font-family: var(--display); font-weight: 800; font-size: 24px; line-height: 1; }

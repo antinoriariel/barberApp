@@ -1,0 +1,106 @@
+/* Componente: área de minijuegos de Inicio (components/arcade.php + js/arcade.js). Mismo lenguaje visual que el resto de la app. */
+
+.arcade { padding: 18px; border-radius: 16px; background: var(--paper); border: 1px solid var(--line); }
+.arcade-summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none;
+  font-family: var(--display); font-weight: 800; font-size: 24px; line-height: 1.1;
+}
+.arcade-summary::-webkit-details-marker { display: none; }
+.arcade-summary small { font-family: var(--body); font-weight: 500; font-size: 14px; color: var(--ink-soft); margin-left: 6px; }
+.arcade-chevron { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--lather); color: var(--ink); transition: transform .2s; }
+.arcade[open] .arcade-chevron { transform: rotate(180deg); }
+.arcade[open] .arcade-summary { margin-bottom: 8px; }
+.arcade-lead { font-size: 14px; color: var(--ink-soft); margin-bottom: 14px; }
+.arcade-grid { display: grid; grid-template-columns: 1fr; gap: 10px; } /* mobile first: 1 columna; 3 desde 381px (abajo) */
+.arcade-card {
+  display: flex; flex-direction: column; gap: 4px; text-align: left;
+  padding: 14px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--lather);
+  transition: transform .1s, border-color .15s;
+}
+.arcade-card:hover, .arcade-card:focus-visible { border-color: var(--ink); }
+.arcade-card:active { transform: scale(.97); }
+.arcade-ic { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--dark); color: #fff; margin-bottom: 6px; }
+.arcade-card[data-game="runner"] .arcade-ic { background: var(--blue); }
+.arcade-card[data-game="pacman"] .arcade-ic { background: var(--red); }
+.arcade-ic .ic { width: 20px; height: 20px; }
+.arcade-name { font-family: var(--display); font-weight: 800; font-size: 20px; line-height: 1.05; }
+.arcade-goal { font-size: 13px; color: var(--ink-soft); }
+.arcade-promo { margin-top: auto; padding-top: 8px; align-self: flex-start; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+.arcade-card[data-game="pacman"] .arcade-promo { color: var(--red); }
+
+.arcade-rewards { margin-top: 14px; padding: 14px 16px; border-radius: 12px; background: var(--paper); border: 1.5px dashed var(--red); }
+.arcade-rewards h3 { font-family: var(--display); font-weight: 800; font-size: 20px; margin-bottom: 6px; }
+.arcade-rewards li { font-size: 14px; padding: 3px 0; }
+.arcade-rewards li b { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: .05em; background: var(--red); color: #fff; padding: 2px 8px; border-radius: 6px; }
+.arcade-rewards small { color: var(--ink-soft); }
+.arcade-rewards p { margin-top: 6px; font-size: 13px; color: var(--ink-soft); }
+
+/* Diálogo del juego: ocupa casi toda la pantalla en móvil. */
+.arcade-dialog {
+  border: 0; padding: 14px; border-radius: 16px; background: var(--dark); color: #fff;
+  width: min(360px, calc(100vw - 16px)); max-height: 100dvh; overflow: auto; margin: auto;
+}
+.arcade-dialog::backdrop { background: rgba(7,7,7,.88); }
+.arcade-bar { display: flex; align-items: center; gap: 10px; }
+.arcade-bar h3 { flex: 1; min-width: 0; font-family: var(--display); font-weight: 800; font-size: 22px; }
+.arcade-score { font-weight: 800; font-size: 20px; min-width: 2ch; text-align: right; color: #F2C94C; font-variant-numeric: tabular-nums; }
+.arcade-close { /* flex: none: el título de la barra (flex: 1) no lo achica por debajo de la palabra */
+  flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 72px; height: 36px; padding: 0 18px;
+  border-radius: 999px; background: var(--red); color: #fff; font-weight: 700; font-size: 14px; line-height: 1; white-space: nowrap;
+}
+.arcade-close:active { transform: scale(.95); }
+.arcade-hint { font-size: 12.5px; color: var(--line); margin: 4px 0 8px; }
+.arcade-stage { position: relative; line-height: 0; }
+.arcade-stage canvas {
+  width: 100%; height: auto; aspect-ratio: 2 / 3; border-radius: 10px; background: #070707;
+  border: 2px solid rgba(255,255,255,.18);
+  image-rendering: pixelated; image-rendering: crisp-edges; image-rendering: pixelated; /* pixel art sin suavizado */
+  touch-action: none; /* el juego usa el arrastre y los toques: que la página no haga scroll */
+  user-select: none; -webkit-user-select: none;
+}
+.arcade-over {
+  position: absolute; inset: 0; line-height: 1.45;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding: 24px; text-align: center; background: rgba(7,7,7,.9); color: #fff;
+}
+.arcade-over h4 { font-family: var(--display); font-weight: 900; font-size: 34px; line-height: 1; color: #F2C94C; }
+.arcade-over p { font-size: 15px; }
+.arcade-over p b { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 22px; letter-spacing: .06em; display: block; margin-top: 6px; }
+
+@media (min-width: 381px) { .arcade-grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* ===== Juegos con forma de máquina de cortar el pelo =====
+   Cuerpo grafito redondeado (más ancho arriba, se afina abajo) con los costados iluminados para que
+   su silueta se vea también en modo oscuro; cabezal negro bajo la cuchilla metálica (::before) y
+   cable abajo (::after). Para volver al diseño anterior: borrar este bloque
+   (copia del archivo previo en docs/archivo/arcade-antes-maquinita.css). */
+.arcade-grid { padding-top: 14px; row-gap: 28px; align-items: stretch; } /* lugar para la cuchilla */
+.arcade-card {
+  position: relative; align-items: center; text-align: center;
+  padding: 24px 10px 22px; margin-bottom: 10px; /* lugar para el cable */
+  border: 1.5px solid #555;
+  border-radius: 20px 20px 34px 34px / 16px 16px 48px 48px;
+  background:
+    linear-gradient(#0b0b0b 0 12px, #3c3c3c 12px 13.5px, transparent 13.5px),          /* cabezal + junta */
+    linear-gradient(90deg, #4a4a4a 0, #262626 16%, #1a1a1a 50%, #262626 84%, #4a4a4a 100%); /* cuerpo con volumen */
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.05), 0 12px 20px -12px rgba(0,0,0,.7);
+}
+.arcade-card::before { /* cuchilla: dientes metálicos sobre el cabezal */
+  content: ""; position: absolute; top: -12px; left: 10%; right: 10%; height: 15px;
+  border-radius: 6px 6px 2px 2px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 3px, rgba(0,0,0,.6) 3px 4.5px),
+    linear-gradient(#ffffff, #b5b5b5 55%, #7d7d7d);
+  box-shadow: 0 2px 0 #2b2b2b, 0 0 0 1px rgba(0,0,0,.35);
+}
+.arcade-card::after { /* cable que sale por abajo */
+  content: ""; position: absolute; bottom: -10px; left: 50%; width: 14px; height: 11px; transform: translateX(-50%);
+  border-radius: 0 0 6px 6px; background: #333; border: 1px solid #555; border-top: 0;
+}
+.arcade-card:hover, .arcade-card:focus-visible { border-color: #9a9a9a; }
+.arcade-card .arcade-ic { box-shadow: 0 0 0 3px #3a3a3a; } /* como el botón de encendido */
+.arcade-card .arcade-name { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+.arcade-card .arcade-goal { color: #d6d6d6; }
+.arcade-card .arcade-promo { align-self: center; color: #ececec; }
+.arcade-card[data-game="pacman"] .arcade-promo { color: #ff7a7a; } /* rojo más claro: se lee sobre el cuerpo oscuro */

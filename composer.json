@@ -1,0 +1,9 @@
+{
+    "name": "navaja/barberapp",
+    "description": "Navaja & Co. - la app NO usa Composer en runtime; solo se usa para instalar PHPUnit en desarrollo.",
+    "type": "project",
+    "require": { "php": ">=8.2" },
+    "require-dev": { "phpunit/phpunit": "^11.0" },
+    "autoload-dev": { "psr-4": { "Tests\\": "tests/" } },
+    "config": { "sort-packages": true }
+}

@@ -1,0 +1,23 @@
+# Apache: front controller + cabeceras básicas para los archivos estáticos
+# (los estáticos no pasan por PHP, así que no reciben las cabeceras de Core\Security).
+Options -Indexes
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Todo lo que no sea un archivo real va al front controller.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "same-origin"
+    # El service worker debe revalidarse siempre para que las actualizaciones lleguen.
+    <Files "sw.js">
+        Header set Cache-Control "no-cache"
+    </Files>
+</IfModule>

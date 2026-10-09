@@ -1,0 +1,164 @@
+/* Escritorio: reacomoda todo cuando se detecta una PC (barra lateral, grillas, tipografía sobria). */
+
+/* ============================================================
+   8. ESCRITORIO
+   Barra lateral fija a la izquierda, contenido en grillas, tipografía
+   sobria (Inter en lugar de las fuentes de cartel del móvil).
+   ============================================================ */
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  :root {
+    --display: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; /* títulos sobrios */
+    --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  body { background: var(--lather); font-size: 15px; }
+
+  /* --- Marco: sin límite de 480px; el contenido deja lugar a la barra lateral --- */
+  .app { max-width: none; margin: 0; padding: 0 0 56px var(--sidebar-w); background: var(--lather); }
+  main { max-width: 1200px; padding: 48px 56px 0; }
+
+  /* --- Barra lateral: marca arriba, navegación debajo --- */
+  .topbar {
+    position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: 76px; z-index: 30;
+    padding: 0 24px; background: var(--ink);
+  }
+  .open-pill { display: none; }
+  .brand-name { font-family: var(--display); font-weight: 700; font-size: 19px; letter-spacing: -.01em; }
+  .pole { width: 10px; height: 24px; }
+
+  .tabbar {
+    position: fixed; top: 76px; bottom: 0; left: 0; transform: none;
+    width: var(--sidebar-w); max-width: none; height: auto; padding: 8px 14px 20px;
+    display: flex; flex-direction: column; align-items: stretch; gap: 2px;
+    background: var(--ink); border-top: 0;
+  }
+  .tab {
+    display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px;
+    padding: 11px 14px; border-radius: 10px;
+    color: rgba(255,255,255,.7); font-size: 15px; font-weight: 500;
+    transition: background .15s, color .15s;
+  }
+  .tab .ic { width: 20px; height: 20px; }
+  .tab:hover { background: rgba(255,255,255,.07); color: #fff; }
+  .tab[aria-current="page"] { background: rgba(255,255,255,.12); color: #fff; }
+  .tab[aria-current="page"] .ic { color: #fff; }
+
+  /* El círculo pasa a ser el botón principal "Reservar turno", arriba de la lista */
+  .fab {
+    order: -1; height: auto; margin: 6px 0 18px;
+    display: flex; flex-direction: row; align-items: center; gap: 12px;
+    padding: 10px 14px; border-radius: 12px;
+    background: var(--red); color: #fff; transition: filter .15s;
+  }
+  .fab:hover { filter: brightness(1.08); }
+  .fab[aria-current="page"] { box-shadow: 0 0 0 2px #fff inset; }
+  .fab .fab-disc {
+    position: static; width: 36px; height: 36px; border: 0; box-shadow: none; animation: none;
+    background: rgba(255,255,255,.18);
+  }
+  .fab .fab-disc::before { display: none; }
+  .fab .fab-disc .ic { width: 20px; height: 20px; }
+  .fab[aria-current="page"] .ic { transform: none; }
+  .fab-label { display: block; font-weight: 600; font-size: 15px; }
+
+  /* Usuario y salida al pie de la barra lateral */
+  .side-user {
+    order: 99; margin-top: auto; padding: 14px 8px 0;
+    display: flex; align-items: center; gap: 10px;
+    border-top: 1px solid rgba(255,255,255,.12); color: #fff;
+  }
+  .side-user .avatar.sm { width: 34px; height: 34px; margin: 0; font-size: 13px; box-shadow: none; font-weight: 600; }
+  .side-user-text { display: grid; flex: 1; min-width: 0; line-height: 1.25; }
+  .side-user-text strong { font-size: 14px; font-weight: 600; }
+  .side-user-text small { font-size: 12px; color: rgba(255,255,255,.6); }
+  .side-logout { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; color: rgba(255,255,255,.7); }
+  .side-logout:hover { background: rgba(255,255,255,.1); color: #fff; }
+  .side-logout .ic { width: 18px; height: 18px; }
+
+  /* --- Tipografía sobria: Inter, mayúsculas/minúsculas normales, pesos moderados --- */
+  .hero-title, .page-title { font-weight: 700; letter-spacing: -.025em; line-height: 1.12; }
+  .hero-title { font-size: 34px; margin-bottom: 28px; }
+  .page-title { font-size: 28px; margin-bottom: 24px; }
+  .page-title.tight { font-size: 24px; }
+  .section-head { margin: 36px 0 14px; }
+  .section-head h2 { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+  .ticket-when { font-weight: 700; font-size: 30px; letter-spacing: -.02em; }
+  .ticket-when span { font-size: 24px; vertical-align: 2px; padding: 2px 10px; }
+  .ticket-title { font-weight: 700; font-size: 26px; letter-spacing: -.02em; }
+  .loyalty-head h2 { font-weight: 600; font-size: 18px; letter-spacing: -.01em; }
+  .rail-price { font-weight: 700; font-size: 22px; letter-spacing: -.02em; }
+  .menu-meta b { font-weight: 600; font-size: 17px; }
+  .menu-text strong { font-size: 15px; font-weight: 600; }
+  .avatar { font-family: var(--body); font-weight: 600; font-size: 17px; letter-spacing: 0; }
+  .avatar.big { font-size: 22px; }
+  .me-text h1 { font-family: var(--body); font-weight: 700; font-size: 24px; letter-spacing: -.02em; }
+  .me-stats dd { font-family: var(--body); font-weight: 700; font-size: 22px; }
+  .visit-price { font-family: var(--body); font-weight: 700; font-size: 17px; }
+  a.prof-row:hover, button.prof-row:hover, .visit:hover { border-color: var(--ink); }
+  .step legend { font-family: var(--body); font-weight: 600; font-size: 15px; margin-bottom: 12px; }
+  .day b { font-family: var(--body); font-weight: 600; font-size: 20px; }
+  .link:hover { text-decoration: underline; }
+
+  /* --- Inicio: título arriba, ticket + fidelidad lado a lado, carrusel en 3 columnas --- */
+  .home-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; align-items: stretch; }
+  .home-title, .home-wide { grid-column: 1 / -1; }
+  .home-sub { margin: -18px 0 24px; }
+  .home-grid .loyalty { margin-top: 0; display: flex; flex-direction: column; justify-content: center; }
+  .home-grid .rail { display: grid; grid-template-columns: repeat(3, 1fr); overflow: visible; margin: 0; padding: 0; }
+  .home-grid .rail-card, .home-grid .sk-card { width: auto; }
+  .rail-card { transition: border-color .15s, box-shadow .15s; }
+  .rail-card:hover { border-color: var(--ink); box-shadow: 0 6px 18px -10px rgba(15,30,58,.4); }
+  .home-grid .info-list { grid-auto-flow: column; justify-content: start; gap: 40px; }
+  .ticket { display: flex; flex-direction: column; justify-content: space-between; }
+
+  /* --- Servicios y perfil: columna de lectura cómoda --- */
+  #view-perfil, #skel-list, #skel-perfil { max-width: 760px; }
+  #view-servicios { max-width: 960px; }
+  .svc-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .svc-card { transition: border-color .15s, box-shadow .15s; }
+  .svc-card:hover { border-color: var(--ink); border-left-color: var(--red); box-shadow: 0 6px 18px -10px rgba(15,30,58,.4); }
+  .svc-text strong { font-size: 16px; font-weight: 600; }
+  .svc-price { font-weight: 700; font-size: 22px; }
+  button.menu-row:hover, a.menu-row:hover { background: var(--lather); }
+
+  /* --- Barberos: tarjetas en 3 columnas --- */
+  .crew { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .barber { transition: border-color .15s, box-shadow .15s; }
+  .barber:hover { border-color: var(--ink); box-shadow: 0 6px 18px -10px rgba(15,30,58,.4); }
+  .barber-body h2 { font-family: var(--body); font-weight: 700; font-size: 20px; letter-spacing: -.02em; }
+  .barber .btn-primary { transition: background .15s; }
+  .barber .btn-primary:hover { background: var(--ink); }
+
+  /* --- Reservar: pasos a la izquierda, resumen fijo a la derecha --- */
+  .reserve-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; column-gap: 48px; align-items: start; }
+  .reserve-title { grid-column: 1 / -1; }
+  .reserve-grid .days { margin: 0; padding: 2px 0 4px; flex-wrap: wrap; overflow: visible; }
+  .reserve-grid .slots, .reserve-grid .sk-slots { grid-template-columns: repeat(6, 1fr); }
+  .chip span { transition: border-color .15s; }
+  .chip:hover span, .day:hover span, .slot:hover input:enabled + span { border-color: var(--ink); }
+  .reserve-side { grid-column: 2; grid-row: 2; }
+  .summary.reserve-side {
+    position: sticky; top: 32px; bottom: auto;
+    flex-direction: column; align-items: stretch; gap: 16px; padding: 22px;
+    box-shadow: none;
+  }
+  .summary-line { font-size: 16px; }
+  .summary .btn-primary { width: 100%; padding: 14px; }
+  .btn-primary:not(:disabled):hover { filter: brightness(1.08); }
+
+  .toast { bottom: 32px; left: calc(50% + var(--sidebar-w) / 2); }
+
+  /* --- Login: panel de marca a la izquierda, formulario a la derecha --- */
+  .login { max-width: none; flex-direction: row; }
+  .login-side { flex: 1; padding: 64px; display: flex; flex-direction: column; justify-content: space-between; }
+  .login-side .brand { order: 0; }
+  .login-tagline { font-family: var(--display); font-weight: 700; font-size: 44px; line-height: 1.1; letter-spacing: -.03em; max-width: 14ch; margin: 0; }
+  .login-main { flex: 1; align-items: center; justify-content: center; background: var(--lather); }
+  .login-card { flex: none; width: 400px; padding: 0; background: none; border-radius: 0; }
+  .login-card h1 { font-family: var(--display); font-weight: 700; font-size: 28px; letter-spacing: -.02em; }
+  .login-card input#dni { font-size: 18px; letter-spacing: .04em; }
+  .btn-primary.block { padding: 14px; font-size: 15px; }
+  .demo-dni:hover { border-color: var(--ink); }
+
+  /* --- Skeletons: ajustes de tamaño a la escala de escritorio --- */
+  .sk-title { height: 32px; }
+}

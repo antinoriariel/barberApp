@@ -1,0 +1,10 @@
+# Apache (XAMPP): este directorio NO es la raíz web. Solo public/ se sirve.
+# Bloquea el acceso directo a app/, config/, data/, storage/, docs/ y a los .md/.php sueltos.
+# En producción apuntar el DocumentRoot a public/ (ver docs/seguridad.md).
+Options -Indexes
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Deny from all
+</IfModule>

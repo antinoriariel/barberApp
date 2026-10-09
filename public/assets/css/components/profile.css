@@ -1,0 +1,36 @@
+/* Componente: pantalla Perfil (tarjeta de cuenta, visitas y ajustes). */
+
+.me-card {
+  position: relative; overflow: hidden; display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center;
+  padding: 28px 20px 18px; border-radius: 16px; background: var(--dark); color: #fff;
+}
+.me-card::before { /* franja de poste, igual que la tarjeta de Inicio */
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 8px;
+  background: repeating-linear-gradient(135deg, var(--red) 0 14px, #fff 14px 28px, var(--blue) 28px 42px, #fff 42px 56px);
+}
+.me-card .avatar { box-shadow: 0 0 0 3px var(--dark), 0 0 0 5px var(--red); }
+.me-text { min-width: 0; }
+.me-text h1 { font-family: var(--display); font-weight: 900; font-size: 30px; line-height: 1.02; }
+.me-text p { font-size: 14px; opacity: .75; overflow-wrap: anywhere; }
+.me-stats { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 4px 0 0; }
+.me-stats > div { padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,.1); }
+.me-stats dt { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; opacity: .7; }
+.me-stats dd { margin: 2px 0 0; font-family: var(--display); font-weight: 800; font-size: 26px; line-height: 1.1; }
+
+.visits, .prof-list { display: grid; gap: 10px; }
+.visit, .prof-row {
+  width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+  border-radius: 16px; background: var(--paper); border: 1px solid var(--line);
+}
+.visit-ic, .prof-ic { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--lather); color: var(--ink); }
+.visit-ic .ic, .prof-ic .ic { width: 20px; height: 20px; }
+.visit-text, .prof-text { flex: 1; display: grid; gap: 2px; min-width: 0; }
+.visit-text strong, .prof-text strong { font-size: 16px; font-weight: 700; }
+.visit-text small, .prof-text small { color: var(--ink-soft); font-size: 14px; }
+.visit-price { font-family: var(--display); font-weight: 800; font-size: 22px; line-height: 1; }
+.prof-empty { padding: 18px; border-radius: 16px; background: var(--paper); border: 1px dashed var(--line); color: var(--ink-soft); }
+
+a.prof-row, button.prof-row { transition: border-color .15s; }
+a.prof-row:active, button.prof-row:active { background: var(--lather); }
+.prof-row.danger .prof-text strong { color: var(--red); }
+.prof-row.danger .prof-ic { background: var(--bad-bg); color: var(--red); }

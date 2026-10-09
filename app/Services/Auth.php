@@ -1,0 +1,248 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Services;
+
+use App\Core\Config;
+use App\Core\Database;
+use App\Core\DbSessionHandler;
+use App\Core\RateLimiter;
+use App\Core\Session;
+use App\Models\User;
+use App\Support\Dni;
+use App\Support\Password;
+
+/**
+ * Autenticación por DNI + contraseña, alta de cuentas y recuperación de contraseña.
+ *
+ * - Un único mensaje de error en el login (ERROR_CREDENTIALS) para DNI inválido, inexistente o contraseña
+ *   incorrecta, y se verifica un hash falso cuando el DNI no existe, así no se enumeran cuentas ni por el
+ *   texto ni por el tiempo de respuesta.
+ * - Los intentos fallidos se limitan por IP y por DNI con RateLimiter.
+ * - Todo evento relevante queda en Audit.
+ * - Con driver files (maqueta) solo se puede iniciar sesión (con la contraseña de demostración);
+ *   el alta y la recuperación requieren base de datos.
+ */
+final class Auth
+{
+    public const ERROR_CREDENTIALS = 'DNI o contraseña incorrectos.';
+    public const ERROR_THROTTLED = 'Demasiados intentos. Esperá unos minutos y probá de nuevo.';
+    public const ERROR_RESET_INVALID = 'El enlace no es válido o venció. Pedí uno nuevo.';
+
+    /** Hash de relleno para igualar el tiempo de respuesta cuando el DNI no existe. */
+    private static ?string $dummyHash = null;
+
+    /** Usuario de la sesión actual o null si no hay sesión (o el DNI guardado ya no existe). */
+    public static function user(): ?User
+    {
+        $dni = Session::get('dni');
+        return is_string($dni) ? User::find($dni) : null;
+    }
+
+    /**
+     * Intenta iniciar sesión.
+     *
+     *  1. Si la IP o el DNI ya superaron su límite de fallos → ERROR_THROTTLED (sin consultar contraseñas).
+     *  2. Cualquier fallo (formato, DNI inexistente, contraseña mala) suma un intento y devuelve ERROR_CREDENTIALS.
+     *  3. Éxito → se actualiza el hash si quedó viejo, se regenera el id de sesión (anti-fijación),
+     *     se rota el token CSRF y se guarda el DNI.
+     *
+     * El contador de la IP no se borra al entrar bien: así un atacante no lo reinicia usando una cuenta propia.
+     *
+     * @return string|null null si salió bien, o el mensaje de error para mostrar
+     */
+    public static function attempt(string $rawDni, string $password, string $ip): ?string
+    {
+        $dni = Dni::normalize($rawDni);
+        $window = (int) Config::get('security.login_window');
+        $ipKey = 'login:ip:' . $ip;
+        $dniKey = 'login:dni:' . $dni;
+        $validDni = Dni::isValid($dni);
+
+        if (RateLimiter::tooMany($ipKey, (int) Config::get('security.login_max_attempts_ip'))
+            || ($validDni && RateLimiter::tooMany($dniKey, (int) Config::get('security.login_max_attempts_dni')))) {
+            return self::ERROR_THROTTLED;
+        }
+
+        $hash = $validDni && mb_strlen($password) <= Password::MAX ? User::passwordHash($dni) : null;
+        $ok = Password::verify($password, $hash ?? self::dummyHash()) && $hash !== null;
+        $user = $ok ? User::find($dni) : null;
+
+        if ($user === null) {
+            RateLimiter::hit($ipKey, $window);
+            if ($validDni) {
+                RateLimiter::hit($dniKey, $window);
+            }
+            Audit::log('login_fail', null, mb_substr($dni, 0, 12));
+            return self::ERROR_CREDENTIALS;
+        }
+
+        if (Database::enabled() && Password::needsRehash($hash)) {
+            User::setPassword($user->id, Password::hash($password));
+        }
+        RateLimiter::clear($dniKey);
+        self::startSession($user);
+        Audit::log('login_ok', $user->id);
+        return null;
+    }
+
+    /** Regenera la sesión (anti-fijación), rota el CSRF y la asocia al usuario. */
+    private static function startSession(User $user): void
+    {
+        Session::regenerate();
+        Session::remove('csrf');
+        Session::set('dni', $user->dni);
+        DbSessionHandler::bindUser($user->id ?: null);
+    }
+
+    /** Hash falso (calculado una vez por petición) contra el que se verifica cuando el DNI no existe. */
+    private static function dummyHash(): string
+    {
+        return self::$dummyHash ??= Password::hash('contraseña-de-relleno');
+    }
+
+    /**
+     * Crea una cuenta nueva y deja la sesión iniciada.
+     *
+     * Valida todo en el servidor. Un DNI o email repetido da un mensaje genérico ("ya existe una cuenta"):
+     * el DNI es lo que se usa para entrar, así que no hay forma de evitar del todo que se sepa si está
+     * registrado; el límite por IP frena el barrido masivo.
+     *
+     * @return string|null null si salió bien, o el mensaje de error
+     */
+    public static function register(string $rawDni, string $fullName, string $email, string $password, string $confirm, string $ip): ?string
+    {
+        $key = 'register:ip:' . $ip;
+        if (RateLimiter::tooMany($key, (int) Config::get('security.register_max_attempts_ip'))) {
+            return self::ERROR_THROTTLED;
+        }
+        RateLimiter::hit($key, (int) Config::get('security.login_window'));
+
+        $dni = Dni::normalize($rawDni);
+        $fullName = trim(preg_replace('/\s+/', ' ', $fullName));
+        $email = mb_strtolower(trim($email));
+
+        if (!Dni::isValid($dni)) {
+            return 'Ingresá un DNI de 7 u 8 números.';
+        }
+        if (!preg_match("/^[\p{L}\p{M}'.-]+( [\p{L}\p{M}'.-]+)+$/u", $fullName) || mb_strlen($fullName) > 120) {
+            return 'Ingresá tu nombre y apellido.';
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 190) {
+            return 'Ingresá un email válido.';
+        }
+        if ($error = Password::validate($password)) {
+            return $error;
+        }
+        if (!hash_equals($password, $confirm)) {
+            return 'Las contraseñas no coinciden.';
+        }
+
+        try {
+            $user = User::create($dni, $fullName, $email, Password::hash($password));
+        } catch (\PDOException $e) {
+            if ($e->getCode() === '23000') {
+                return 'Ya existe una cuenta con ese DNI o email.';
+            }
+            throw $e;
+        }
+        self::startSession($user);
+        Audit::log('register', $user->id);
+        return null;
+    }
+
+    /**
+     * Pide recuperar la contraseña: si el email tiene cuenta, genera un token de un solo uso (se guarda
+     * hasheado, vence en auth.reset_ttl) y manda el enlace. El resultado hacia el usuario es siempre el mismo,
+     * exista o no la cuenta. Devuelve false solo si se superó el límite por IP.
+     */
+    public static function requestReset(string $email, string $ip): bool
+    {
+        $key = 'reset:ip:' . $ip;
+        if (RateLimiter::tooMany($key, (int) Config::get('security.reset_max_attempts_ip'))) {
+            return false;
+        }
+        RateLimiter::hit($key, (int) Config::get('security.login_window'));
+
+        $user = filter_var(trim($email), FILTER_VALIDATE_EMAIL) ? User::findByEmail(trim($email)) : null;
+        if ($user === null || $user->email === '') {
+            return true;
+        }
+        $token = bin2hex(random_bytes(32));
+        Database::execute(
+            'INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)',
+            [hash('sha256', $token), $user->id, date('Y-m-d H:i:s', time() + (int) Config::get('auth.reset_ttl'))]
+        );
+        Mailer::send($user->email, 'Recuperá tu contraseña · Barbería',
+            "Hola {$user->name},\n\nPara elegir una contraseña nueva entrá a este enlace (vale 1 hora y se usa una sola vez):\n\n"
+            . rtrim((string) Config::get('url'), '/') . '/restablecer?token=' . $token
+            . "\n\nSi no lo pediste vos, ignorá este mensaje.");
+        Audit::log('password_reset_request', $user->id);
+        return true;
+    }
+
+    /** ¿El token de recuperación existe y no venció? */
+    public static function resetTokenValid(string $token): bool
+    {
+        return self::resetUserId($token) !== null;
+    }
+
+    /** Id del usuario dueño de un token vigente, o null. */
+    private static function resetUserId(string $token): ?int
+    {
+        if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
+            return null;
+        }
+        $r = Database::selectOne(
+            'SELECT user_id FROM password_resets WHERE token_hash = ? AND expires_at > ?',
+            [hash('sha256', $token), date('Y-m-d H:i:s')]
+        );
+        return $r ? (int) $r['user_id'] : null;
+    }
+
+    /**
+     * Cambia la contraseña con un token de recuperación: valida, guarda el hash nuevo, borra los tokens del usuario
+     * y cierra todas sus sesiones abiertas.
+     * @return string|null null si salió bien, o el mensaje de error
+     */
+    public static function resetPassword(string $token, string $password, string $confirm): ?string
+    {
+        $userId = self::resetUserId($token);
+        if ($userId === null) {
+            return self::ERROR_RESET_INVALID;
+        }
+        if ($error = Password::validate($password)) {
+            return $error;
+        }
+        if (!hash_equals($password, $confirm)) {
+            return 'Las contraseñas no coinciden.';
+        }
+        Database::transaction(function () use ($userId, $password) {
+            User::setPassword($userId, Password::hash($password));
+            Database::execute('DELETE FROM password_resets WHERE user_id = ?', [$userId]);
+            DbSessionHandler::revokeUser($userId);
+        });
+        Audit::log('password_reset', $userId);
+        return null;
+    }
+
+    /** Cierra la sesión actual. */
+    public static function logout(): void
+    {
+        $user = self::user();
+        if ($user) {
+            Audit::log('logout', $user->id);
+        }
+        Session::destroy();
+    }
+
+    /** Cierra la sesión en todos los dispositivos (borra todas las sesiones del usuario) y la actual. */
+    public static function logoutEverywhere(User $user): void
+    {
+        if (Database::enabled()) {
+            DbSessionHandler::revokeUser($user->id);
+        }
+        Audit::log('logout_all', $user->id);
+        Session::destroy();
+    }
+}
