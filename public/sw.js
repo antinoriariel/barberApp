@@ -45,6 +45,7 @@ const SHELL = [
   '/assets/css/pages/login.css',
   '/assets/css/pages/admin.css',
   '/assets/css/pages/su.css',
+  '/assets/css/pages/error.css',
   '/assets/css/a11y.css',
   '/assets/js/main.js',
   '/assets/js/navigation.js',

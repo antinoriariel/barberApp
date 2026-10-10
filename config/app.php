@@ -104,6 +104,7 @@ return [
             'css/pages/login.css',
             'css/pages/admin.css',
             'css/pages/su.css',
+            'css/pages/error.css',
             'css/a11y.css',
         ],
     ],
