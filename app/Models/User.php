@@ -286,6 +286,40 @@ final class User
         Database::execute('UPDATE users SET active = ? WHERE id = ?', [$active ? 1 : 0, $id]);
     }
 
+    /** Condición SQL "la cuenta u no tiene historial": turnos, premios de juegos, números de la fila ni movimientos cargados. */
+    private const NO_HISTORY = 'NOT EXISTS (SELECT 1 FROM appointments x WHERE x.user_id = u.id)
+        AND NOT EXISTS (SELECT 1 FROM game_rewards x WHERE x.user_id = u.id)
+        AND NOT EXISTS (SELECT 1 FROM queue_tickets x WHERE x.user_id = u.id)
+        AND NOT EXISTS (SELECT 1 FROM expenses x WHERE x.created_by = u.id)
+        AND NOT EXISTS (SELECT 1 FROM incomes x WHERE x.created_by = u.id)';
+
+    /**
+     * Ids de las cuentas que se pueden eliminar del todo (sin historial, ver NO_HISTORY). Las demás solo se suspenden,
+     * para no perder turnos, ingresos ni la fila.
+     * @return int[]
+     */
+    public static function deletableIds(): array
+    {
+        return array_map('intval', array_column(Database::select('SELECT u.id FROM users u WHERE ' . self::NO_HISTORY), 'id'));
+    }
+
+    /**
+     * Elimina una cuenta sin historial con sus sesiones y enlaces de recuperación (la auditoría se conserva).
+     * Devuelve false si no existe o tiene historial; la comprobación y el borrado van en la misma sentencia,
+     * así un turno reservado en el medio no queda huérfano (y la clave foránea lo frena igual).
+     */
+    public static function delete(int $id): bool
+    {
+        return (bool) Database::transaction(function () use ($id) {
+            $deleted = Database::execute('DELETE u FROM users u WHERE u.id = ? AND ' . self::NO_HISTORY, [$id]);
+            if ($deleted > 0) {
+                Database::execute('DELETE FROM sessions WHERE user_id = ?', [$id]);
+                Database::execute('DELETE FROM password_resets WHERE user_id = ?', [$id]);
+            }
+            return $deleted > 0;
+        });
+    }
+
     /** Cantidad de administradores activos (el panel no deja quitarle el rol ni dar de baja al último). */
     public static function activeAdminCount(): int
     {

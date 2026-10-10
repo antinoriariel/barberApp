@@ -69,6 +69,7 @@ return static function (Router $router): void {
     $router->post('/admin/usuarios/guardar', [AdminController::class, 'saveUser']);
     $router->post('/admin/usuarios/clave', [AdminController::class, 'userPassword']);
     $router->post('/admin/usuarios/estado', [AdminController::class, 'toggleUser']);
+    $router->post('/admin/usuarios/borrar', [AdminController::class, 'deleteUser']);
 
     // Minijuegos de la pantalla de inicio (JSON; sesión + CSRF).
     $router->post('/juegos/iniciar', [GameController::class, 'start']);

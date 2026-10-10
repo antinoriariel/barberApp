@@ -114,6 +114,21 @@ final class UserAdminTest extends DbTestCase
         $this->assertFalse(User::barberTaken($barber->key), 'una cuenta dada de baja no la ocupa');
     }
 
+    public function testSoloSeEliminanCuentasSinHistorial(): void
+    {
+        $fresh = $this->makeUser('99700007');
+        $this->assertContains($fresh->id, User::deletableIds());
+        $this->assertTrue(User::delete($fresh->id));
+        $this->assertNull(User::findById($fresh->id));
+        $this->assertFalse(User::delete($fresh->id), 'ya no existe');
+
+        // Mateo (semilla) tiene turnos: no se puede borrar, solo suspender.
+        $mateo = User::find('40123456');
+        $this->assertNotContains($mateo->id, User::deletableIds());
+        $this->assertFalse(User::delete($mateo->id));
+        $this->assertNotNull(User::find('40123456'));
+    }
+
     public function testLaSemillaTraeUnAdministradorActivo(): void
     {
         $this->assertGreaterThanOrEqual(1, User::activeAdminCount());

@@ -1,13 +1,14 @@
 <?php
 /**
  * pages/admin-usuarios.php — Cuentas de la barbería (solo administrador). Arriba el alta (DNI, nombre, email,
- * contraseña y rol); debajo un buscador y una tarjeta por cuenta con su estado (el badge da de baja o reactiva),
- * la edición de datos y rol, y el cambio de contraseña. Si el rol es barbero se elige su ficha del equipo y qué
+ * contraseña y rol); debajo un buscador y una tarjeta por cuenta con su estado (el badge suspende o da el alta),
+ * la edición de datos y rol, el cambio de contraseña y la baja definitiva (solo cuentas sin historial). Si el rol es barbero se elige su ficha del equipo y qué
  * secciones del panel ve (admin-users.js oculta esos campos con otros roles; sin JS se ven siempre y el servidor
  * los ignora si el rol no es barbero).
  *
  * Variables: $user (User, el administrador), $accounts (User::allForAdmin()), $barbers (Barber::all()),
- *            $flash ('1' guardado | 'clave' contraseña cambiada | ''), $error (string)
+ *            $deletable (array id => índice, cuentas sin historial: User::deletableIds() invertido),
+ *            $flash ('1' guardado | 'clave' contraseña cambiada | 'borrado' cuenta eliminada | ''), $error (string)
  */
 use App\Models\User;
 
@@ -58,6 +59,7 @@ $roleFields = static function (?User $account) use ($barbers): void {
 
   <?php if ($flash === '1'): ?><p class="admin-flash ok" role="status">Cambios guardados.</p><?php endif; ?>
   <?php if ($flash === 'clave'): ?><p class="admin-flash ok" role="status">Contraseña cambiada. Se cerraron las sesiones abiertas de esa cuenta.</p><?php endif; ?>
+  <?php if ($flash === 'borrado'): ?><p class="admin-flash ok" role="status">Cuenta eliminada.</p><?php endif; ?>
   <?php if ($error !== ''): ?><p class="admin-flash bad" role="alert"><?= e($error) ?></p><?php endif; ?>
 
   <section class="admin-card svc-edit user-card" id="usuario-nuevo" aria-labelledby="user-new">
@@ -99,15 +101,15 @@ $roleFields = static function (?User $account) use ($barbers): void {
         <?php if ($self): ?>
           <span class="status done">Activa</span>
         <?php else: ?>
-          <?php /* El badge es el interruptor: da de baja la cuenta (no puede entrar, se cierran sus sesiones) o la reactiva. */ ?>
+          <?php /* El badge es el interruptor: suspende la cuenta (no puede entrar, se cierran sus sesiones) o le da el alta de nuevo. */ ?>
           <form method="post" action="/admin/usuarios/estado" class="inline-form">
             <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= $a->id ?>">
             <button type="submit" name="active" value="<?= $a->active ? '0' : '1' ?>"
                     class="status toggle <?= $a->active ? 'done' : 'cancelled' ?>"
-                    <?= $a->active ? 'data-confirm="¿Dar de baja a ' . e($a->fullName) . '? No va a poder entrar hasta que la reactives."' : '' ?>
-                    title="<?= $a->active ? 'Click para dar de baja' : 'Click para reactivar' ?>"
-                    aria-label="<?= e($a->fullName) ?>: <?= $a->active ? 'activa, dar de baja' : 'dada de baja, reactivar' ?>"><?= $a->active ? 'Activa' : 'De baja' ?></button>
+                    <?= $a->active ? 'data-confirm="¿Suspender a ' . e($a->fullName) . '? No va a poder entrar hasta que le des el alta de nuevo."' : '' ?>
+                    title="<?= $a->active ? 'Click para suspender' : 'Click para darle el alta' ?>"
+                    aria-label="<?= e($a->fullName) ?>: <?= $a->active ? 'activa, suspender' : 'suspendida, dar de alta' ?>"><?= $a->active ? 'Activa' : 'Suspendida' ?></button>
           </form>
         <?php endif; ?>
       </div>
@@ -138,6 +140,24 @@ $roleFields = static function (?User $account) use ($barbers): void {
           <div class="svc-row-actions"><button class="btn-small" type="submit">Cambiar contraseña</button></div>
         </form>
       </details>
+
+      <?php if (!$self): ?>
+      <details class="user-more">
+        <summary>Dar de baja definitiva</summary>
+        <?php if (isset($deletable[$a->id])): ?>
+          <form method="post" action="/admin/usuarios/borrar" class="svc-edit">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id" value="<?= $a->id ?>">
+            <p class="admin-sub">Borra la cuenta para siempre. Solo se puede porque no tiene turnos ni movimientos.</p>
+            <div class="svc-row-actions">
+              <button class="btn-small danger" type="submit" data-confirm="¿Eliminar para siempre la cuenta de <?= e($a->fullName) ?>? No se puede deshacer.">Eliminar cuenta</button>
+            </div>
+          </form>
+        <?php else: ?>
+          <p class="admin-sub">Tiene historial (turnos, fila o movimientos), así que no se borra: suspendela con el botón “Activa” de arriba y su historial queda guardado.</p>
+        <?php endif; ?>
+      </details>
+      <?php endif; ?>
     </section>
   <?php endforeach; ?>
 </main>

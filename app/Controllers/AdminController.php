@@ -518,6 +518,7 @@ final class AdminController extends Controller
             'user'      => $user,
             'scripts'   => ['js/admin-users.js'],
             'accounts'  => User::allForAdmin(),
+            'deletable' => array_flip(User::deletableIds()),
             'barbers'   => Barber::all(),
             'flash'     => (string) $request->query('ok', ''),
             'error'     => (string) $request->query('error', ''),
@@ -648,5 +649,33 @@ final class AdminController extends Controller
         }
         Audit::log($active ? 'admin_user_enable' : 'admin_user_disable', $user->id, 'usuario ' . $id);
         $this->redirect('/admin/usuarios?ok=1#usuario-' . $id);
+    }
+
+    /**
+     * POST /admin/usuarios/borrar — campo id: elimina del todo una cuenta sin historial (p. ej. creada por error).
+     * Con turnos, premios, fila o movimientos no se borra (User::delete devuelve false): esas se suspenden.
+     * No se puede eliminar la propia cuenta ni al último administrador activo.
+     */
+    public function deleteUser(Request $request): void
+    {
+        $user = $this->requireSection('usuarios');
+        $this->requireCsrf($request);
+
+        $id = (int) $request->input('id', 0);
+        $target = $id > 0 ? User::findById($id) : null;
+        if ($target === null) {
+            $this->usersError('Esa cuenta no existe.');
+        }
+        if ($target->id === $user->id) {
+            $this->usersError('No podés eliminar tu propia cuenta.', $id);
+        }
+        if ($target->isAdmin && $target->active && User::activeAdminCount() <= 1) {
+            $this->usersError('Tiene que quedar al menos un administrador activo.', $id);
+        }
+        if (!User::delete($id)) {
+            $this->usersError('Esta cuenta tiene historial (turnos, fila o movimientos): suspendela en lugar de eliminarla.', $id);
+        }
+        Audit::log('admin_user_delete', $user->id, 'usuario ' . $id . ' · ' . $target->dni);
+        $this->redirect('/admin/usuarios?ok=borrado');
     }
 }
