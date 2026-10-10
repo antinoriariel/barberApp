@@ -50,6 +50,8 @@ return static function (Router $router): void {
     $router->get('/admin/barberos', [AdminController::class, 'barbers']);
     $router->post('/admin/barberos/horario', [AdminController::class, 'saveBarberHours']);
     $router->post('/admin/barberos/dias', [AdminController::class, 'saveShopDays']);
+    $router->post('/admin/barberos/nuevo', [AdminController::class, 'createBarber']);
+    $router->post('/admin/barberos/foto', [AdminController::class, 'saveBarberPhoto']);
     $router->get('/admin/finanzas', [AdminController::class, 'finance']);
     $router->get('/admin/egresos', [AdminController::class, 'expenses']);
     $router->post('/admin/egresos', [AdminController::class, 'saveExpense']);

@@ -19,6 +19,7 @@ use App\Models\Schedule;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\Audit;
+use App\Services\BarberPhoto;
 use App\Services\Qr;
 
 /**
@@ -186,6 +187,68 @@ final class AdminController extends Controller
         BarberHours::save($barber->key, $days);
         Audit::log('admin_barber_hours', $user->id, 'barbero ' . $barber->key);
         $this->redirect('/admin/barberos?ok=1#horario-' . rawurlencode($barber->id));
+    }
+
+    /**
+     * POST /admin/barberos/nuevo (multipart) — campos: name, role, years, rating, tone y photo (archivo, opcional).
+     * Valida con Barber::validate; si vino foto se procesa antes de crear la ficha, así un archivo inválido no
+     * deja un barbero a medias. El nuevo barbero aparece enseguida en la app y atiende la jornada completa hasta
+     * que se le cargue un horario.
+     */
+    public function createBarber(Request $request): void
+    {
+        $user = $this->requireAdmin();
+        $this->requireCsrf($request);
+
+        [$data, $error] = Barber::validate([
+            'name' => $request->input('name'), 'role' => $request->input('role'), 'years' => $request->input('years'),
+            'rating' => $request->input('rating'), 'tone' => $request->input('tone'),
+        ]);
+        if ($error !== null) {
+            $this->redirect('/admin/barberos?error=' . rawurlencode($error) . '#nuevo-barbero');
+        }
+        $photo = null;
+        $file = $request->file('photo');
+        if ($file !== null && ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            [$photo, $error] = BarberPhoto::store($file, slugify($data['name'], 'barbero'));
+            if ($error !== null) {
+                $this->redirect('/admin/barberos?error=' . rawurlencode($error) . '#nuevo-barbero');
+            }
+        }
+        $slug = Barber::create($data);
+        $barber = Barber::find($slug);
+        if ($photo !== null && $barber !== null) {
+            Barber::setPhoto($barber->key, $photo);
+        }
+        Audit::log('admin_barber_create', $user->id, 'barbero ' . ($barber?->key ?? 0) . ' · ' . $data['name']);
+        $this->redirect('/admin/barberos?ok=nuevo#horario-' . rawurlencode($slug));
+    }
+
+    /**
+     * POST /admin/barberos/foto (multipart) — campos: barber (slug), photo (archivo) o remove=1 para sacarla.
+     * Reemplaza la imagen del barbero; la foto subida anterior se borra del disco (las del repositorio no).
+     */
+    public function saveBarberPhoto(Request $request): void
+    {
+        $user = $this->requireAdmin();
+        $this->requireCsrf($request);
+
+        $barber = Barber::find((string) $request->input('barber', ''));
+        if ($barber === null) {
+            $this->redirect('/admin/barberos?error=' . rawurlencode('Ese barbero no existe.'));
+        }
+        $back = '#horario-' . rawurlencode($barber->id);
+        $photo = null;
+        if ($request->input('remove') !== '1') {
+            [$photo, $error] = BarberPhoto::store($request->file('photo'), $barber->id);
+            if ($error !== null) {
+                $this->redirect('/admin/barberos?error=' . rawurlencode($barber->firstName() . ': ' . $error) . $back);
+            }
+        }
+        Barber::setPhoto($barber->key, $photo);
+        BarberPhoto::delete($barber->photo);
+        Audit::log($photo === null ? 'admin_barber_photo_remove' : 'admin_barber_photo', $user->id, 'barbero ' . $barber->key);
+        $this->redirect('/admin/barberos?ok=foto' . $back);
     }
 
     /** GET /admin/finanzas?mes=YYYY-MM — ingresos vs egresos del mes y gráfico de 6 meses (los egresos se cargan en /admin/egresos). */

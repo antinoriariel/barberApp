@@ -51,8 +51,6 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 /* Editor de servicios (/admin/servicios). */
 .svc-edit { display: grid; gap: 12px; }
 .svc-edit.off { opacity: .65; }
-.admin > .admin-section-title { margin-top: 12px; scroll-margin-top: 16px; } /* Servicios / Productos en /admin/servicios */
-.admin > .svc-edit { scroll-margin-top: 16px; } /* #producto-N tras guardar */
 .svc-edit-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .svc-edit-head strong { font-size: 17px; }
 .svc-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } /* celular: 2 columnas (precio y duración juntos) */
@@ -124,6 +122,15 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .hours-head h3 { display: flex; align-items: center; font-size: 17px; font-weight: 800; }
 .hours-count { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
 .hours-form { display: grid; gap: 12px; }
+/* Foto del barbero en su ficha: avatar (foto o inicial sobre su color) + subir/cambiar/quitar. */
+.barber-photo-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.bp-avatar { flex: none; width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: var(--tone, var(--line)); }
+.bp-avatar.empty { display: grid; place-items: center; color: #fff; font-size: 26px; font-weight: 800; }
+.bp-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.bp-file { max-width: 100%; min-width: 0; font: inherit; font-size: 14px; color: var(--ink-soft); }
+.bp-file::file-selector-button { margin-right: 8px; padding: 6px 10px; border: 1.5px solid var(--line); border-radius: 8px; font: inherit; font-weight: 700; color: var(--ink); background: var(--paper); cursor: pointer; }
+.svc-fields input.bp-file { padding: 8px; }
+.svc-fields input.bp-color { height: 44px; padding: 4px; cursor: pointer; }
 .hours-list { list-style: none; margin: 0; padding: 0; }
 .hours-row {
   display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-areas: "day day day" "from sep to";
