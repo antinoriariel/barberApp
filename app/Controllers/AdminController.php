@@ -551,6 +551,7 @@ final class AdminController extends Controller
             'scripts'   => ['js/admin-users.js'],
             'accounts'  => User::allForAdmin(),
             'deletable' => array_flip(User::deletableIds()),
+            'stranded'  => (int) $request->query('turnos', 0),
             'barbers'   => Barber::all(),
             'flash'     => (string) $request->query('ok', ''),
             'error'     => (string) $request->query('error', ''),
@@ -565,9 +566,11 @@ final class AdminController extends Controller
 
     /**
      * POST /admin/usuarios/guardar — edita una cuenta (id) o crea una nueva (sin id; trae dni y password).
-     * Valida con User::validate y además: una ficha de barbero no puede quedar en dos cuentas activas, el admin no
-     * puede quitarse su propio rol y nunca se le quita el rol al último administrador activo (nadie podría entrar
-     * al panel). Los permisos se leen en cada petición, así que el cambio vale enseguida para el usuario.
+     * Valida con User::validate y además: el admin no puede quitarse su propio rol y nunca se le quita el rol al último
+     * administrador activo (nadie podría entrar al panel). Con rol barbero, User::saveFromAdmin crea su ficha del equipo
+     * con el nombre cargado (no se elige una existente); si deja de ser barbero su ficha se oculta y, si tenía turnos
+     * reservados a futuro, se avisa cuántos (no se cancelan solos). Los permisos se leen en cada petición, así que el
+     * cambio vale enseguida para el usuario.
      */
     public function saveUser(Request $request): void
     {
@@ -581,14 +584,11 @@ final class AdminController extends Controller
         }
         [$data, $error] = User::validate([
             'dni' => $request->input('dni'), 'full_name' => $request->input('full_name'), 'email' => $request->input('email'),
-            'role' => $request->input('role'), 'barber' => $request->input('barber'), 'sections' => $request->input('sections'),
+            'role' => $request->input('role'), 'sections' => $request->input('sections'),
             'password' => $request->input('password'),
         ], $target === null);
         if ($error !== null) {
             $this->usersError($error, $id);
-        }
-        if ($data['barber_id'] !== null && User::barberTaken($data['barber_id'], $id)) {
-            $this->usersError('Esa ficha del equipo ya está vinculada a otra cuenta activa.', $id);
         }
         if ($target?->isAdmin && !$data['is_admin']) {
             if ($target->id === $user->id) {
@@ -599,21 +599,24 @@ final class AdminController extends Controller
             }
         }
 
+        // Si deja de ser barbero, su ficha se oculta: se cuentan antes sus turnos reservados para avisar.
+        $stranded = $target?->barberId !== null && !$data['is_barber'] ? Barber::upcomingCount($target->barberId) : 0;
+
         try {
-            if ($target === null) {
-                $id = User::createFromAdmin($data, Password::hash($data['password']));
-                Audit::log('admin_user_create', $user->id, 'usuario ' . $id . ' · ' . $data['dni'] . ' · ' . $request->string('role'));
-            } else {
-                User::updateFromAdmin($id, $data);
-                Audit::log('admin_user_update', $user->id, 'usuario ' . $id . ' · ' . $request->string('role') . ($data['panel_access'] ? ' · ' . $data['panel_access'] : ''));
-            }
+            $id = User::saveFromAdmin($target, $data, $target === null ? Password::hash($data['password']) : null);
         } catch (\PDOException $e) {
             if ($e->getCode() === '23000') {
                 $this->usersError('Ya existe una cuenta con ese DNI o email.', $target === null ? 0 : $id);
             }
             throw $e;
         }
-        $this->redirect('/admin/usuarios?ok=1#usuario-' . $id);
+        $role = $request->string('role') . ($data['panel_access'] ? ' · ' . $data['panel_access'] : '');
+        if ($target === null) {
+            Audit::log('admin_user_create', $user->id, 'usuario ' . $id . ' · ' . $data['dni'] . ' · ' . $role);
+        } else {
+            Audit::log('admin_user_update', $user->id, 'usuario ' . $id . ' · ' . $role);
+        }
+        $this->redirect('/admin/usuarios?ok=1' . ($stranded > 0 ? '&turnos=' . $stranded : '') . '#usuario-' . $id);
     }
 
     /**
@@ -650,9 +653,11 @@ final class AdminController extends Controller
     }
 
     /**
-     * POST /admin/usuarios/estado — campos: id, active ('0' baja, '1' reactivar). La baja no borra la cuenta (sus turnos
-     * y movimientos se conservan): le impide entrar y cierra sus sesiones. No se puede dar de baja la propia cuenta ni
-     * al último administrador activo, y no se reactiva un barbero cuya ficha ya usa otra cuenta activa.
+     * POST /admin/usuarios/estado — campos: id, active ('0' suspender, '1' dar el alta). Suspender no borra la cuenta
+     * (sus turnos y movimientos se conservan): le impide entrar y cierra sus sesiones; si es barbero, además su ficha
+     * deja de aparecer en la app y de tomar turnos (se avisa cuántos reservados le quedan), y vuelve con el alta.
+     * No se puede suspender la propia cuenta ni al último administrador activo, y no se reactiva un barbero cuya
+     * ficha ya usa otra cuenta activa.
      */
     public function toggleUser(Request $request): void
     {
@@ -675,12 +680,18 @@ final class AdminController extends Controller
         } elseif ($target->barberId !== null && User::barberTaken($target->barberId, $id)) {
             $this->usersError('Su ficha del equipo ya está vinculada a otra cuenta activa: cambiale el rol antes de reactivarla.', $id);
         }
-        User::setActive($id, $active);
+        $stranded = !$active && $target->barberId !== null ? Barber::upcomingCount($target->barberId) : 0;
+        Database::transaction(function () use ($id, $active, $target) {
+            User::setActive($id, $active);
+            if ($target->barberId !== null) {
+                Barber::setActive($target->barberId, $active);
+            }
+        });
         if (!$active) {
             DbSessionHandler::revokeUser($id);
         }
         Audit::log($active ? 'admin_user_enable' : 'admin_user_disable', $user->id, 'usuario ' . $id);
-        $this->redirect('/admin/usuarios?ok=1#usuario-' . $id);
+        $this->redirect('/admin/usuarios?ok=1' . ($stranded > 0 ? '&turnos=' . $stranded : '') . '#usuario-' . $id);
     }
 
     /**
@@ -706,6 +717,10 @@ final class AdminController extends Controller
         }
         if (!User::delete($id)) {
             $this->usersError('Esta cuenta tiene historial (turnos, fila o movimientos): suspendela en lugar de eliminarla.', $id);
+        }
+        // Su ficha del equipo se borra si nunca atendió turnos; si atendió, queda oculta para no perder ese historial.
+        if ($target->barberId !== null) {
+            Barber::retire($target->barberId);
         }
         Audit::log('admin_user_delete', $user->id, 'usuario ' . $id . ' · ' . $target->dni);
         $this->redirect('/admin/usuarios?ok=borrado');

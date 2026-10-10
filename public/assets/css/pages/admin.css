@@ -204,6 +204,7 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .svc-fields .field-msg { font-size: 12px; font-weight: 600; color: var(--red); }
 .svc-fields [aria-invalid="true"] { border-color: var(--red); }
 .svc-fields [aria-invalid="true"]:focus { border-color: var(--red); box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 18%, transparent); } /* eliminar cuenta (no se puede deshacer) */
+.perm-note { font-size: 13px; color: var(--ink-soft); } /* aviso de la ficha del equipo que se crea con el nombre */
 .perm-box { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 6px; }
 .perm-box legend { padding: 0; margin-bottom: 6px; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
 .perm-box small { color: var(--ink-soft); font-size: 12px; }

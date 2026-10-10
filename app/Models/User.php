@@ -200,11 +200,11 @@ final class User
 
     /**
      * Valida el formulario de /admin/usuarios. Campos: dni y password (solo en el alta, $isNew), full_name, email
-     * (opcional, pero sin él la cuenta no puede recuperar su contraseña), role (clave de ROLES), barber (slug de la
-     * ficha del equipo, obligatorio si el rol es barbero) y sections[] (secciones del panel que verá el barbero).
+     * (opcional, pero sin él la cuenta no puede recuperar su contraseña), role (clave de ROLES) y sections[]
+     * (secciones extra del panel que verá el barbero). La ficha del equipo no se elige: la crea saveFromAdmin.
      *
      * Devuelve [datos normalizados, null] o [null, mensaje]. Los datos traen name (nombre de pila), full_name,
-     * email (null si vacío), is_admin, barber_id, panel_access ("a,b" o null) y, en el alta, dni y password.
+     * email (null si vacío), is_admin, is_barber, barber_id (null), panel_access ("a,b" o null) y, en el alta, dni y password.
      * Los duplicados de DNI/email no se miran acá: los frenan los índices únicos al guardar.
      *
      * @return array{0: ?array, 1: ?string}
@@ -237,14 +237,10 @@ final class User
             return [null, 'Elegí un rol.'];
         }
         $data['is_admin'] = $role === 'admin' ? 1 : 0;
-        $data['barber_id'] = null;
+        $data['is_barber'] = $role === 'barbero';
+        $data['barber_id'] = null; // la ficha la resuelve saveFromAdmin (se crea con el nombre de la cuenta)
         $data['panel_access'] = null;
         if ($role === 'barbero') {
-            $barber = Barber::find($text('barber'));
-            if ($barber === null) {
-                return [null, 'Elegí la ficha del equipo de ese barbero.'];
-            }
-            $data['barber_id'] = $barber->key;
             $picked = is_array($in['sections'] ?? null) ? array_filter($in['sections'], 'is_string') : [];
             $sections = array_values(array_intersect(array_keys(self::SECTIONS), $picked));
             $data['panel_access'] = $sections ? implode(',', $sections) : null;
@@ -288,6 +284,37 @@ final class User
             [$data['name'], $data['full_name'], $data['email'], $data['is_admin'], $data['barber_id'], $data['panel_access'], $id]
         );
         return true;
+    }
+
+    /**
+     * Guarda el formulario de /admin/usuarios (datos de validate()) en una sola transacción, junto con la ficha del
+     * equipo si el rol es barbero:
+     *  - pasa a barbero (alta o cliente/admin que cambia de rol) → Barber::provision crea su ficha con el nombre completo
+     *    (o reactiva la que tenía si vuelve);
+     *  - ya era barbero → conserva su ficha y le actualiza el nombre;
+     *  - deja de ser barbero → su ficha se oculta (no toma turnos nuevos; su historial de cortes queda).
+     * $target es null en el alta (entonces $passwordHash es obligatorio). Devuelve el id de la cuenta.
+     * @throws \PDOException con código 23000 si el DNI o el email ya existen (no queda nada a medias: rollback)
+     */
+    public static function saveFromAdmin(?self $target, array $data, ?string $passwordHash = null): int
+    {
+        return (int) Database::transaction(function () use ($target, $data, $passwordHash) {
+            if ($data['is_barber']) {
+                $data['barber_id'] = $target?->barberId ?? Barber::provision($data['full_name']);
+                if ($target?->barberId !== null) {
+                    Barber::rename($target->barberId, $data['full_name']);
+                } elseif ($target !== null && !$target->active) {
+                    Barber::setActive($data['barber_id'], false); // cuenta suspendida: su ficha aparece recién con el alta
+                }
+            } elseif ($target?->barberId !== null) {
+                Barber::setActive($target->barberId, false);
+            }
+            if ($target === null) {
+                return self::createFromAdmin($data, (string) $passwordHash);
+            }
+            self::updateFromAdmin($target->id, $data);
+            return $target->id;
+        });
     }
 
     /** Da de baja (false) o reactiva (true) una cuenta. La baja no borra nada: sus turnos y movimientos se conservan. */

@@ -1,7 +1,7 @@
 /**
  * admin-users.js — Comportamiento de /admin/usuarios (todo es mejora progresiva: sin JS la página funciona igual).
  *
- * - En cada formulario con [data-role-form], los campos [data-barber-only] (ficha del equipo y secciones del
+ * - En cada formulario con [data-role-form], los campos [data-barber-only] (aviso de la ficha del equipo y secciones del
  *   panel) solo se muestran si el rol elegido es "barbero"; con otro rol el servidor los ignora de todas formas.
  * - El buscador [data-user-search] filtra las tarjetas por nombre, DNI (con o sin puntos) o email.
  * - Los botones con [data-confirm] (dar de baja) piden confirmación antes de enviar.
@@ -94,12 +94,6 @@ const RULES = {
     if (input.value === '') return 'Repetí la contraseña.';
     return password && input.value !== password.value ? 'Las contraseñas no coinciden.' : '';
   },
-  barber(input) {
-    // Solo es obligatoria si el rol elegido es barbero (con otro rol el campo está oculto y el servidor lo ignora).
-    const role = input.form.querySelector('[data-role-select]');
-    if (!role || role.value !== 'barbero') return '';
-    return input.value !== '' ? '' : 'Elegí la ficha del equipo de ese barbero.';
-  },
 };
 
 let msgCount = 0;
@@ -160,12 +154,6 @@ document.querySelectorAll('form').forEach((form) => {
       }
     });
     if (input.tagName === 'SELECT') input.addEventListener('change', () => check(input));
-  });
-
-  // Al cambiar el rol, la ficha de barbero pasa a ser obligatoria (o deja de serlo): se recalcula su error.
-  form.querySelector('[data-role-select]')?.addEventListener('change', () => {
-    const barber = form.querySelector('[data-validate="barber"]');
-    if (barber?.hasAttribute('aria-invalid')) check(barber);
   });
 
   // Al enviar se validan todos; si alguno falla no se envía y el foco va al primero con error.

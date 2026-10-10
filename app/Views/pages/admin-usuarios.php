@@ -2,13 +2,14 @@
 /**
  * pages/admin-usuarios.php — Cuentas de la barbería (solo administrador). Arriba el alta (DNI, nombre, email,
  * contraseña y rol); debajo un buscador y una tarjeta por cuenta con su estado (el badge suspende o da el alta),
- * la edición de datos y rol, el cambio de contraseña y la baja definitiva (solo cuentas sin historial). Si el rol es barbero se elige su ficha del equipo y qué
- * secciones del panel ve (admin-users.js oculta esos campos con otros roles; sin JS se ven siempre y el servidor
- * los ignora si el rol no es barbero).
+ * la edición de datos y rol, el cambio de contraseña y la baja definitiva (solo cuentas sin historial). Si el rol es
+ * barbero se eligen las secciones extra del panel que ve; su ficha del equipo no se elige: se crea con el nombre de la
+ * cuenta (admin-users.js oculta esos campos con otros roles; sin JS se ven siempre y el servidor los ignora).
  *
- * Variables: $user (User, el administrador), $accounts (User::allForAdmin()), $barbers (Barber::all()),
+ * Variables: $user (User, el administrador), $accounts (User::allForAdmin()), $barbers (Barber::all(): nombres de las fichas),
  *            $deletable (array id => índice, cuentas sin historial: User::deletableIds() invertido),
- *            $flash ('1' guardado | 'clave' contraseña cambiada | 'borrado' cuenta eliminada | ''), $error (string)
+ *            $flash ('1' guardado | 'clave' contraseña cambiada | 'borrado' cuenta eliminada | ''), $error (string),
+ *            $stranded (turnos reservados a futuro de un barbero cuya ficha se acaba de ocultar)
  */
 use App\Models\User;
 
@@ -24,7 +25,7 @@ $maxPassword = \App\Support\Password::MAX;
  * Campos de rol de un formulario: selector de rol, ficha del equipo y secciones del panel (los tres cambian juntos).
  * $account es null en el alta.
  */
-$roleFields = static function (?User $account) use ($barbers): void {
+$roleFields = static function (?User $account): void {
     $role = $account?->role() ?? 'cliente';
     ?>
         <label>Rol
@@ -34,14 +35,13 @@ $roleFields = static function (?User $account) use ($barbers): void {
 <?php endforeach; ?>
           </select>
         </label>
-        <label data-barber-only>Ficha del equipo
-          <select name="barber" data-validate="barber">
-            <option value="">Elegí un barbero…</option>
-<?php foreach ($barbers as $b): ?>
-            <option value="<?= e($b->id) ?>"<?= $account?->barberId === $b->key ? ' selected' : '' ?>><?= e($b->name) ?></option>
-<?php endforeach; ?>
-          </select>
-        </label>
+        <p class="wide perm-note" data-barber-only>
+          <?php if ($account?->isBarber()): ?>
+            Su ficha del equipo usa el nombre de esta cuenta: si lo cambiás, también cambia en la app.
+          <?php else: ?>
+            Se crea su ficha en el equipo con el nombre y apellido de arriba: aparece en la app para reservar con él.
+          <?php endif; ?>
+        </p>
         <fieldset class="wide perm-box" data-barber-only>
           <legend>Secciones extra del panel</legend>
           <div class="perm-chips">
@@ -63,6 +63,7 @@ $roleFields = static function (?User $account) use ($barbers): void {
   <?php if ($flash === '1'): ?><p class="admin-flash ok" role="status">Cambios guardados.</p><?php endif; ?>
   <?php if ($flash === 'clave'): ?><p class="admin-flash ok" role="status">Contraseña cambiada. Se cerraron las sesiones abiertas de esa cuenta.</p><?php endif; ?>
   <?php if ($flash === 'borrado'): ?><p class="admin-flash ok" role="status">Cuenta eliminada.</p><?php endif; ?>
+  <?php if ($stranded > 0): ?><p class="admin-flash bad" role="alert">Ojo: ese barbero tiene <?= $stranded ?> turno<?= $stranded === 1 ? '' : 's' ?> reservado<?= $stranded === 1 ? '' : 's' ?> a futuro. Ya no aparece en la app, pero esos turnos no se cancelan solos: revisalos en Turnos.</p><?php endif; ?>
   <?php if ($error !== ''): ?><p class="admin-flash bad" role="alert"><?= e($error) ?></p><?php endif; ?>
 
   <section class="admin-card svc-edit user-card" id="usuario-nuevo" aria-labelledby="user-new">
@@ -95,7 +96,7 @@ $roleFields = static function (?User $account) use ($barbers): void {
           <strong><?= e($a->fullName) ?><?= $self ? ' (vos)' : '' ?></strong>
           <small>
             DNI <?= e(\App\Support\Dni::format($a->dni)) ?> · <?= e(User::ROLES[$a->role()]) ?>
-            <?php if ($a->isBarber()): ?> · <?= e($barberNames[$a->barberId] ?? 'ficha inactiva') ?><?php endif; ?>
+            <?php if ($a->isBarber()): ?> · <?= e($barberNames[$a->barberId] ?? 'oculto en la app') ?><?php endif; ?>
             <?php if ($a->role() === 'cliente'): ?> · <?= $a->visits ?> <?= $a->visits === 1 ? 'visita' : 'visitas' ?><?php endif; ?>
           </small>
           <?php if ($a->isBarber() && !$a->isAdmin): ?>
