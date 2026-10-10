@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Core\Config;
 use App\Core\Controller;
 use App\Core\Database;
 use App\Core\Request;
@@ -33,8 +34,8 @@ final class AuthController extends Controller
     {
         $this->requireCsrf($request);
 
-        $raw = (string) $request->input('dni', '');
-        $error = Auth::attempt($raw, (string) $request->input('password', ''), $request->ip());
+        $raw = $request->string('dni');
+        $error = Auth::attempt($raw, $request->string('password'), $request->ip());
 
         if ($error === null) {
             // Si venía de escanear el QR de la fila sin sesión, vuelve a esa pantalla (solo rutas /fila, nada externo).
@@ -67,12 +68,12 @@ final class AuthController extends Controller
         $this->requireCsrf($request);
 
         $values = [
-            'dni'       => Dni::normalize((string) $request->input('dni', '')),
-            'full_name' => (string) $request->input('full_name', ''),
-            'email'     => (string) $request->input('email', ''),
+            'dni'       => Dni::normalize($request->string('dni')),
+            'full_name' => $request->string('full_name'),
+            'email'     => $request->string('email'),
         ];
         $error = Auth::register($values['dni'], $values['full_name'], $values['email'],
-            (string) $request->input('password', ''), (string) $request->input('password2', ''), $request->ip());
+            $request->string('password'), $request->string('password2'), $request->ip());
 
         if ($error === null) {
             $this->redirect('/');
@@ -94,7 +95,7 @@ final class AuthController extends Controller
         $this->requireDatabase();
         $this->requireCsrf($request);
 
-        $sent = Auth::requestReset((string) $request->input('email', ''), $request->ip());
+        $sent = Auth::requestReset($request->string('email'), $request->ip());
         if (!$sent) {
             http_response_code(429);
             header('Retry-After: 900');
@@ -122,8 +123,8 @@ final class AuthController extends Controller
         $this->requireDatabase();
         $this->requireCsrf($request);
 
-        $token = (string) $request->input('token', '');
-        $error = Auth::resetPassword($token, (string) $request->input('password', ''), (string) $request->input('password2', ''));
+        $token = $request->string('token');
+        $error = Auth::resetPassword($token, $request->string('password'), $request->string('password2'));
         if ($error === null) {
             $this->view('pages/reset', $this->authPage('Nueva contraseña', ['token' => '', 'valid' => false, 'done' => true]));
             return;
@@ -160,12 +161,15 @@ final class AuthController extends Controller
         }
     }
 
-    /** Si el error fue por exceso de intentos responde 429 con Retry-After. */
+    /**
+     * Si el error fue por exceso de intentos responde 429 con Retry-After: los segundos reales del bloqueo
+     * del login, o la ventana completa para alta y recuperación.
+     */
     private function throttleHeaders(?string $error): void
     {
-        if ($error === Auth::ERROR_THROTTLED) {
+        if ($error !== null && str_starts_with($error, Auth::THROTTLED_PREFIX)) {
             http_response_code(429);
-            header('Retry-After: 900');
+            header('Retry-After: ' . (Auth::retryAfter() ?: (int) Config::get('security.login_window')));
         }
     }
 

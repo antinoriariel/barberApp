@@ -1,6 +1,7 @@
 <?php
 /**
- * pages/admin-finanzas.php — Ingresos (turnos atendidos) contra egresos por mes; los gastos se cargan en /admin/egresos.
+ * pages/admin-finanzas.php — Ingresos (turnos atendidos) e ingresos extra contra egresos por mes; los gastos se
+ * cargan en /admin/egresos y los ingresos extra en /admin/ingresos.
  *
  * Variables: $month ('YYYY-MM'), $prev/$next ('YYYY-MM'), $isCurrent, $finance (Dashboard::finance: el último es $month),
  *            $expenses (Expense::forMonth)
@@ -24,6 +25,11 @@ $net = $cur['net'];
       <p class="kpi-prev"><?= $cur['served'] ?> cortes atendidos</p>
     </article>
     <article class="kpi">
+      <h2>Ingresos extra</h2>
+      <p class="kpi-value"><?= money($cur['extra']) ?></p>
+      <p class="kpi-prev"><a class="link" href="/admin/ingresos?mes=<?= e($month) ?>">Cargar o ver ingresos extra</a></p>
+    </article>
+    <article class="kpi">
       <h2>Egresos</h2>
       <p class="kpi-value"><?= money($cur['expenses']) ?></p>
       <p class="kpi-prev"><?= count($expenses) ?> movimientos</p>
@@ -31,7 +37,7 @@ $net = $cur['net'];
     <article class="kpi">
       <h2>Resultado</h2>
       <p class="kpi-value <?= $net < 0 ? 'neg' : '' ?>"><?= $net < 0 ? '−' . money(-$net) : money($net) ?></p>
-      <p class="kpi-prev">Ingresos menos egresos</p>
+      <p class="kpi-prev">Ingresos + extra − egresos</p>
     </article>
   </section>
 

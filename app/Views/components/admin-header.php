@@ -1,7 +1,7 @@
 <?php
 /**
  * components/admin-header.php — Cabecera del panel: título, subtítulo y pestañas de las vistas.
- * Variables: $heading (string), $sub (string), $active ('resumen'|'turnos'|'fila'|'barberos'|'finanzas'|'egresos'|'servicios')
+ * Variables: $heading (string), $sub (string), $active ('resumen'|'turnos'|'fila'|'barberos'|'finanzas'|'ingresos'|'egresos'|'servicios')
  */
 $tabs = [
     'resumen'   => ['/admin', 'Resumen'],
@@ -9,6 +9,7 @@ $tabs = [
     'fila'      => ['/admin/fila', 'Fila'],
     'barberos'  => ['/admin/barberos', 'Barberos'],
     'finanzas'  => ['/admin/finanzas', 'Finanzas'],
+    'ingresos'  => ['/admin/ingresos', 'Ingreso extra'],
     'egresos'   => ['/admin/egresos', 'Egresos'],
     'servicios' => ['/admin/servicios', 'Servicios'],
 ];

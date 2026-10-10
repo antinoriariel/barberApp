@@ -51,6 +51,8 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 /* Editor de servicios (/admin/servicios). */
 .svc-edit { display: grid; gap: 12px; }
 .svc-edit.off { opacity: .65; }
+.admin > .admin-section-title { margin-top: 12px; scroll-margin-top: 16px; } /* Servicios / Productos en /admin/servicios */
+.admin > .svc-edit { scroll-margin-top: 16px; } /* #producto-N tras guardar */
 .svc-edit-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .svc-edit-head strong { font-size: 17px; }
 .svc-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } /* celular: 2 columnas (precio y duración juntos) */
@@ -111,11 +113,80 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .admin-table.sticky-first th:first-child { position: sticky; left: 0; z-index: 1; background: var(--paper); min-width: 120px; }
 .admin-table.sticky-first td { padding-left: 10px; padding-right: 10px; }
 
+/* Tabla .oneline (turnos del día, egresos): un renglón por fila en cualquier ancho; en celular se desliza de costado
+   con la primera columna (la hora) fija a la izquierda. */
+.admin-table.oneline :is(th, td):first-child { position: sticky; left: 0; z-index: 1; background: var(--paper); }
+
+/* Horario semanal de cada barbero (/admin/barberos). Mobile first: cada día ocupa dos renglones (día arriba,
+   desde/hasta abajo) y pasa a uno solo cuando la tarjeta tiene lugar (container query, no depende de la pantalla). */
+.hours-section { display: grid; gap: 12px; margin-top: 10px; }
+.hours-section-head { display: grid; gap: 2px; }
+.admin-section-title { font-family: var(--display); font-weight: 900; font-size: 24px; line-height: 1.1; }
+.hours-grid { display: grid; gap: 12px; }
+.hours-edit { container-type: inline-size; display: grid; gap: 12px; scroll-margin-top: 16px; }
+.hours-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; }
+.hours-head h3 { display: flex; align-items: center; font-size: 17px; font-weight: 800; }
+.hours-count { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.hours-form { display: grid; gap: 12px; }
+.hours-list { list-style: none; margin: 0; padding: 0; }
+.hours-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-areas: "day day day" "from sep to";
+  align-items: center; gap: 6px 8px; padding: 10px 0; border-top: 1px solid var(--line);
+}
+.hours-row:first-child { border-top: 0; padding-top: 0; }
+.hours-row:last-child { padding-bottom: 0; }
+.hours-row.off { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "day note"; }
+.hours-row.off .hours-day { color: var(--ink-soft); }
+.hours-day { grid-area: day; display: flex; align-items: center; gap: 10px; min-height: 32px; font-weight: 700; cursor: pointer; }
+.hours-row.off .hours-day { cursor: default; }
+.hours-day input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--blue); cursor: pointer; }
+.hours-time.from { grid-area: from; }
+.hours-time.to { grid-area: to; }
+.hours-sep { grid-area: sep; font-size: 13px; color: var(--ink-soft); }
+.hours-note { grid-area: note; font-size: 12px; font-weight: 600; color: var(--ink-soft); background: var(--lather); padding: 4px 10px; border-radius: 99px; }
+.hours-time {
+  width: 100%; min-width: 0; min-height: 44px; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 10px;
+  font: inherit; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--ink); background: var(--paper); color-scheme: inherit;
+}
+.hours-time:focus { border-color: var(--blue); outline: none; }
+/* Día sin atención: las horas quedan atenuadas (se guardan igual para cuando se vuelva a activar). */
+.hours-row:has(.hours-day input:not(:checked)) .hours-time { opacity: .4; }
+.hours-row:has(.hours-day input:not(:checked)) .hours-day { color: var(--ink-soft); }
+/* Días del local: un chip por día (tilde = abre). El texto Abierto/Cerrado sale del estado del checkbox, sin JS. */
+.shop-days { display: grid; gap: 12px; scroll-margin-top: 16px; }
+.shop-days h3 { font-size: 17px; font-weight: 800; }
+.day-chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.day-chip {
+  position: relative; display: grid; align-content: start; gap: 2px; min-height: 56px; padding: 10px 12px; border: 1.5px solid var(--line);
+  border-radius: 12px; cursor: pointer; background: var(--paper); transition: border-color .15s, background-color .15s;
+}
+.day-chip input { position: absolute; opacity: 0; pointer-events: none; }
+.day-chip-name { font-weight: 700; }
+.day-chip-state { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.day-chip-state::before { content: "Cerrado"; }
+.day-chip-hint { font-size: 11px; color: var(--ink-soft); }
+.day-chip:has(input:checked) { border-color: var(--blue); background: color-mix(in srgb, var(--blue) 10%, var(--paper)); }
+.day-chip:has(input:checked) .day-chip-state { color: var(--blue); }
+.day-chip:has(input:checked) .day-chip-state::before { content: "Abierto"; }
+.day-chip:has(input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
+.day-chip:has(input:not(:checked)) .day-chip-hint { display: none; }
+
+.hours-save { width: 100%; padding: 12px 14px; text-align: center; } /* celular: botón cómodo para el dedo */
+
+@container (min-width: 400px) {
+  .hours-row { grid-template-columns: minmax(0, 1fr) 7.5em auto 7.5em; grid-template-areas: "day from sep to"; }
+  .hours-row.off { grid-template-columns: minmax(0, 1fr) auto; }
+  .hours-time { min-height: 40px; }
+}
+
 /* ===== Tablet / escritorio ===== */
 @media (min-width: 720px) {
   .admin { padding-left: 24px; padding-right: 24px; gap: 16px; }
   .admin-nav .btn-small { flex: none; }
   .svc-fields { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .day-chips { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .hours-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); align-items: start; gap: 16px; }
+  .hours-save { width: auto; justify-self: end; padding: 9px 18px; }
   .chart { gap: 8px; }
   .chart li { grid-template-rows: auto 140px auto; }
   .chart-val { font-size: 11px; }

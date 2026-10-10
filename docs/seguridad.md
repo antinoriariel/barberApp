@@ -14,7 +14,8 @@ Estado de la seguridad de la app, qué se implementó y qué falta antes de prod
 | CSRF | Token por sesión (`csrf_field()`), verificado con `hash_equals`. Login y logout son **POST** y responden **419** sin token válido. | `Security`, `Controller::requireCsrf()` |
 | Contraseñas y sesiones | Argon2id, mínimo 8 y máximo 72 caracteres, mensaje de login único (con hash falso para igualar tiempos), sesiones en la tabla `sessions` revocables por usuario, recuperación con token de un solo uso guardado hasheado (vence en 1 h y cierra las sesiones abiertas). | `Support\Password`, `Services\Auth`, `Core\DbSessionHandler` |
 | Trazabilidad | Login, altas, recuperaciones, cierres de sesión y turnos en `audit_log` (sin contraseñas ni tokens). | `Services\Audit` |
-| Fuerza bruta de DNI | Máximo 5 fallos por DNI y 10 por IP cada 15 min → **429** con `Retry-After`. El contador de la IP no se reinicia con un login exitoso. | `Services\Auth`, `Core\RateLimiter` |
+| Fuerza bruta de DNI | Máximo 5 fallos por DNI y 10 por IP cada 15 min → **429** con `Retry-After`. El intento se reserva de forma atómica *antes* de verificar la contraseña, así que mandar contraseñas en paralelo no esquiva el límite. IPv6 se cuenta por prefijo /64. Un login exitoso no gasta cupo de la IP, pero tampoco borra sus fallos previos. | `Services\Auth`, `Core\RateLimiter` |
+| Entradas malformadas | Los campos de los formularios de cuenta se leen con `Request::string()`: un arreglo (`password[]=a&password[]=b`) se toma como vacío y cuenta como un solo intento; todo se corta en 1024 bytes. Contraseñas vacías, de más de 72 caracteres o con bytes nulos nunca se verifican (cuentan como fallo, con el mismo tiempo de respuesta). | `Core\Request`, `Services\Auth`, `Support\Password` |
 | Fijación de sesión | `session_regenerate_id(true)` al entrar, modo estricto de sesiones y rotación del token CSRF | `Session`, `Auth::attempt()` |
 | Robo de cookie de sesión | `HttpOnly`, `SameSite=Lax`, `Secure` bajo HTTPS, solo por cookie (no en URL), nombre propio `navaja_sid` | `Session::start()` |
 | Cierre de sesión incompleto | `logout` vacía la sesión, la destruye y expira la cookie | `Session::destroy()` |
@@ -82,7 +83,7 @@ curl -s -o /dev/null -w "%{http_code}\n" -d "dni=40123456" http://127.0.0.1:8000
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/logout                  # 405: logout ya no es GET
 ```
 
-Para ver el bloqueo por intentos: repetir 6 veces un `POST /login` con un DNI inexistente y un token válido → el sexto responde **429**.
+Para ver el bloqueo por intentos: repetir 5 veces un `POST /login` con un DNI inexistente y un token válido → cada fallo avisa cuántos intentos quedan y el quinto ya responde **429** con "Podés volver a intentar en N minutos" (y `Retry-After` en segundos). El conteo es el mismo exista o no el DNI, así que no revela cuentas.
 Los contadores viven en la tabla `login_attempts` (con `DB_DRIVER=files`, en `storage/ratelimit/`); para desbloquear en desarrollo se pueden borrar sin riesgo.
 
 Editor de servicios (`/admin/servicios`): solo administradores, POST con CSRF, validación en `Service::validate` y auditoría (`admin_service_update/create/hide/show`). Los turnos ya reservados conservan el precio con el que se tomaron.

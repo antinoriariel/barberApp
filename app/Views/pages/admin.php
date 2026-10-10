@@ -4,7 +4,7 @@
  * y resultado del mes, gráfico de 6 meses y desempeño de cada barbero en el día.
  *
  * Variables: $day/$prev/$next (YYYY-MM-DD), $isToday, $today/$yesterday (Dashboard::day), $dayExpenses (egresos del día),
- *            $dayNet (ingresos − egresos del día), $revenueDelta/$servedDelta/
+ *            $dayExtra (ingresos extra del día), $dayNet (ingresos + extra − egresos del día), $revenueDelta/$servedDelta/
  *            $monthDelta (Dashboard::delta), $verdict (string), $finance (Dashboard::finance, el último es el mes del día)
  */
 [$revClass, $revText] = delta_text($revenueDelta, true, 'ayer');
@@ -16,7 +16,7 @@ $maxRevenue = max(1, ...array_column($today['barbers'], 'revenue'));
 $before = array_column($yesterday['barbers'], null, 'id');
 ?>
 <main class="admin">
-  <?= partial('components/admin-header', ['heading' => 'Panel', 'sub' => ucfirst(date_es($day)) . ($isToday ? ' · hoy' : ''), 'active' => 'resumen']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Panel Administrativo', 'sub' => ucfirst(date_es($day)) . ($isToday ? ' · hoy' : ''), 'active' => 'resumen']) ?>
 
   <nav class="admin-nav" aria-label="Cambiar de día">
     <a class="btn-small" href="/admin?fecha=<?= e($prev) ?>">← Anterior</a>
@@ -45,9 +45,14 @@ $before = array_column($yesterday['barbers'], null, 'id');
       <p class="kpi-prev"><a class="link" href="/admin/egresos?mes=<?= e(substr($day, 0, 7)) ?>">Agregar gasto</a></p>
     </article>
     <article class="kpi">
+      <h2>Ingreso extra del día</h2>
+      <p class="kpi-value"><?= money($dayExtra) ?></p>
+      <p class="kpi-prev"><a class="link" href="/admin/ingresos?mes=<?= e(substr($day, 0, 7)) ?>">Agregar ingreso extra</a></p>
+    </article>
+    <article class="kpi">
       <h2>Resultado del día</h2>
       <p class="kpi-value <?= $dayNet < 0 ? 'neg' : '' ?>"><?= $dayNet < 0 ? '−' . money(-$dayNet) : money($dayNet) ?></p>
-      <p class="kpi-prev">Ingresos menos egresos</p>
+      <p class="kpi-prev">Ingresos + extra − egresos</p>
     </article>
   </section>
 
@@ -66,7 +71,7 @@ $before = array_column($yesterday['barbers'], null, 'id');
     <article class="kpi">
       <h2>Resultado del mes</h2>
       <p class="kpi-value <?= $cur['net'] < 0 ? 'neg' : '' ?>"><?= $cur['net'] < 0 ? '−' . money(-$cur['net']) : money($cur['net']) ?></p>
-      <p class="kpi-prev">Ingresos menos egresos</p>
+      <p class="kpi-prev">Ingresos + extra (<?= money($cur['extra']) ?>) − egresos</p>
     </article>
   </section>
 

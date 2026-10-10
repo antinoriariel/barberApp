@@ -27,6 +27,11 @@ final class Auth
 {
     public const ERROR_CREDENTIALS = 'DNI o contraseña incorrectos.';
     public const ERROR_THROTTLED = 'Demasiados intentos. Esperá unos minutos y probá de nuevo.';
+    /** Comienzo de todo mensaje de bloqueo (el del login agrega el tiempo de espera); el controlador lo usa para responder 429. */
+    public const THROTTLED_PREFIX = 'Demasiados intentos.';
+
+    /** Segundos de espera del último bloqueo de login (para la cabecera Retry-After); 0 si no hubo bloqueo. */
+    private static int $retryAfter = 0;
     public const ERROR_RESET_INVALID = 'El enlace no es válido o venció. Pedí uno nuevo.';
 
     /** Hash de relleno para igualar el tiempo de respuesta cuando el DNI no existe. */
@@ -42,48 +47,88 @@ final class Auth
     /**
      * Intenta iniciar sesión.
      *
-     *  1. Si la IP o el DNI ya superaron su límite de fallos → ERROR_THROTTLED (sin consultar contraseñas).
-     *  2. Cualquier fallo (formato, DNI inexistente, contraseña mala) suma un intento y devuelve ERROR_CREDENTIALS.
-     *  3. Éxito → se actualiza el hash si quedó viejo, se regenera el id de sesión (anti-fijación),
-     *     se rota el token CSRF y se guarda el DNI.
+     *  1. Reserva el intento ANTES de verificar: suma uno a la IP y al DNI de forma atómica y mira el número
+     *     que le tocó. Si pasa el límite → mensaje de bloqueo con el tiempo de espera (sin consultar
+     *     contraseñas) y devuelve la reserva. Así un bot que manda muchas contraseñas en paralelo no puede
+     *     colarlas todas entre "consultar" y "sumar": como mucho pasan tantas como el límite.
+     *  2. Cualquier fallo (formato, DNI inexistente, contraseña mala) deja el intento sumado y devuelve
+     *     ERROR_CREDENTIALS más cuántos quedan (el menor entre IP y DNI); si era el último, el de bloqueo.
+     *     El conteo es igual exista o no el DNI, así que no sirve para averiguar cuentas.
+     *  3. Éxito → borra el contador del DNI, devuelve la reserva de la IP (un login correcto no cuenta como
+     *     fallo, pero los fallos anteriores de esa IP siguen: un atacante no la reinicia con una cuenta propia),
+     *     actualiza el hash si quedó viejo, regenera el id de sesión (anti-fijación), rota el CSRF y guarda el DNI.
      *
-     * El contador de la IP no se borra al entrar bien: así un atacante no lo reinicia usando una cuenta propia.
+     * Contraseñas vacías, más largas que Password::MAX o con bytes nulos nunca se verifican (cuentan como fallo):
+     * el hash falso se calcula igual para que el tiempo de respuesta no delate nada.
      *
      * @return string|null null si salió bien, o el mensaje de error para mostrar
      */
     public static function attempt(string $rawDni, string $password, string $ip): ?string
     {
-        $dni = Dni::normalize($rawDni);
+        $dni = Dni::normalize(substr($rawDni, 0, 32));
         $window = (int) Config::get('security.login_window');
-        $ipKey = 'login:ip:' . $ip;
+        $ipKey = 'login:ip:' . RateLimiter::ipBucket($ip);
         $dniKey = 'login:dni:' . $dni;
         $validDni = Dni::isValid($dni);
+        $maxIp = (int) Config::get('security.login_max_attempts_ip');
+        $maxDni = (int) Config::get('security.login_max_attempts_dni');
+        self::$retryAfter = 0;
 
-        if (RateLimiter::tooMany($ipKey, (int) Config::get('security.login_max_attempts_ip'))
-            || ($validDni && RateLimiter::tooMany($dniKey, (int) Config::get('security.login_max_attempts_dni')))) {
-            return self::ERROR_THROTTLED;
+        $ipCount = RateLimiter::hit($ipKey, $window);
+        $dniCount = $validDni ? RateLimiter::hit($dniKey, $window) : 0;
+        if ($ipCount > $maxIp || $dniCount > $maxDni) {
+            // Ya estaba bloqueado: este pedido no cuenta, así no se consume el cupo de la IP (wifi compartido).
+            RateLimiter::release($ipKey);
+            if ($validDni) {
+                RateLimiter::release($dniKey);
+            }
+            Audit::log('login_throttled', null, mb_substr($dni, 0, 12));
+            return self::throttled($ipKey, $validDni ? $dniKey : null);
         }
 
-        $hash = $validDni && mb_strlen($password) <= Password::MAX ? User::passwordHash($dni) : null;
-        $ok = Password::verify($password, $hash ?? self::dummyHash()) && $hash !== null;
+        $usable = $validDni && $password !== '' && mb_strlen($password) <= Password::MAX && !str_contains($password, "\0");
+        $hash = $usable ? User::passwordHash($dni) : null;
+        $ok = Password::verify($usable ? $password : '', $hash ?? self::dummyHash()) && $hash !== null;
         $user = $ok ? User::find($dni) : null;
 
         if ($user === null) {
-            RateLimiter::hit($ipKey, $window);
-            if ($validDni) {
-                RateLimiter::hit($dniKey, $window);
-            }
             Audit::log('login_fail', null, mb_substr($dni, 0, 12));
-            return self::ERROR_CREDENTIALS;
+            $left = $maxIp - $ipCount;
+            if ($validDni) {
+                $left = min($left, $maxDni - $dniCount);
+            }
+            if ($left <= 0) {
+                return self::throttled($ipKey, $validDni ? $dniKey : null);
+            }
+            return self::ERROR_CREDENTIALS . ' ' . ($left === 1 ? 'Te queda 1 intento.' : "Te quedan $left intentos.");
         }
 
         if (Database::enabled() && Password::needsRehash($hash)) {
             User::setPassword($user->id, Password::hash($password));
         }
+        RateLimiter::release($ipKey);
         RateLimiter::clear($dniKey);
         self::startSession($user);
         Audit::log('login_ok', $user->id);
         return null;
+    }
+
+    /**
+     * Mensaje de bloqueo del login con el tiempo de espera: el mayor de las claves bloqueadas (IP y, si hay, DNI),
+     * redondeado a minutos hacia arriba. Lo guarda en $retryAfter para la cabecera HTTP.
+     */
+    private static function throttled(string $ipKey, ?string $dniKey): string
+    {
+        $wait = max(RateLimiter::retryAfter($ipKey), $dniKey !== null ? RateLimiter::retryAfter($dniKey) : 0);
+        self::$retryAfter = max(1, $wait);
+        $minutes = (int) ceil(self::$retryAfter / 60);
+        return self::THROTTLED_PREFIX . ' Podés volver a intentar en ' . ($minutes === 1 ? '1 minuto.' : "$minutes minutos.");
+    }
+
+    /** Segundos de espera del último bloqueo de login, o 0 si el último intento no quedó bloqueado. */
+    public static function retryAfter(): int
+    {
+        return self::$retryAfter;
     }
 
     /** Regenera la sesión (anti-fijación), rota el CSRF y la asocia al usuario. */
@@ -112,11 +157,11 @@ final class Auth
      */
     public static function register(string $rawDni, string $fullName, string $email, string $password, string $confirm, string $ip): ?string
     {
-        $key = 'register:ip:' . $ip;
-        if (RateLimiter::tooMany($key, (int) Config::get('security.register_max_attempts_ip'))) {
+        // Reserva atómica (ver attempt): en paralelo no se pueden colar más altas que el límite.
+        $key = 'register:ip:' . RateLimiter::ipBucket($ip);
+        if (RateLimiter::hit($key, (int) Config::get('security.login_window')) > (int) Config::get('security.register_max_attempts_ip')) {
             return self::ERROR_THROTTLED;
         }
-        RateLimiter::hit($key, (int) Config::get('security.login_window'));
 
         $dni = Dni::normalize($rawDni);
         $fullName = trim(preg_replace('/\s+/', ' ', $fullName));
@@ -158,11 +203,11 @@ final class Auth
      */
     public static function requestReset(string $email, string $ip): bool
     {
-        $key = 'reset:ip:' . $ip;
-        if (RateLimiter::tooMany($key, (int) Config::get('security.reset_max_attempts_ip'))) {
+        // Reserva atómica (ver attempt): en paralelo no se pueden mandar más mails que el límite.
+        $key = 'reset:ip:' . RateLimiter::ipBucket($ip);
+        if (RateLimiter::hit($key, (int) Config::get('security.login_window')) > (int) Config::get('security.reset_max_attempts_ip')) {
             return false;
         }
-        RateLimiter::hit($key, (int) Config::get('security.login_window'));
 
         $user = filter_var(trim($email), FILTER_VALIDATE_EMAIL) ? User::findByEmail(trim($email)) : null;
         if ($user === null || $user->email === '') {

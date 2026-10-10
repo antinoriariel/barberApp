@@ -7,6 +7,7 @@ use App\Core\Config;
 use App\Core\Database;
 use App\Models\Appointment;
 use App\Models\Barber;
+use App\Models\BarberHours;
 use App\Models\Schedule;
 use App\Models\Service;
 use App\Models\User;
@@ -128,6 +129,14 @@ final class Booking
         }
         if (Appointment::userHasOverlap($user, $start, $end)) {
             throw new BookingException('Ya tenés un turno que se superpone con ese horario.', 409);
+        }
+
+        // Solo cuentan los barberos que ese día atienden en esa franja (horario semanal de /admin/barberos).
+        $candidates = array_filter($candidates, static fn (Barber $b) => BarberHours::covers($b->key, $date, $start, $end));
+        if (!$candidates) {
+            throw new BookingException($barberSlug === 'any'
+                ? 'No hay barberos atendiendo en ese horario. Elegí otro.'
+                : 'Ese barbero no atiende en ese horario. Elegí otro día u horario.');
         }
 
         $barber = null;
