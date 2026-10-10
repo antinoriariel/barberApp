@@ -39,7 +39,8 @@ $defaultDate = substr($today, 0, 7) === $month ? $today : $month . '-01';
     <h2 id="exp-new">Agregar gasto</h2>
     <form method="post" action="/admin/egresos" class="svc-edit">
       <?= csrf_field() ?>
-      <div class="svc-fields">
+      <?php // .exp-fields: grilla pareja, 2 columnas en celular y 4 desde 720px; la observación ocupa todo el ancho. ?>
+      <div class="svc-fields exp-fields">
         <label>Fecha<input type="date" name="spent_on" value="<?= e($defaultDate) ?>" required></label>
         <label>Categoría
           <select name="category" required>
@@ -49,10 +50,10 @@ $defaultDate = substr($today, 0, 7) === $month ? $today : $month . '-01';
           </select>
         </label>
         <label>Monto ($)<input type="text" name="amount" inputmode="numeric" autocomplete="off" maxlength="11" pattern="\d{1,3}(\.\d{3})*" placeholder="Ej: 15.000" data-thousands required></label>
-        <label class="wide">Gasto<input type="text" name="description" maxlength="120" required placeholder="Ej: compra de navajas"></label>
+        <label>Gasto<input type="text" name="description" maxlength="120" required placeholder="Ej: compra de navajas"></label>
         <label class="wide">Observación<textarea name="notes" maxlength="255" rows="2" placeholder="Opcional: proveedor, nº de factura, detalle…"></textarea></label>
       </div>
-      <div class="svc-row-actions"><button class="btn-small" type="submit">Agregar gasto</button></div>
+      <div class="svc-row-actions"><button class="btn-small exp-submit" type="submit">Agregar gasto</button></div>
     </form>
   </section>
 
