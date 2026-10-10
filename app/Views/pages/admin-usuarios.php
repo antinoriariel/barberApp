@@ -16,6 +16,9 @@ $barberNames = [];
 foreach ($barbers as $b) {
     $barberNames[$b->key] = $b->name;
 }
+// Límites de contraseña del servidor (Password::validate): los usan los atributos y admin-users.js.
+$minPassword = (int) \App\Core\Config::get('auth.min_password');
+$maxPassword = \App\Support\Password::MAX;
 
 /**
  * Campos de rol de un formulario: selector de rol, ficha del equipo y secciones del panel (los tres cambian juntos).
@@ -32,7 +35,7 @@ $roleFields = static function (?User $account) use ($barbers): void {
           </select>
         </label>
         <label data-barber-only>Ficha del equipo
-          <select name="barber">
+          <select name="barber" data-validate="barber">
             <option value="">Elegí un barbero…</option>
 <?php foreach ($barbers as $b): ?>
             <option value="<?= e($b->id) ?>"<?= $account?->barberId === $b->key ? ' selected' : '' ?>><?= e($b->name) ?></option>
@@ -67,10 +70,11 @@ $roleFields = static function (?User $account) use ($barbers): void {
     <form method="post" action="/admin/usuarios/guardar" class="svc-edit" data-role-form>
       <?= csrf_field() ?>
       <div class="svc-fields">
-        <label>DNI<input type="text" name="dni" inputmode="numeric" autocomplete="off" maxlength="12" required placeholder="Ej: 30.123.456"></label>
-        <label>Contraseña<input type="password" name="password" autocomplete="new-password" minlength="<?= (int) \App\Core\Config::get('auth.min_password') ?>" maxlength="<?= \App\Support\Password::MAX ?>" required></label>
-        <label class="wide">Nombre y apellido<input type="text" name="full_name" maxlength="120" autocomplete="off" required placeholder="Ej: Juan Pérez"></label>
-        <label class="wide">Email<input type="email" name="email" maxlength="190" autocomplete="off" placeholder="Opcional: sirve para recuperar la contraseña"></label>
+        <label>DNI<input type="text" name="dni" inputmode="numeric" autocomplete="off" maxlength="10" required placeholder="Ej: 30.123.456"
+               pattern="\d{1,2}\.\d{3}\.\d{3}" title="7 u 8 números (los puntos se ponen solos)" data-validate="dni"></label>
+        <label>Contraseña<input type="password" name="password" autocomplete="new-password" minlength="<?= $minPassword ?>" maxlength="<?= $maxPassword ?>" required data-validate="password"></label>
+        <label class="wide">Nombre y apellido<input type="text" name="full_name" maxlength="120" autocomplete="off" autocapitalize="words" required placeholder="Ej: Juan Pérez" data-validate="name"></label>
+        <label class="wide">Email<input type="email" name="email" maxlength="190" autocomplete="off" placeholder="Opcional: sirve para recuperar la contraseña" data-validate="email"></label>
         <?php $roleFields(null); ?>
       </div>
       <div class="svc-row-actions"><button class="btn-small" type="submit">Agregar usuario</button></div>
@@ -120,8 +124,8 @@ $roleFields = static function (?User $account) use ($barbers): void {
           <?= csrf_field() ?>
           <input type="hidden" name="id" value="<?= $a->id ?>">
           <div class="svc-fields">
-            <label class="wide">Nombre y apellido<input type="text" name="full_name" value="<?= e($a->fullName) ?>" maxlength="120" required></label>
-            <label class="wide">Email<input type="email" name="email" value="<?= e($a->email) ?>" maxlength="190" placeholder="Opcional"></label>
+            <label class="wide">Nombre y apellido<input type="text" name="full_name" value="<?= e($a->fullName) ?>" maxlength="120" autocapitalize="words" required data-validate="name"></label>
+            <label class="wide">Email<input type="email" name="email" value="<?= e($a->email) ?>" maxlength="190" placeholder="Opcional" data-validate="email"></label>
             <?php $roleFields($a); ?>
           </div>
           <div class="svc-row-actions"><button class="btn-small" type="submit">Guardar</button></div>
@@ -134,8 +138,8 @@ $roleFields = static function (?User $account) use ($barbers): void {
           <?= csrf_field() ?>
           <input type="hidden" name="id" value="<?= $a->id ?>">
           <div class="svc-fields">
-            <label>Nueva contraseña<input type="password" name="password" autocomplete="new-password" minlength="<?= (int) \App\Core\Config::get('auth.min_password') ?>" maxlength="<?= \App\Support\Password::MAX ?>" required></label>
-            <label>Repetila<input type="password" name="confirm" autocomplete="new-password" maxlength="<?= \App\Support\Password::MAX ?>" required></label>
+            <label>Nueva contraseña<input type="password" name="password" autocomplete="new-password" minlength="<?= $minPassword ?>" maxlength="<?= $maxPassword ?>" required data-validate="password"></label>
+            <label>Repetila<input type="password" name="confirm" autocomplete="new-password" maxlength="<?= $maxPassword ?>" required data-validate="confirm"></label>
           </div>
           <div class="svc-row-actions"><button class="btn-small" type="submit">Cambiar contraseña</button></div>
         </form>

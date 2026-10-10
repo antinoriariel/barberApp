@@ -5,6 +5,9 @@
  *   panel) solo se muestran si el rol elegido es "barbero"; con otro rol el servidor los ignora de todas formas.
  * - El buscador [data-user-search] filtra las tarjetas por nombre, DNI (con o sin puntos) o email.
  * - Los botones con [data-confirm] (dar de baja) piden confirmación antes de enviar.
+ * - Los campos con [data-validate] se validan con las mismas reglas y mensajes que el servidor (User::validate,
+ *   Password::validate) al salir del campo y al enviar; el error se muestra debajo del campo. El DNI se formatea
+ *   con puntos mientras se escribe (30123456 → 30.123.456). El servidor vuelve a validar todo igual.
  */
 
 /** Muestra u oculta los campos de barbero de un formulario según su selector de rol. */
@@ -45,4 +48,132 @@ document.addEventListener('click', (event) => {
   if (button && !window.confirm(button.dataset.confirm)) {
     event.preventDefault();
   }
+});
+
+/* ===== Validación de los formularios (mismas reglas que el servidor) ===== */
+
+/** Deja solo dígitos (máx. 8) y los agrupa de a tres desde la derecha: punto de miles y de millones (igual que login.js). */
+function formatDni(raw) {
+  const digits = raw.replace(/\D/g, '').slice(0, 8);
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+/** Nombre y apellido: al menos dos palabras de letras (con tildes), apóstrofo, punto o guion; como User::validate. */
+const NAME_RE = /^[\p{L}\p{M}'.-]+( [\p{L}\p{M}'.-]+)+$/u;
+
+/**
+ * Reglas por tipo de campo: devuelven el mensaje de error o '' si el valor es válido.
+ * Los textos son los del servidor, así el mensaje es el mismo con o sin JS.
+ */
+const RULES = {
+  dni(input) {
+    return /^\d{7,8}$/.test(input.value.replace(/\D/g, '')) ? '' : 'Ingresá un DNI de 7 u 8 números.';
+  },
+  name(input) {
+    const value = input.value.trim().replace(/\s+/g, ' ');
+    if (!value.includes(' ')) return 'Ingresá nombre y apellido.';
+    if (value.length > 120) return 'El nombre es demasiado largo (máximo 120 caracteres).';
+    return NAME_RE.test(value) ? '' : 'Usá solo letras, espacios, apóstrofo, punto o guion.';
+  },
+  email(input) {
+    const value = input.value.trim();
+    if (value === '') return '';
+    return value.length <= 190 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? '' : 'Ingresá un email válido (o dejalo vacío).';
+  },
+  password(input) {
+    const min = input.minLength > 0 ? input.minLength : 8;
+    const max = input.maxLength > 0 ? input.maxLength : 72;
+    const len = [...input.value].length; // caracteres, no bytes (como mb_strlen)
+    if (input.value.includes('\0')) return 'La contraseña tiene caracteres no válidos.';
+    if (len < min) return `La contraseña debe tener al menos ${min} caracteres.`;
+    if (len > max) return `La contraseña es demasiado larga (máximo ${max} caracteres).`;
+    return '';
+  },
+  confirm(input) {
+    const password = input.form.querySelector('[data-validate="password"]');
+    if (input.value === '') return 'Repetí la contraseña.';
+    return password && input.value !== password.value ? 'Las contraseñas no coinciden.' : '';
+  },
+  barber(input) {
+    // Solo es obligatoria si el rol elegido es barbero (con otro rol el campo está oculto y el servidor lo ignora).
+    const role = input.form.querySelector('[data-role-select]');
+    if (!role || role.value !== 'barbero') return '';
+    return input.value !== '' ? '' : 'Elegí la ficha del equipo de ese barbero.';
+  },
+};
+
+let msgCount = 0;
+
+/** Muestra (o borra, si message es '') el error de un campo: texto debajo del campo, aria-invalid y validez nativa. */
+function showError(input, message) {
+  const label = input.closest('label') ?? input.parentElement;
+  let note = label.querySelector('.field-msg');
+  if (message && !note) {
+    note = document.createElement('small');
+    note.className = 'field-msg';
+    note.id = `field-msg-${(msgCount += 1)}`;
+    label.append(note);
+  }
+  if (note) {
+    note.textContent = message;
+    note.hidden = message === '';
+  }
+  input.setCustomValidity(message);
+  if (message) {
+    input.setAttribute('aria-invalid', 'true');
+    input.setAttribute('aria-describedby', note.id);
+  } else {
+    input.removeAttribute('aria-invalid');
+    input.removeAttribute('aria-describedby');
+  }
+}
+
+/** Valida un campo con su regla y muestra el resultado; devuelve true si es válido. */
+function check(input) {
+  const rule = RULES[input.dataset.validate];
+  const message = rule ? rule(input) : '';
+  showError(input, message);
+  return message === '';
+}
+
+document.querySelectorAll('form').forEach((form) => {
+  const fields = [...form.querySelectorAll('[data-validate]')];
+  if (fields.length === 0) return;
+  // Con JS se muestran estos mensajes en lugar de los globos del navegador (sin JS quedan los nativos).
+  form.noValidate = true;
+
+  fields.forEach((input) => {
+    const type = input.dataset.validate;
+    // Al salir del campo: se normaliza (espacios de más, email sin espacios) y se valida si escribió algo.
+    input.addEventListener('blur', () => {
+      if (type === 'name') input.value = input.value.trim().replace(/\s+/g, ' ');
+      if (type === 'email') input.value = input.value.trim();
+      if (input.value !== '' || input.hasAttribute('aria-invalid')) check(input);
+    });
+    // Mientras escribe: el DNI se formatea con puntos y, si el campo ya marcaba error, se revalida para sacarlo apenas se corrige.
+    input.addEventListener('input', () => {
+      if (type === 'dni') input.value = formatDni(input.value);
+      if (input.hasAttribute('aria-invalid')) check(input);
+      if (type === 'password') {
+        const confirm = form.querySelector('[data-validate="confirm"]');
+        if (confirm?.value) check(confirm);
+      }
+    });
+    if (input.tagName === 'SELECT') input.addEventListener('change', () => check(input));
+  });
+
+  // Al cambiar el rol, la ficha de barbero pasa a ser obligatoria (o deja de serlo): se recalcula su error.
+  form.querySelector('[data-role-select]')?.addEventListener('change', () => {
+    const barber = form.querySelector('[data-validate="barber"]');
+    if (barber?.hasAttribute('aria-invalid')) check(barber);
+  });
+
+  // Al enviar se validan todos; si alguno falla no se envía y el foco va al primero con error.
+  form.addEventListener('submit', (event) => {
+    const invalid = fields.filter((input) => !check(input));
+    if (invalid.length > 0) {
+      event.preventDefault();
+      invalid[0].focus();
+    }
+  });
 });
