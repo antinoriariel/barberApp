@@ -1,0 +1,66 @@
+/* Página de error (404, 500…): código gigante, poste de barbero como "0" y línea de corte con tijera. */
+
+/* ========== Página de error ========== */
+body.error-page { background: var(--dark); min-height: 100dvh; }
+.error {
+  min-height: 100dvh; max-width: 480px; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 28px;
+  padding: calc(28px + env(safe-area-inset-top, 0px)) 16px calc(24px + var(--safe-b));
+  color: #fff;
+}
+.error-card {
+  flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
+  min-width: 0; text-align: center; padding: 34px 20px; border-radius: 12px; overflow: hidden;
+  background: var(--lather); color: var(--ink);
+}
+
+/* Código: "4 [poste] 4" en la tipografía de títulos */
+.error-code {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-family: var(--display); font-weight: 900; line-height: .85;
+  font-size: clamp(88px, 30vw, 150px); letter-spacing: -2px; color: var(--ink);
+}
+
+/* Poste de barbero: tubo con rayas rojas y blancas que suben, tapas oscuras arriba y abajo */
+.error-pole {
+  position: relative; width: .42em; height: .78em; border-radius: 99px;
+  background: var(--dark); padding: .07em .045em; box-shadow: 0 0 0 3px var(--line);
+}
+.error-pole::before, .error-pole::after { /* bolitas de las tapas */
+  content: ""; position: absolute; left: 50%; width: .16em; height: .06em;
+  transform: translateX(-50%); border-radius: 99px; background: var(--red);
+}
+.error-pole::before { top: -.05em; }
+.error-pole::after { bottom: -.05em; }
+.error-pole-stripes {
+  display: block; width: 100%; height: 100%; border-radius: 99px;
+  /* Tile cuadrado con 4 franjas a 45°: empalma sin costuras en ambos ejes, así el bucle no salta */
+  background: linear-gradient(45deg, var(--red) 25%, #fff 25% 50%, var(--red) 50% 75%, #fff 75%);
+  background-size: .24em .24em;
+  animation: error-pole-spin 1.4s linear infinite;
+}
+@keyframes error-pole-spin { to { background-position: 0 -.24em; } }
+
+/* Línea de corte: puntos como los tickets, con la tijera "cortando" */
+.error-cut {
+  position: relative; width: 100%; margin: 26px 0 22px;
+  border-top: 2px dashed var(--line); color: var(--red);
+}
+.error-scissors {
+  position: absolute; top: 50%; left: 18%; width: 26px; height: 26px;
+  transform: translate(-50%, -50%) rotate(180deg);
+  background: var(--lather); padding: 2px;
+  animation: error-snip 3.2s ease-in-out infinite alternate;
+}
+@keyframes error-snip { to { left: 82%; } }
+
+.error-card h1 { font-family: var(--display); font-weight: 900; font-size: clamp(26px, 8vw, 34px); line-height: 1; text-transform: uppercase; overflow-wrap: anywhere; }
+.error-message { margin-top: 10px; max-width: 32ch; color: var(--ink-soft); font-size: 16px; }
+.error-actions { width: 100%; margin-top: 26px; display: grid; gap: 14px; }
+.error-link { color: var(--red); font-weight: 700; font-size: 15px; }
+.error-link:hover { text-decoration: underline; }
+.error-foot { text-align: center; color: var(--ink-soft); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+
+@media (prefers-reduced-motion: reduce) {
+  .error-pole-stripes, .error-scissors { animation: none; }
+}

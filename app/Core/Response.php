@@ -28,8 +28,10 @@ final class Response
         http_response_code($status);
         header('Cache-Control: no-store');
         echo View::page('pages/error', [
-            'title'   => $heading . ' · ' . Config::get('app.name'),
-            'heading' => $heading,
+            'title'     => $heading . ' · ' . Config::get('app.name'),
+            'bodyClass' => 'error-page',
+            'status'    => $status,
+            'heading'   => $heading,
             'message' => $message,
         ]);
         exit;
