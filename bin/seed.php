@@ -48,9 +48,16 @@ foreach (Data::get('barbers') as $b) {
         [$b['id'], $b['name'], $b['role'], $b['years'], str_replace(',', '.', $b['rating']), $b['tone'], $b['photo'] ?? null]);
 }
 
+// Productos: INSERT IGNORE porque el administrador los edita en /admin/servicios (no se pisan precios ni nombres).
+foreach (Data::get('products') as $i => $p) {
+    $run('INSERT IGNORE INTO products (slug, name, description, price, sort_order) VALUES (?, ?, ?, ?, ?)',
+        [$p['id'], $p['name'], $p['description'], $p['price'], $i]);
+}
+
 $schedule = Data::get('schedule');
 for ($w = 0; $w <= 6; $w++) {
-    $run('INSERT INTO opening_hours (weekday, is_open) VALUES (?, ?) ON DUPLICATE KEY UPDATE is_open = VALUES(is_open)',
+    // INSERT IGNORE: solo completa los días que faltan; los días abiertos/cerrados se eligen en /admin/barberos.
+    $run('INSERT IGNORE INTO opening_hours (weekday, is_open) VALUES (?, ?)',
         [$w, in_array($w, $schedule['closed_weekdays'], true) ? 0 : 1]);
 }
 foreach ($schedule['slots'] as [$time]) {

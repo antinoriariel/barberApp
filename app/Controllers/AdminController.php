@@ -8,9 +8,14 @@ use App\Core\Controller;
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
+use App\Models\Appointment;
+use App\Models\Barber;
+use App\Models\BarberHours;
 use App\Models\Dashboard;
 use App\Models\Expense;
+use App\Models\Product;
 use App\Models\QueueTicket;
+use App\Models\Schedule;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\Audit;
@@ -111,7 +116,10 @@ final class AdminController extends Controller
         ]);
     }
 
-    /** GET /admin/barberos?fecha=YYYY-MM-DD — cortes atendidos por barbero en la semana (lunes a domingo) de esa fecha. */
+    /**
+     * GET /admin/barberos?fecha=YYYY-MM-DD — cortes atendidos por barbero en la semana (lunes a domingo) de esa fecha
+     * y, debajo, el horario semanal de cada barbero (lo que usa la agenda para ofrecer turnos).
+     */
     public function barbers(Request $request): void
     {
         $user = $this->requireAdmin();
@@ -125,7 +133,59 @@ final class AdminController extends Controller
             'prev'      => date('Y-m-d', strtotime($week['from'] . ' -7 days')),
             'next'      => date('Y-m-d', strtotime($week['from'] . ' +7 days')),
             'isCurrent' => $week['from'] === Dashboard::week(date('Y-m-d'))['from'],
+            'team'      => array_map(static fn (Barber $b) => ['barber' => $b, 'hours' => BarberHours::week($b->key)], Barber::all()),
+            'weekdays'  => Schedule::weekdayStatus(),
+            'flash'     => (string) $request->query('ok', ''),
+            'error'     => (string) $request->query('error', ''),
+            'stranded'  => (int) $request->query('turnos', 0),
         ]);
+    }
+
+    /**
+     * POST /admin/barberos/dias — campo: open[] (weekdays 0–6 que abre el local). Los que no vienen quedan cerrados.
+     * Si un día recién cerrado ya tenía turnos reservados no se cancelan: se avisa cuántos hay para que el admin decida.
+     */
+    public function saveShopDays(Request $request): void
+    {
+        $user = $this->requireAdmin();
+        $this->requireCsrf($request);
+
+        $input = $request->input('open', []);
+        $open = array_values(array_unique(array_filter(
+            array_map('intval', is_array($input) ? array_filter($input, 'is_string') : []),
+            static fn (int $w) => $w >= 0 && $w <= 6
+        )));
+        Schedule::saveOpenWeekdays($open);
+        Audit::log('admin_shop_days', $user->id, 'abre: ' . (implode(',', $open) ?: 'ninguno'));
+
+        $stranded = Appointment::countUpcomingOnWeekdays(array_values(array_diff(range(0, 6), $open)));
+        $this->redirect('/admin/barberos?ok=dias' . ($stranded > 0 ? '&turnos=' . $stranded : '') . '#dias-local');
+    }
+
+    /**
+     * POST /admin/barberos/horario — campos: barber (slug), days[weekday][works|from|to]. Guarda el horario semanal
+     * de un barbero; solo se aceptan los días en que el local da turnos (los demás no se usan para reservar).
+     * Los turnos ya reservados no se tocan: el cambio vale para las reservas nuevas.
+     */
+    public function saveBarberHours(Request $request): void
+    {
+        $user = $this->requireAdmin();
+        $this->requireCsrf($request);
+
+        $barber = Barber::find((string) $request->input('barber', ''));
+        if ($barber === null) {
+            $this->redirect('/admin/barberos?error=' . rawurlencode('Ese barbero no existe.'));
+        }
+        $bookable = array_keys(array_filter(Schedule::weekdayStatus(), static fn (string $s) => $s === 'open'));
+        $input = $request->input('days');
+        $input = is_array($input) ? array_intersect_key($input, array_flip($bookable)) : null;
+        [$days, $error] = BarberHours::validate($input);
+        if ($error !== null) {
+            $this->redirect('/admin/barberos?error=' . rawurlencode($barber->firstName() . ': ' . $error) . '#horario-' . rawurlencode($barber->id));
+        }
+        BarberHours::save($barber->key, $days);
+        Audit::log('admin_barber_hours', $user->id, 'barbero ' . $barber->key);
+        $this->redirect('/admin/barberos?ok=1#horario-' . rawurlencode($barber->id));
     }
 
     /** GET /admin/finanzas?mes=YYYY-MM — ingresos vs egresos del mes y gráfico de 6 meses (los egresos se cargan en /admin/egresos). */
@@ -279,6 +339,7 @@ final class AdminController extends Controller
             'user'      => $user,
             'active'    => 'servicios',
             'services'  => Service::allForAdmin(),
+            'products'  => Product::allForAdmin(),
             'flash'     => (string) $request->query('ok', ''),
             'error'     => (string) $request->query('error', ''),
         ]);
@@ -326,5 +387,45 @@ final class AdminController extends Controller
             Audit::log($active ? 'admin_service_show' : 'admin_service_hide', $user->id, 'servicio ' . $id);
         }
         $this->redirect('/admin/servicios?ok=1');
+    }
+
+    /** POST /admin/productos/guardar — edita un producto existente (id) o crea uno nuevo (sin id): nombre, descripción y precio. */
+    public function saveProduct(Request $request): void
+    {
+        $user = $this->requireAdmin();
+        $this->requireCsrf($request);
+
+        $id = (int) $request->input('id', 0);
+        [$data, $error] = Product::validate([
+            'name' => $request->input('name'), 'description' => $request->input('description'), 'price' => $request->input('price'),
+        ]);
+        if ($error !== null) {
+            $this->redirect('/admin/servicios?error=' . rawurlencode($error) . '#productos');
+        }
+        if ($id > 0) {
+            if (!Product::update($id, $data)) {
+                $this->redirect('/admin/servicios?error=' . rawurlencode('Ese producto no existe.') . '#productos');
+            }
+            Audit::log('admin_product_update', $user->id, 'producto ' . $id . ' · $' . $data['price']);
+        } else {
+            $id = Product::create($data);
+            Audit::log('admin_product_create', $user->id, 'producto ' . $id . ' · ' . $data['name']);
+        }
+        $this->redirect('/admin/servicios?ok=1#producto-' . $id);
+    }
+
+    /** POST /admin/productos/estado — oculta ('0') o muestra ('1') un producto en la app. */
+    public function toggleProduct(Request $request): void
+    {
+        $user = $this->requireAdmin();
+        $this->requireCsrf($request);
+
+        $id = (int) $request->input('id', 0);
+        $active = $request->input('active') === '1';
+        if ($id > 0) {
+            Product::setActive($id, $active);
+            Audit::log($active ? 'admin_product_show' : 'admin_product_hide', $user->id, 'producto ' . $id);
+        }
+        $this->redirect('/admin/servicios?ok=1#producto-' . $id);
     }
 }

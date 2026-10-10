@@ -48,6 +48,8 @@ return static function (Router $router): void {
     $router->get('/admin/turnos', [AdminController::class, 'appointments']);
     $router->post('/admin/turnos/estado', [AdminController::class, 'mark']);
     $router->get('/admin/barberos', [AdminController::class, 'barbers']);
+    $router->post('/admin/barberos/horario', [AdminController::class, 'saveBarberHours']);
+    $router->post('/admin/barberos/dias', [AdminController::class, 'saveShopDays']);
     $router->get('/admin/finanzas', [AdminController::class, 'finance']);
     $router->get('/admin/egresos', [AdminController::class, 'expenses']);
     $router->post('/admin/egresos', [AdminController::class, 'saveExpense']);
@@ -55,6 +57,8 @@ return static function (Router $router): void {
     $router->get('/admin/servicios', [AdminController::class, 'services']);
     $router->post('/admin/servicios/guardar', [AdminController::class, 'saveService']);
     $router->post('/admin/servicios/estado', [AdminController::class, 'toggleService']);
+    $router->post('/admin/productos/guardar', [AdminController::class, 'saveProduct']);
+    $router->post('/admin/productos/estado', [AdminController::class, 'toggleProduct']);
     $router->get('/admin/fila', [AdminController::class, 'queue']);
     $router->post('/admin/fila/llamar', [AdminController::class, 'queueCall']);
     $router->post('/admin/fila/ausente', [AdminController::class, 'queueNoShow']);
