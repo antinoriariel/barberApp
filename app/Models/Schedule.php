@@ -31,6 +31,33 @@ final class Schedule
         return array_values(array_diff(range(0, 6), Data::get('schedule')['closed_weekdays']));
     }
 
+    /**
+     * Estado de cada día de la semana (0 = domingo): 'open' se dan turnos, 'walkin' abre solo por orden de llegada,
+     * 'closed' el local no abre. Lo usa /admin/barberos para saber qué días tiene sentido configurar.
+     * @return array<int, string>
+     */
+    public static function weekdayStatus(): array
+    {
+        $open = self::openWeekdays();
+        $walkIn = (array) Config::get('booking.walk_in_weekdays');
+        return array_map(static fn (int $w) => !in_array($w, $open, true) ? 'closed' : (in_array($w, $walkIn, true) ? 'walkin' : 'open'), range(0, 6));
+    }
+
+    /**
+     * Guarda qué días de la semana abre el local (opening_hours): $open = lista de weekdays (0 = domingo) abiertos;
+     * el resto queda cerrado. Lo usa /admin/barberos. Solo con base de datos.
+     * @param int[] $open
+     */
+    public static function saveOpenWeekdays(array $open): void
+    {
+        Database::transaction(function () use ($open) {
+            for ($w = 0; $w <= 6; $w++) {
+                Database::execute('INSERT INTO opening_hours (weekday, is_open) VALUES (?, ?) ON DUPLICATE KEY UPDATE is_open = VALUES(is_open)',
+                    [$w, in_array($w, $open, true) ? 1 : 0]);
+            }
+        });
+    }
+
     /** Fechas ISO de cierre especial (feriados) entre dos fechas ISO, ambas inclusive. Vacío sin base de datos. */
     private static function closures(string $from, string $to): array
     {
@@ -100,8 +127,9 @@ final class Schedule
      * Horarios de un día con su disponibilidad real.
      *
      * Un horario está libre si el local abre ese día, todavía no pasó, el servicio (de $minutes) termina antes
-     * del cierre y hay al menos un barbero sin turnos que se superpongan: el indicado en $barberSlug o, si es
-     * null / 'any', cualquiera del equipo. Con driver files devuelve los horarios fijos de data/schedule.php.
+     * del cierre y hay al menos un barbero que ese día atiende en esa franja (BarberHours) y no tiene turnos que se
+     * superpongan: el indicado en $barberSlug o, si es null / 'any', cualquiera del equipo. Con driver files
+     * devuelve los horarios fijos de data/schedule.php.
      *
      * @return array<int, array{time: string, free: bool}>
      */
@@ -119,6 +147,13 @@ final class Schedule
             $one = Barber::find($barberSlug);
             $barbers = $one ? [$one->key] : [];
         }
+        // Franja de cada barbero ese día (una consulta por barbero, no por horario); quien no atiende queda afuera.
+        $windows = [];
+        foreach ($barbers as $barberKey) {
+            if ($open && ($window = BarberHours::window($barberKey, $date)) !== null) {
+                $windows[$barberKey] = $window;
+            }
+        }
 
         $now = time();
         $closing = $open ? strtotime($date . ' ' . Config::get('booking.closing_time')) : 0;
@@ -128,7 +163,10 @@ final class Schedule
             $end = $start + $minutes * 60;
             $free = false;
             if ($open && $start > $now && $end <= $closing) {
-                foreach ($barbers as $barberKey) {
+                foreach ($windows as $barberKey => [$from, $to]) {
+                    if ($start < $from || $end > $to) {
+                        continue;
+                    }
                     $taken = array_filter($busy, fn (array $b) => $b['barber_id'] === $barberKey && $b['start'] < $end && $b['end'] > $start);
                     if (!$taken) {
                         $free = true;

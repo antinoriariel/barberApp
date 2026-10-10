@@ -9,14 +9,19 @@ $first = explode(' ', $barber->name)[0];
 ?>
 <li class="barber<?= $barber->photo ? ' has-photo' : '' ?><?= $barber->isTopRated() ? ' is-top' : '' ?>" style="--tone: <?= e(css_color($barber->tone)) ?>">
   <div class="barber-top">
-    <span class="rating"><?= icon('star') ?><?= e($barber->rating) ?></span>
+    <?php // Ficha recién creada desde /admin/usuarios: sin valoración ni años cargados, se presenta como "Nuevo". ?>
+    <span class="rating"><?php if ($barber->isNew()): ?>Nuevo<?php else: ?><?= icon('star') ?><?= e($barber->rating) ?><?php endif; ?></span>
   </div>
   <span class="avatar barber-avatar"><?= initials($barber->name) ?></span>
   <div class="barber-body">
     <div class="barber-info">
       <h2><?= e($barber->name) ?></h2>
       <p class="barber-role"><?= e($barber->role) ?></p>
-      <p class="barber-years"><b><?= $barber->years ?></b> años de oficio</p>
+      <?php if ($barber->years > 0): ?>
+        <p class="barber-years"><b><?= $barber->years ?></b> años de oficio</p>
+      <?php else: ?>
+        <p class="barber-years">Nuevo en el equipo</p>
+      <?php endif; ?>
       <?php if ($barber->photo): ?>
         <img class="barber-photo" src="<?= e($barber->photo) ?>" alt="Ilustración de <?= e($barber->name) ?>" width="128" height="128" loading="lazy" decoding="async">
       <?php endif; ?>

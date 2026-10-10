@@ -149,11 +149,7 @@ final class Service
     /** Crea un servicio activo al final del catálogo; el slug sale del nombre y se hace único con un sufijo. */
     public static function create(array $d): int
     {
-        // strtr en vez de iconv//TRANSLIT: su resultado cambia según la plataforma (en Windows deja "n~").
-        $ascii = strtolower(strtr($d['name'], ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n',
-                                               'Á' => 'a', 'É' => 'e', 'Í' => 'i', 'Ó' => 'o', 'Ú' => 'u', 'Ü' => 'u', 'Ñ' => 'n']));
-        $base = trim((string) preg_replace('/[^a-z0-9]+/', '-', $ascii), '-');
-        $base = substr($base !== '' ? $base : 'servicio', 0, 24);
+        $base = slugify($d['name'], 'servicio');
         $slug = $base;
         for ($n = 2; Database::selectOne('SELECT id FROM services WHERE slug = ?', [$slug]); $n++) {
             $slug = $base . '-' . $n;
