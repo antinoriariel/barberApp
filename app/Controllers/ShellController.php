@@ -26,14 +26,15 @@ use App\Models\Shop;
 final class ShellController extends Controller
 {
     /**
-     * GET / — exige sesión (si no hay, redirige a /login; los administradores van a /admin) y renderiza la app con todos los datos.
+     * GET / — exige sesión (si no hay, redirige a /login; el personal va a /admin) y renderiza la app con todos los datos.
      * Las claves del arreglo son las variables que reciben pages/shell y sus pantallas.
      */
     public function index(Request $request): void
     {
         $user = $this->requireLogin();
-        // El administrador solo ve su panel, no la app de clientes (el panel necesita la base de datos).
-        if ($user->isAdmin && \App\Core\Database::enabled()) {
+        // El personal (administrador o barbero) solo ve su panel, no la app de clientes: /admin manda al barbero a
+        // "Mi semana" o a la primera sección que tenga habilitada (el panel necesita la base de datos).
+        if ($user->hasPanel() && \App\Core\Database::enabled()) {
             $this->redirect('/admin');
         }
         $services = Service::all();
