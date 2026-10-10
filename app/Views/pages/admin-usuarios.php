@@ -60,11 +60,16 @@ $roleFields = static function (?User $account): void {
 <main class="admin">
   <?= partial('components/admin-header', ['heading' => 'Usuarios', 'sub' => count($accounts) . ' cuentas · altas, bajas, roles y contraseñas', 'sections' => $user->panelSections(), 'active' => 'usuarios']) ?>
 
-  <?php if ($flash === '1'): ?><p class="admin-flash ok" role="status">Cambios guardados.</p><?php endif; ?>
-  <?php if ($flash === 'clave'): ?><p class="admin-flash ok" role="status">Contraseña cambiada. Se cerraron las sesiones abiertas de esa cuenta.</p><?php endif; ?>
-  <?php if ($flash === 'borrado'): ?><p class="admin-flash ok" role="status">Cuenta eliminada.</p><?php endif; ?>
-  <?php if ($stranded > 0): ?><p class="admin-flash bad" role="alert">Ojo: ese barbero tiene <?= $stranded ?> turno<?= $stranded === 1 ? '' : 's' ?> reservado<?= $stranded === 1 ? '' : 's' ?> a futuro. Ya no aparece en la app, pero esos turnos no se cancelan solos: revisalos en Turnos.</p><?php endif; ?>
-  <?php if ($error !== ''): ?><p class="admin-flash bad" role="alert"><?= e($error) ?></p><?php endif; ?>
+  <?php // #aviso: todos los formularios de la página vuelven acá (ver AdminController), así el resultado queda a la vista. ?>
+  <?php if ($flash !== '' || $stranded > 0 || $error !== ''): ?>
+  <div class="admin-flashes" id="aviso">
+    <?php if ($flash === '1'): ?><p class="admin-flash ok" role="status">Cambios guardados.</p><?php endif; ?>
+    <?php if ($flash === 'clave'): ?><p class="admin-flash ok" role="status">Contraseña cambiada. Se cerraron las sesiones abiertas de esa cuenta.</p><?php endif; ?>
+    <?php if ($flash === 'borrado'): ?><p class="admin-flash ok" role="status">Cuenta eliminada.</p><?php endif; ?>
+    <?php if ($stranded > 0): ?><p class="admin-flash bad" role="alert">Ojo: ese barbero tiene <?= $stranded ?> turno<?= $stranded === 1 ? '' : 's' ?> reservado<?= $stranded === 1 ? '' : 's' ?> a futuro. Ya no aparece en la app, pero esos turnos no se cancelan solos: revisalos en Turnos.</p><?php endif; ?>
+    <?php if ($error !== ''): ?><p class="admin-flash bad" role="alert"><?= e($error) ?></p><?php endif; ?>
+  </div>
+  <?php endif; ?>
 
   <section class="admin-card svc-edit user-card" id="usuario-nuevo" aria-labelledby="user-new">
     <h2 id="user-new">Agregar usuario</h2>

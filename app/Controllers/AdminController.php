@@ -558,10 +558,13 @@ final class AdminController extends Controller
         ]);
     }
 
-    /** Vuelve a /admin/usuarios con un error, anclado a la cuenta si la hay (#usuario-N) o al alta (#usuario-nuevo). */
-    private function usersError(string $message, int $id = 0): never
+    /**
+     * Vuelve a /admin/usuarios con un error. Como los avisos de guardado, se ancla a #aviso (arriba de todo) para que
+     * el mensaje quede a la vista después de enviar cualquier formulario de la página.
+     */
+    private function usersError(string $message): never
     {
-        $this->redirect('/admin/usuarios?error=' . rawurlencode($message) . ($id > 0 ? '#usuario-' . $id : '#usuario-nuevo'));
+        $this->redirect('/admin/usuarios?error=' . rawurlencode($message) . '#aviso');
     }
 
     /**
@@ -588,14 +591,14 @@ final class AdminController extends Controller
             'password' => $request->input('password'),
         ], $target === null);
         if ($error !== null) {
-            $this->usersError($error, $id);
+            $this->usersError($error);
         }
         if ($target?->isAdmin && !$data['is_admin']) {
             if ($target->id === $user->id) {
-                $this->usersError('No podés quitarte tu propio rol de administrador.', $id);
+                $this->usersError('No podés quitarte tu propio rol de administrador.');
             }
             if ($target->active && User::activeAdminCount() <= 1) {
-                $this->usersError('Tiene que quedar al menos un administrador activo.', $id);
+                $this->usersError('Tiene que quedar al menos un administrador activo.');
             }
         }
 
@@ -606,7 +609,7 @@ final class AdminController extends Controller
             $id = User::saveFromAdmin($target, $data, $target === null ? Password::hash($data['password']) : null);
         } catch (\PDOException $e) {
             if ($e->getCode() === '23000') {
-                $this->usersError('Ya existe una cuenta con ese DNI o email.', $target === null ? 0 : $id);
+                $this->usersError('Ya existe una cuenta con ese DNI o email.');
             }
             throw $e;
         }
@@ -616,7 +619,7 @@ final class AdminController extends Controller
         } else {
             Audit::log('admin_user_update', $user->id, 'usuario ' . $id . ' · ' . $role);
         }
-        $this->redirect('/admin/usuarios?ok=1' . ($stranded > 0 ? '&turnos=' . $stranded : '') . '#usuario-' . $id);
+        $this->redirect('/admin/usuarios?ok=1' . ($stranded > 0 ? '&turnos=' . $stranded : '') . '#aviso');
     }
 
     /**
@@ -636,10 +639,10 @@ final class AdminController extends Controller
         }
         $password = $request->string('password');
         if ($error = Password::validate($password)) {
-            $this->usersError($error, $id);
+            $this->usersError($error);
         }
         if (!hash_equals($password, $request->string('confirm'))) {
-            $this->usersError('Las contraseñas no coinciden.', $id);
+            $this->usersError('Las contraseñas no coinciden.');
         }
         Database::transaction(function () use ($target, $password, $user) {
             User::setPassword($target->id, Password::hash($password));
@@ -649,7 +652,7 @@ final class AdminController extends Controller
             }
         });
         Audit::log('admin_user_password', $user->id, 'usuario ' . $id);
-        $this->redirect('/admin/usuarios?ok=clave#usuario-' . $id);
+        $this->redirect('/admin/usuarios?ok=clave#aviso');
     }
 
     /**
@@ -672,13 +675,13 @@ final class AdminController extends Controller
         }
         if (!$active) {
             if ($target->id === $user->id) {
-                $this->usersError('No podés darte de baja a vos mismo.', $id);
+                $this->usersError('No podés darte de baja a vos mismo.');
             }
             if ($target->isAdmin && $target->active && User::activeAdminCount() <= 1) {
-                $this->usersError('Tiene que quedar al menos un administrador activo.', $id);
+                $this->usersError('Tiene que quedar al menos un administrador activo.');
             }
         } elseif ($target->barberId !== null && User::barberTaken($target->barberId, $id)) {
-            $this->usersError('Su ficha del equipo ya está vinculada a otra cuenta activa: cambiale el rol antes de reactivarla.', $id);
+            $this->usersError('Su ficha del equipo ya está vinculada a otra cuenta activa: cambiale el rol antes de reactivarla.');
         }
         $stranded = !$active && $target->barberId !== null ? Barber::upcomingCount($target->barberId) : 0;
         Database::transaction(function () use ($id, $active, $target) {
@@ -691,7 +694,7 @@ final class AdminController extends Controller
             DbSessionHandler::revokeUser($id);
         }
         Audit::log($active ? 'admin_user_enable' : 'admin_user_disable', $user->id, 'usuario ' . $id);
-        $this->redirect('/admin/usuarios?ok=1' . ($stranded > 0 ? '&turnos=' . $stranded : '') . '#usuario-' . $id);
+        $this->redirect('/admin/usuarios?ok=1' . ($stranded > 0 ? '&turnos=' . $stranded : '') . '#aviso');
     }
 
     /**
@@ -710,13 +713,13 @@ final class AdminController extends Controller
             $this->usersError('Esa cuenta no existe.');
         }
         if ($target->id === $user->id) {
-            $this->usersError('No podés eliminar tu propia cuenta.', $id);
+            $this->usersError('No podés eliminar tu propia cuenta.');
         }
         if ($target->isAdmin && $target->active && User::activeAdminCount() <= 1) {
-            $this->usersError('Tiene que quedar al menos un administrador activo.', $id);
+            $this->usersError('Tiene que quedar al menos un administrador activo.');
         }
         if (!User::delete($id)) {
-            $this->usersError('Esta cuenta tiene historial (turnos, fila o movimientos): suspendela en lugar de eliminarla.', $id);
+            $this->usersError('Esta cuenta tiene historial (turnos, fila o movimientos): suspendela en lugar de eliminarla.');
         }
         // Su ficha del equipo se borra si nunca atendió turnos; si atendió, queda oculta para no perder ese historial.
         if ($target->barberId !== null) {
