@@ -434,8 +434,22 @@ final class AdminController extends Controller
     }
 
     /**
+     * Exige poder modificar el catálogo (servicios y productos): solo el administrador. Un barbero con la sección
+     * Servicios habilitada la ve en modo lectura y, si igual manda el formulario, recibe 403.
+     */
+    private function requireCatalogEditor(): User
+    {
+        $user = $this->requireSection('servicios');
+        if (!$user->isAdmin) {
+            Response::error(403, 'Solo lectura', 'Los servicios y productos los carga y edita el administrador.');
+        }
+        return $user;
+    }
+
+    /**
      * GET /admin/servicios — editor del catálogo: precio, nombre, descripción y duración de cada servicio,
-     * alta de servicios nuevos y ocultar/mostrar. `ok` y `error` traen el resultado de la acción anterior.
+     * alta de servicios nuevos y ocultar/mostrar. Para un barbero (canEdit = false) es solo una lista de lo que
+     * existe, sin formularios. `ok` y `error` traen el resultado de la acción anterior.
      */
     public function services(Request $request): void
     {
@@ -445,6 +459,7 @@ final class AdminController extends Controller
             'bodyClass' => 'admin-page',
             'user'      => $user,
             'active'    => 'servicios',
+            'canEdit'   => $user->isAdmin,
             'services'  => Service::allForAdmin(),
             'products'  => Product::allForAdmin(),
             'flash'     => (string) $request->query('ok', ''),
@@ -458,7 +473,7 @@ final class AdminController extends Controller
      */
     public function saveService(Request $request): void
     {
-        $user = $this->requireSection('servicios');
+        $user = $this->requireCatalogEditor();
         $this->requireCsrf($request);
 
         $id = (int) $request->input('id', 0);
@@ -484,7 +499,7 @@ final class AdminController extends Controller
     /** POST /admin/servicios/estado — oculta ('0') o muestra ('1') un servicio en el catálogo. */
     public function toggleService(Request $request): void
     {
-        $user = $this->requireSection('servicios');
+        $user = $this->requireCatalogEditor();
         $this->requireCsrf($request);
 
         $id = (int) $request->input('id', 0);
@@ -499,7 +514,7 @@ final class AdminController extends Controller
     /** POST /admin/productos/guardar — edita un producto existente (id) o crea uno nuevo (sin id): nombre, descripción y precio. */
     public function saveProduct(Request $request): void
     {
-        $user = $this->requireSection('servicios');
+        $user = $this->requireCatalogEditor();
         $this->requireCsrf($request);
 
         $id = (int) $request->input('id', 0);
@@ -524,7 +539,7 @@ final class AdminController extends Controller
     /** POST /admin/productos/estado — oculta ('0') o muestra ('1') un producto en la app. */
     public function toggleProduct(Request $request): void
     {
-        $user = $this->requireSection('servicios');
+        $user = $this->requireCatalogEditor();
         $this->requireCsrf($request);
 
         $id = (int) $request->input('id', 0);

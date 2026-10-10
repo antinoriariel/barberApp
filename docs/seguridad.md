@@ -90,7 +90,7 @@ Usuarios (`/admin/usuarios`): exclusivo del administrador (nunca se le habilita 
 
 Permisos del panel: cada acción de `AdminController` exige su sección (`requireSection`, ver `User::canSee`); el admin ve todas y el barbero solo las de `users.panel_access`, comprobadas en cada petición (también en los POST), no solo ocultando pestañas.
 
-Editor de servicios (`/admin/servicios`): administradores (o barberos con la sección Servicios), POST con CSRF, validación en `Service::validate` y auditoría (`admin_service_update/create/hide/show`). Los turnos ya reservados conservan el precio con el que se tomaron.
+Editor de servicios (`/admin/servicios`): solo administradores (un barbero con la sección Servicios la ve en modo lectura y sus POST reciben 403, ver `requireCatalogEditor`), POST con CSRF, validación en `Service::validate` y auditoría (`admin_service_update/create/hide/show`). Los turnos ya reservados conservan el precio con el que se tomaron.
 
 API de turnos: sin sesión responde 401 JSON; las POST exigen CSRF (campo `_csrf` o cabecera `X-CSRF-Token`) y las escrituras filtran siempre por el usuario de la sesión. El servidor revalida servicio, barbero, fecha y hora, y recalcula precio y duración; un cliente no puede tener más de `booking.max_active` turnos futuros.
 

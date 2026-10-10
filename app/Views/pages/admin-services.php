@@ -4,12 +4,59 @@
  * duración (la duración no se muestra al cliente, pero la agenda la usa para calcular horarios), oculta o muestra
  * servicios y agrega nuevos (el formulario de alta va primero). Debajo, los productos que se venden en el local
  * (nombre, descripción y precio; se agregan, editan y ocultan igual que los servicios).
+ * Un barbero con la sección habilitada ($canEdit = false) ve solo dos tablas de lo que existe, sin formularios
+ * (el servidor rechaza igual cualquier cambio que no venga del administrador).
  *
- * Variables: $services (Service::allForAdmin()), $products (Product::allForAdmin()), $flash ('1'|''), $error (string)
+ * Variables: $services (Service::allForAdmin()), $products (Product::allForAdmin()), $canEdit (bool: es admin),
+ *            $flash ('1'|''), $error (string)
  */
 ?>
 <main class="admin">
-  <?= partial('components/admin-header', ['heading' => 'Servicios y productos', 'sub' => 'Los cambios se ven al instante en la app.', 'sections' => $user->panelSections(), 'active' => 'servicios']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Servicios y productos', 'sub' => $canEdit ? 'Los cambios se ven al instante en la app.' : 'Lo que ofrece la barbería. Los carga y edita el administrador.', 'sections' => $user->panelSections(), 'active' => 'servicios']) ?>
+
+<?php if (!$canEdit): ?>
+  <section class="admin-card" aria-labelledby="svc-list">
+    <h2 id="svc-list">Servicios</h2>
+    <div class="table-wrap">
+      <table class="admin-table stack">
+        <thead><tr><th>Servicio</th><th class="num">Duración</th><th class="num">Precio</th><th>Estado</th></tr></thead>
+        <tbody>
+<?php foreach ($services as $s): ?>
+          <tr>
+            <td class="cell-main"><b><?= e($s['name']) ?></b><?php if ($s['description'] !== ''): ?><br><small><?= e($s['description']) ?></small><?php endif; ?></td>
+            <td class="num" data-label="Duración"><?= $s['minutes'] ?> min</td>
+            <td class="num" data-label="Precio"><b><?= money($s['price']) ?></b></td>
+            <td data-label="Estado"><span class="status <?= $s['active'] ? 'done' : 'cancelled' ?>"><?= $s['active'] ? 'Visible' : 'Oculto' ?></span></td>
+          </tr>
+<?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="admin-card" aria-labelledby="prod-list">
+    <h2 id="prod-list">Productos</h2>
+<?php if (!$products): ?>
+    <p class="admin-empty">No hay productos cargados.</p>
+<?php else: ?>
+    <div class="table-wrap">
+      <table class="admin-table stack">
+        <thead><tr><th>Producto</th><th class="num">Precio</th><th>Estado</th></tr></thead>
+        <tbody>
+<?php foreach ($products as $p): ?>
+          <tr>
+            <td class="cell-main"><b><?= e($p['name']) ?></b><?php if ($p['description'] !== ''): ?><br><small><?= e($p['description']) ?></small><?php endif; ?></td>
+            <td class="num" data-label="Precio"><b><?= money($p['price']) ?></b></td>
+            <td data-label="Estado"><span class="status <?= $p['active'] ? 'done' : 'cancelled' ?>"><?= $p['active'] ? 'Visible' : 'Oculto' ?></span></td>
+          </tr>
+<?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+<?php endif; ?>
+  </section>
+</main>
+<?php return; endif; ?>
 
   <?php if ($flash === '1'): ?><p class="admin-flash ok" role="status">Cambios guardados.</p><?php endif; ?>
   <?php if ($error !== ''): ?><p class="admin-flash bad" role="alert"><?= e($error) ?></p><?php endif; ?>
