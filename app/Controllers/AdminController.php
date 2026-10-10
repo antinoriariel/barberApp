@@ -65,7 +65,7 @@ final class AdminController extends Controller
 
     /** Dirección de cada sección del panel (para mandar a un barbero a la primera que tiene habilitada). */
     private const SECTION_URLS = [
-        'resumen' => '/admin', 'turnos' => '/admin/turnos', 'fila' => '/admin/fila', 'barberos' => '/admin/barberos',
+        'semana' => '/admin/mi-semana', 'resumen' => '/admin', 'turnos' => '/admin/turnos', 'fila' => '/admin/fila', 'barberos' => '/admin/barberos',
         'finanzas' => '/admin/finanzas', 'ingresos' => '/admin/ingresos', 'egresos' => '/admin/egresos',
         'servicios' => '/admin/servicios', 'usuarios' => '/admin/usuarios',
     ];
@@ -127,6 +127,28 @@ final class AdminController extends Controller
             'revenueDelta' => Dashboard::delta($today['total'], $yesterday['total']),
             'servedDelta'  => Dashboard::delta($today['served'], $yesterday['served']),
             'verdict'      => Dashboard::verdict($today, $yesterday),
+        ]);
+    }
+
+    /**
+     * GET /admin/mi-semana?fecha=YYYY-MM-DD — tablero propio del barbero: solo su fila de la tabla de cortes de la
+     * semana (lunes a domingo de esa fecha), con lo atendido cada día, el total y los ingresos. Toma la ficha de la
+     * sesión (users.barber_id), nunca de la URL, así un barbero no puede ver la semana de otro.
+     */
+    public function myWeek(Request $request): void
+    {
+        $user = $this->requireSection(User::MY_WEEK);
+        $week = Dashboard::week($this->day($request->query('fecha')));
+        $mine = array_values(array_filter($week['barbers'], static fn (array $b) => $b['id'] === $user->barberId));
+        $this->view('pages/admin-mi-semana', [
+            'title'     => 'Mi semana · Barbería',
+            'bodyClass' => 'admin-page',
+            'user'      => $user,
+            'week'      => $week,
+            'rows'      => $mine,
+            'prev'      => date('Y-m-d', strtotime($week['from'] . ' -7 days')),
+            'next'      => date('Y-m-d', strtotime($week['from'] . ' +7 days')),
+            'isCurrent' => $week['from'] === Dashboard::week(date('Y-m-d'))['from'],
         ]);
     }
 

@@ -10,8 +10,6 @@
  *            $flash ('1' horario guardado | 'dias' días del local guardados | ''), $error (string),
  *            $stranded (turnos reservados que quedaron en días ahora cerrados)
  */
-$dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-$maxTotal = max(1, ...array_column($week['barbers'], 'total'));
 $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n', strtotime($week['from'])))
     . ' al ' . date('j', strtotime($week['to'])) . ' de ' . month_es((int) date('n', strtotime($week['to'])));
 ?>
@@ -39,35 +37,7 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
 
   <section class="admin-card" aria-labelledby="week-cuts">
     <h2 id="week-cuts">Cortes por barbero</h2>
-    <div class="table-wrap">
-      <?php // tabla ancha (7 días): se desliza de costado y la columna del barbero queda fija a la izquierda ?>
-      <table class="admin-table sticky-first">
-        <thead>
-          <tr>
-            <th>Barbero</th>
-<?php foreach ($week['days'] as $i => $d): ?>
-            <th class="num"><?= e($dayNames[$i]) ?> <small><?= date('j', strtotime($d)) ?></small></th>
-<?php endforeach; ?>
-            <th class="num">Total</th><th class="num">Ingresos</th>
-          </tr>
-        </thead>
-        <tbody>
-<?php foreach ($week['barbers'] as $b): ?>
-          <tr>
-            <th scope="row">
-              <span class="dot" style="--tone: <?= e(css_color($b['tone'])) ?>"></span><?= e($b['name']) ?>
-              <span class="bar" aria-hidden="true"><i style="width: <?= (int) round($b['total'] / $maxTotal * 100) ?>%"></i></span>
-            </th>
-<?php foreach ($b['perDay'] as $n): ?>
-            <td class="num<?= $n === 0 ? ' zero' : '' ?>"><?= $n ?></td>
-<?php endforeach; ?>
-            <td class="num"><b><?= $b['total'] ?></b></td>
-            <td class="num"><?= money($b['revenue']) ?></td>
-          </tr>
-<?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
+    <?= partial('components/admin-week-table', ['days' => $week['days'], 'rows' => $week['barbers']]) ?>
   </section>
 
   <?php // Orden lunes → domingo; los índices son los de date('w') (0 = domingo). ?>

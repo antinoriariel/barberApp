@@ -45,6 +45,7 @@ return static function (Router $router): void {
 
     // Panel de administración (administrador, o barbero en las secciones que tenga habilitadas; usuarios: solo admin).
     $router->get('/admin', [AdminController::class, 'dashboard']);
+    $router->get('/admin/mi-semana', [AdminController::class, 'myWeek']);
     $router->get('/admin/turnos', [AdminController::class, 'appointments']);
     $router->post('/admin/turnos/estado', [AdminController::class, 'mark']);
     $router->get('/admin/barberos', [AdminController::class, 'barbers']);

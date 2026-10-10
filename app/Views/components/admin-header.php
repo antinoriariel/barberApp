@@ -3,10 +3,11 @@
  * components/admin-header.php — Cabecera del panel: título, subtítulo, selector de tema claro/oscuro, cierre de sesión
  * y pestañas de las vistas. El botón de tema lo conecta js/admin.js (que AdminController carga en todas las vistas).
  * Variables: $heading (string), $sub (string),
- *            $active ('resumen'|'turnos'|'fila'|'barberos'|'finanzas'|'ingresos'|'egresos'|'servicios'|'usuarios'),
+ *            $active ('semana'|'resumen'|'turnos'|'fila'|'barberos'|'finanzas'|'ingresos'|'egresos'|'servicios'|'usuarios'),
  *            $sections (string[]: secciones que la cuenta puede ver, User::panelSections(); solo esas pestañas se muestran)
  */
 $tabs = [
+    'semana'    => ['/admin/mi-semana', 'Mi semana'],
     'resumen'   => ['/admin', 'Resumen'],
     'turnos'    => ['/admin/turnos', 'Turnos'],
     'fila'      => ['/admin/fila', 'Fila'],
@@ -36,8 +37,11 @@ $tabs = array_intersect_key($tabs, array_flip($sections ?? []));
     </form>
   </div>
 </header>
+<?php // Con una sola sección (un barbero que solo tiene "Mi semana") las pestañas no aportan nada: no se muestran. ?>
+<?php if (count($tabs) > 1): ?>
 <nav class="admin-tabs" aria-label="Secciones del panel">
 <?php foreach ($tabs as $key => [$href, $label]): ?>
   <a href="<?= e($href) ?>"<?= $key === $active ? ' aria-current="page"' : '' ?>><?= e($label) ?></a>
 <?php endforeach; ?>
 </nav>
+<?php endif; ?>

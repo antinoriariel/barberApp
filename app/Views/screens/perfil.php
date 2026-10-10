@@ -45,7 +45,7 @@
       <li>
         <a class="prof-row" href="/admin">
           <span class="prof-ic"><?= icon('home') ?></span>
-          <span class="prof-text"><strong>Panel de administración</strong><small><?= $user->isAdmin ? 'Turnos, ingresos y servicios' : 'Las secciones que tenés habilitadas' ?></small></span>
+          <span class="prof-text"><strong><?= $user->isAdmin ? 'Panel de administración' : 'Mi semana' ?></strong><small><?= $user->isAdmin ? 'Turnos, ingresos y servicios' : 'Tus cortes de la semana' ?></small></span>
         </a>
       </li>
     <?php endif; ?>

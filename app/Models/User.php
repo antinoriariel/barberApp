@@ -61,11 +61,20 @@ final class User
     }
 
     /**
-     * ¿Puede ver esa sección del panel? El administrador ve todas (incluida "usuarios"); un barbero solo las que el
-     * administrador le habilitó en panel_access; un cliente, ninguna.
+     * Sección propia de cada barbero ("Mi semana": sus cortes de la semana). No se habilita a mano ni la ve el
+     * administrador: la tiene toda cuenta vinculada a una ficha del equipo, y es donde entra al panel.
+     */
+    public const MY_WEEK = 'semana';
+
+    /**
+     * ¿Puede ver esa sección del panel? "semana" es solo de los barberos (ver MY_WEEK). Fuera de eso, el administrador
+     * ve todas (incluida "usuarios"); un barbero solo las que el administrador le habilitó en panel_access; un cliente, ninguna.
      */
     public function canSee(string $section): bool
     {
+        if ($section === self::MY_WEEK) {
+            return $this->isBarber();
+        }
         if ($this->isAdmin) {
             return true;
         }
@@ -73,19 +82,20 @@ final class User
     }
 
     /**
-     * Secciones del panel visibles para la cuenta, en el orden de las pestañas (con "usuarios" al final si es admin).
+     * Secciones del panel visibles para la cuenta, en el orden de las pestañas: "semana" primero si es barbero (así es
+     * donde aterriza), después las habilitadas y "usuarios" al final si es admin.
      * @return string[]
      */
     public function panelSections(): array
     {
-        $keys = array_keys(self::SECTIONS);
+        $keys = [self::MY_WEEK, ...array_keys(self::SECTIONS)];
         if ($this->isAdmin) {
             $keys[] = 'usuarios';
         }
         return array_values(array_filter($keys, $this->canSee(...)));
     }
 
-    /** ¿Entra al panel /admin? (administrador, o barbero con al menos una sección habilitada). */
+    /** ¿Entra al panel /admin? (administrador, o barbero: siempre tiene al menos "Mi semana"). */
     public function hasPanel(): bool
     {
         return $this->panelSections() !== [];

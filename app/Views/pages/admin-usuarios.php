@@ -43,7 +43,7 @@ $roleFields = static function (?User $account) use ($barbers): void {
           </select>
         </label>
         <fieldset class="wide perm-box" data-barber-only>
-          <legend>Secciones del panel que ve</legend>
+          <legend>Secciones extra del panel</legend>
           <div class="perm-chips">
 <?php foreach (User::SECTIONS as $key => $label): ?>
             <label class="perm-chip">
@@ -52,7 +52,7 @@ $roleFields = static function (?User $account) use ($barbers): void {
             </label>
 <?php endforeach; ?>
           </div>
-          <small>Sin ninguna tildada entra solo a la app, como un cliente. "Usuarios" es siempre exclusivo del administrador.</small>
+          <small>Todo barbero entra a "Mi semana" (sus cortes de la semana). Sin ninguna tildada, ve solo eso. "Usuarios" es siempre exclusivo del administrador.</small>
         </fieldset>
     <?php
 };
@@ -99,7 +99,7 @@ $roleFields = static function (?User $account) use ($barbers): void {
             <?php if ($a->role() === 'cliente'): ?> · <?= $a->visits ?> <?= $a->visits === 1 ? 'visita' : 'visitas' ?><?php endif; ?>
           </small>
           <?php if ($a->isBarber() && !$a->isAdmin): ?>
-            <small>Panel: <?= $a->panelAccess ? e(implode(', ', array_map(static fn (string $k) => User::SECTIONS[$k], $a->panelAccess))) : 'sin acceso' ?></small>
+            <small>Panel: <?= $a->panelAccess ? 'Mi semana, ' . e(implode(', ', array_map(static fn (string $k) => User::SECTIONS[$k], $a->panelAccess))) : 'solo Mi semana' ?></small>
           <?php endif; ?>
         </div>
         <?php if ($self): ?>

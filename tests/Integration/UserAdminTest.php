@@ -70,18 +70,50 @@ final class UserAdminTest extends DbTestCase
         $this->assertTrue($u->canSee('turnos'));
         $this->assertFalse($u->canSee('finanzas'));
         $this->assertFalse($u->canSee('usuarios'));
-        $this->assertSame(['turnos', 'fila'], $u->panelSections());
+        $this->assertSame(['semana', 'turnos', 'fila'], $u->panelSections(), '"Mi semana" siempre primero');
         $this->assertTrue($u->hasPanel());
+
+        [$data] = User::validate($this->form(['email' => '', 'role' => 'barbero', 'barber' => $barber->id, 'sections' => []]), false);
+        User::updateFromAdmin($u->id, $data);
+        $this->assertSame(['semana'], User::findById($u->id)->panelSections(), 'sin secciones extra ve solo su semana');
 
         [$data] = User::validate($this->form(['email' => '', 'role' => 'admin']), false);
         User::updateFromAdmin($u->id, $data);
         $admin = User::findById($u->id);
         $this->assertTrue($admin->canSee('usuarios'));
+        $this->assertFalse($admin->canSee('semana'), 'el admin no es barbero: no tiene "Mi semana"');
         $this->assertSame('usuarios', $admin->panelSections()[8]);
 
         [$data] = User::validate($this->form(['email' => '', 'role' => 'cliente']), false);
         User::updateFromAdmin($u->id, $data);
         $this->assertFalse(User::findById($u->id)->hasPanel());
+        $this->assertFalse(User::findById($u->id)->canSee('semana'));
+    }
+
+    public function testMiSemanaCuentaSoloLosCortesAtendidosDelBarbero(): void
+    {
+        $barber = Barber::all()[0];
+        $client = $this->makeUser('99700008');
+        $service = \App\Core\Database::selectOne('SELECT id, price FROM services WHERE active = 1 ORDER BY id LIMIT 1');
+        $monday = '2031-06-02'; // lunes lejano, sin datos de la semilla
+        $insert = static function (string $start, string $status) use ($client, $barber, $service): void {
+            \App\Core\Database::execute(
+                'INSERT INTO appointments (user_id, barber_id, service_id, starts_at, ends_at, price, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [$client->id, $barber->key, $service['id'], $start, date('Y-m-d H:i:s', strtotime($start . ' +30 minutes')), $service['price'], $status]
+            );
+        };
+        $insert('2031-06-02 10:00:00', 'done');    // lunes
+        $insert('2031-06-02 11:00:00', 'done');    // lunes
+        $insert('2031-06-04 10:00:00', 'done');    // miércoles
+        $insert('2031-06-05 10:00:00', 'no_show'); // no cuenta
+        $insert('2031-06-06 10:00:00', 'booked');  // no cuenta
+
+        $week = \App\Models\Dashboard::week('2031-06-05');
+        $this->assertSame($monday, $week['from']);
+        $mine = array_values(array_filter($week['barbers'], static fn (array $b) => $b['id'] === $barber->key))[0];
+        $this->assertSame([2, 0, 1, 0, 0, 0, 0], $mine['perDay']);
+        $this->assertSame(3, $mine['total']);
+        $this->assertSame(3 * (int) $service['price'], $mine['revenue']);
     }
 
     public function testDniOEmailRepetidosChocanConLosIndicesUnicos(): void
