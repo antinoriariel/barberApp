@@ -95,6 +95,15 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .svc-fields select, .svc-fields textarea { width: 100%; min-width: 0; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 16px; color: var(--ink); background: var(--paper); }
 .svc-fields textarea { resize: vertical; min-height: 64px; } /* observación del egreso */
 .svc-fields input[type="date"] { color-scheme: inherit; } /* el calendario nativo sigue al tema (claro/oscuro) */
+/* Misma altura para texto, fecha y select: cada navegador les da un alto nativo distinto y la fila queda despareja. */
+.svc-fields input:not([type="checkbox"]):not([type="radio"]), .svc-fields select { height: 46px; }
+.svc-fields input[type="date"] { -webkit-appearance: none; appearance: none; text-align: left; }
+.svc-fields input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+.svc-fields label { align-content: start; }
+
+/* Alta de egresos: 4 campos cortos en grilla pareja (2×2 en celular, 4 en fila desde 720px) y el botón a todo el ancho. */
+.exp-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.exp-submit { width: 100%; padding: 12px 14px; text-align: center; }
 
 /* Barras agrupadas: ingresos (rojo) y egresos (gris) por mes. */
 .chart { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin: 14px 0 10px; padding: 0; list-style: none; }
@@ -252,6 +261,8 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
   .perm-chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .hours-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); align-items: start; gap: 16px; }
   .hours-save { width: auto; justify-self: end; padding: 9px 18px; }
+  .exp-fields { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .exp-submit { width: auto; margin-left: auto; padding: 9px 18px; }
   .chart { gap: 8px; }
   .chart li { grid-template-rows: auto 140px auto; }
   .chart-val { font-size: 11px; }
