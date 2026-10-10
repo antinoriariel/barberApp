@@ -112,7 +112,7 @@
   <h2 class="admin-section-title" id="productos">Productos</h2>
   <p class="admin-sub">Se muestran en la pestaña Productos de la app y se pagan en el local.</p>
 
-  <section class="admin-card svc-edit" aria-labelledby="prod-new">
+  <section class="admin-card svc-edit invert" aria-labelledby="prod-new">
     <h2 id="prod-new">Agregar producto</h2>
     <form method="post" action="/admin/productos/guardar" class="svc-edit">
       <?= csrf_field() ?>
