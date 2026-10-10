@@ -452,6 +452,7 @@ final class AdminController extends Controller
     /**
      * POST /admin/turnos/estado — marca un turno reservado como atendido ('done') o ausente ('no_show')
      * y vuelve a la agenda del mismo día. Exige CSRF y rol; queda en la auditoría.
+     * Si lo marca un barbero y el turno era de otro, pasa a sus cortes (ver Dashboard::mark).
      */
     public function mark(Request $request): void
     {
@@ -462,7 +463,7 @@ final class AdminController extends Controller
         $status = (string) $request->input('status', '');
         $id = (int) $request->input('id', 0);
 
-        $ok = $id > 0 && Dashboard::mark($id, $status);
+        $ok = $id > 0 && Dashboard::mark($id, $status, $user->barberId);
         if ($ok) {
             Audit::log('admin_appointment_' . $status, $user->id, 'turno ' . $id);
         }

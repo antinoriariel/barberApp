@@ -1,7 +1,8 @@
 <?php
 /**
  * pages/admin-turnos.php — Agenda del día: cliente, servicio, barbero y estado; permite marcar cada turno
- * reservado como atendido o ausente.
+ * reservado como atendido o ausente. Si lo atendió otro barbero, al lado del nombre va la observación
+ * ("Reservado con …").
  *
  * Variables: $day/$prev/$next (YYYY-MM-DD), $isToday, $appointments (Dashboard::appointments), $flash ('1'|'0'|'')
  */
@@ -36,7 +37,7 @@ $statusLabel = ['booked' => 'Reservado', 'done' => 'Atendido', 'no_show' => 'No 
             <td class="cell-main"><b><?= e($a['time']) ?></b></td>
             <td data-label="Cliente"><?= e($a['client']) ?></td>
             <td data-label="Servicio"><?= e($a['service']) ?></td>
-            <td data-label="Barbero"><?= e($a['barber']) ?></td>
+            <td data-label="Barbero"><?= e($a['barber']) ?><?php if ($a['notes'] !== ''): ?> <small>· <?= e($a['notes']) ?></small><?php endif; ?></td>
             <td class="num" data-label="Precio"><?= money($a['price']) ?></td>
             <td data-label="Estado"><span class="status <?= e($a['status']) ?>"><?= e($statusLabel[$a['status']] ?? $a['status']) ?></span></td>
             <td class="actions">

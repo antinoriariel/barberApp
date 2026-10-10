@@ -134,8 +134,9 @@ final class Dashboard
         return array_map(static fn (array $r) => [
             'id' => (int) $r['id'], 'time' => date('H:i', strtotime($r['starts_at'])), 'client' => $r['client'],
             'service' => $r['service'], 'barber' => $r['barber'], 'price' => (int) $r['price'], 'status' => $r['status'],
+            'notes' => (string) $r['notes'],
         ], Database::select(
-            'SELECT a.id, a.starts_at, a.price, a.status, u.full_name AS client, ' . Appointment::SERVICE_NAMES_SQL . ' AS service, b.name AS barber
+            'SELECT a.id, a.starts_at, a.price, a.status, a.notes, u.full_name AS client, ' . Appointment::SERVICE_NAMES_SQL . ' AS service, b.name AS barber
                FROM appointments a
                JOIN users u ON u.id = a.user_id
                JOIN services s ON s.id = a.service_id
@@ -149,11 +150,33 @@ final class Dashboard
     /**
      * Marca un turno reservado como atendido ('done') o ausente ('no_show').
      * Solo cambia turnos que siguen en 'booked'; devuelve false si no existía o ya tenía otro estado.
+     *
+     * $byBarberId es la ficha del barbero que lo marca (null si es el administrador). Si un barbero da por
+     * atendido un turno reservado con otro, el turno pasa a su nombre (los cortes se cuentan por barber_id)
+     * y queda como observación con quién se había reservado. El UPDATE vuelve a exigir el barbero original
+     * para no pisar un cambio hecho entre la lectura y la escritura.
      */
-    public static function mark(int $id, string $status): bool
+    public static function mark(int $id, string $status, ?int $byBarberId = null): bool
     {
         if (!in_array($status, ['done', 'no_show'], true)) {
             return false;
+        }
+        if ($status === 'done' && $byBarberId !== null) {
+            $row = Database::selectOne(
+                "SELECT a.barber_id, b.name FROM appointments a JOIN barbers b ON b.id = a.barber_id
+                  WHERE a.id = ? AND a.status = 'booked'",
+                [$id]
+            );
+            if ($row === null) {
+                return false;
+            }
+            if ((int) $row['barber_id'] !== $byBarberId) {
+                return Database::execute(
+                    "UPDATE appointments SET status = 'done', barber_id = ?, notes = ?
+                      WHERE id = ? AND status = 'booked' AND barber_id = ?",
+                    [$byBarberId, mb_substr('Reservado con ' . $row['name'], 0, 255), $id, (int) $row['barber_id']]
+                ) === 1;
+            }
         }
         return Database::execute("UPDATE appointments SET status = ? WHERE id = ? AND status = 'booked'", [$status, $id]) === 1;
     }
