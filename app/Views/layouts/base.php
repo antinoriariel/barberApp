@@ -34,6 +34,12 @@ use App\Core\Config;
 </head>
 <body<?= !empty($bodyClass) ? ' class="' . e($bodyClass) . '"' : '' ?>>
 <?= $content ?>
+<?php
+// Las páginas del panel (body.admin-page) cargan además admin.js, que conecta el selector de tema de su cabecera.
+if (($bodyClass ?? '') === 'admin-page') {
+    $scripts = array_merge(['js/admin.js'], $scripts ?? []);
+}
+?>
 <?php foreach ($scripts ?? [] as $js): ?>
   <script type="module" src="<?= e(asset($js)) ?>"></script>
 <?php endforeach; ?>

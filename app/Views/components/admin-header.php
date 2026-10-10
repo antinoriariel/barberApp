@@ -18,10 +18,16 @@ $tabs = [
     <h1><?= e($heading) ?></h1>
     <p class="admin-sub"><?= e($sub) ?></p>
   </div>
-  <form method="post" action="/logout" class="inline-form">
-    <?= csrf_field() ?>
-    <button class="btn-small ghost" type="submit">Cerrar sesión</button>
-  </form>
+  <div class="admin-head-end">
+    <?php // Mismo selector claro/oscuro que la cabecera de la app (lo conecta theme.js vía admin.js). ?>
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Cambiar a modo claro" title="Cambiar tema">
+      <?= icon('sun', 'theme-ic-sun') ?><?= icon('moon', 'theme-ic-moon') ?>
+    </button>
+    <form method="post" action="/logout" class="inline-form">
+      <?= csrf_field() ?>
+      <button class="btn-small ghost" type="submit">Cerrar sesión</button>
+    </form>
+  </div>
 </header>
 <nav class="admin-tabs" aria-label="Secciones del panel">
 <?php foreach ($tabs as $key => [$href, $label]): ?>

@@ -19,7 +19,7 @@
  * usuarios reciban la versión nueva. Si se agregan archivos a config/app.php
  * ('assets.styles') o módulos JS, agregarlos también a SHELL.
  */
-const CACHE = 'navaja-v84';
+const CACHE = 'navaja-v91';
 // Rutas de páginas HTML que se guardan al visitarlas (dependen de la sesión).
 const PAGE_PATHS = ['/', '/login', '/registro', '/recuperar'];
 const SHELL = [
@@ -63,6 +63,7 @@ const SHELL = [
   '/assets/js/theme-init.js',
   '/assets/js/login.js',
   '/assets/js/money-input.js',
+  '/assets/js/admin.js',
   '/manifest.webmanifest',
   '/icon.png?s=192',
   '/icon.png?s=512',

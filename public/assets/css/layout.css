@@ -72,6 +72,9 @@ main { padding: 24px 20px 0; }
 .theme-ic-moon { display: none; }
 :root[data-theme="light"] .theme-ic-sun { display: none; }
 :root[data-theme="light"] .theme-ic-moon { display: block; }
+/* Panel admin: el botón va sobre el fondo de la página (no sobre la cabecera oscura), así que toma los tokens del tema */
+.admin-head-end { display: flex; align-items: center; gap: 8px; }
+.admin-head .theme-toggle { background: var(--paper); color: var(--ink); border: 1px solid var(--line); }
 
 /* Inicio: ritmo vertical único entre recuadros (los márgenes propios de cada
    componente se anulan acá para que todos queden a la misma distancia). */
