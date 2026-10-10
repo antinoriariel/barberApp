@@ -6,7 +6,8 @@
  * turnos dentro de esa franja; los días que el local cierra o atiende por orden de llegada no se configuran.
  *
  * Variables: $week (Dashboard::week), $prev/$next (YYYY-MM-DD: semana anterior/siguiente), $isCurrent (bool),
- *            $team (lista de ['barber' => Barber, 'hours' => BarberHours::week]), $weekdays (Schedule::weekdayStatus),
+ *            $team (lista de ['barber' => Barber, 'hours' => BarberHours::week]; a un barbero solo le llega su propia ficha),
+ *            $canShopDays (bool: solo el administrador edita los días del local), $weekdays (Schedule::weekdayStatus),
  *            $flash ('1' horario guardado | 'dias' días del local guardados | ''), $error (string),
  *            $stranded (turnos reservados que quedaron en días ahora cerrados)
  */
@@ -48,7 +49,8 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
       <h2 id="hours-title" class="admin-section-title">Horarios de atención</h2>
       <p class="admin-sub">La agenda solo ofrece turnos dentro de la franja de cada barbero.</p>
     </header>
-    <?php // Días que abre el local: un tilde por día. Los cerrados no ofrecen turnos y no se configuran por barbero. ?>
+    <?php // Días que abre el local: un tilde por día. Los cerrados no ofrecen turnos y no se configuran por barbero. Solo el administrador. ?>
+<?php if ($canShopDays): ?>
     <section class="admin-card shop-days" id="dias-local" aria-labelledby="dias-title">
       <header class="hours-head">
         <h3 id="dias-title">Días del local</h3>
@@ -71,6 +73,7 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
         <button class="btn-small hours-save" type="submit">Guardar días</button>
       </form>
     </section>
+<?php endif; ?>
 
     <div class="hours-grid">
 <?php foreach ($team as ['barber' => $b, 'hours' => $hours]):

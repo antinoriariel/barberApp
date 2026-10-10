@@ -70,6 +70,15 @@ final class AdminController extends Controller
         'servicios' => '/admin/servicios', 'usuarios' => '/admin/usuarios',
     ];
 
+    /**
+     * ¿Puede esta cuenta editar el horario de ese barbero? El administrador, el de cualquiera; un barbero, solo el de
+     * su propia ficha (users.barber_id = barbers.id), tomada de la sesión y nunca del formulario.
+     */
+    private function canEditHours(User $user, Barber $barber): bool
+    {
+        return $user->isAdmin || ($user->barberId !== null && $user->barberId === $barber->key);
+    }
+
     /** Valida una fecha "YYYY-MM-DD" real; cualquier otra cosa (o vacío) devuelve el día de hoy. */
     private function day(mixed $raw): string
     {
@@ -175,6 +184,8 @@ final class AdminController extends Controller
     {
         $user = $this->requireSection('barberos');
         $week = Dashboard::week($this->day($request->query('fecha')));
+        // Un barbero solo ve (y edita) el horario de su propia ficha; el administrador, el de todo el equipo.
+        $editable = array_values(array_filter(Barber::all(), fn (Barber $b) => $this->canEditHours($user, $b)));
         $this->view('pages/admin-barberos', [
             'title'     => 'Barberos · Barbería',
             'bodyClass' => 'admin-page',
@@ -184,7 +195,8 @@ final class AdminController extends Controller
             'prev'      => date('Y-m-d', strtotime($week['from'] . ' -7 days')),
             'next'      => date('Y-m-d', strtotime($week['from'] . ' +7 days')),
             'isCurrent' => $week['from'] === Dashboard::week(date('Y-m-d'))['from'],
-            'team'      => array_map(static fn (Barber $b) => ['barber' => $b, 'hours' => BarberHours::week($b->key)], Barber::all()),
+            'team'      => array_map(static fn (Barber $b) => ['barber' => $b, 'hours' => BarberHours::week($b->key)], $editable),
+            'canShopDays' => $user->isAdmin,
             'weekdays'  => Schedule::weekdayStatus(),
             'flash'     => (string) $request->query('ok', ''),
             'error'     => (string) $request->query('error', ''),
@@ -195,11 +207,15 @@ final class AdminController extends Controller
     /**
      * POST /admin/barberos/dias — campo: open[] (weekdays 0–6 que abre el local). Los que no vienen quedan cerrados.
      * Si un día recién cerrado ya tenía turnos reservados no se cancelan: se avisa cuántos hay para que el admin decida.
+     * Solo el administrador: un barbero con la sección "barberos" maneja su propio horario, no los días del local.
      */
     public function saveShopDays(Request $request): void
     {
         $user = $this->requireSection('barberos');
         $this->requireCsrf($request);
+        if (!$user->isAdmin) {
+            Response::error(403, 'Sin permiso', 'Solo el administrador cambia los días que abre el local.');
+        }
 
         $input = $request->input('open', []);
         $open = array_values(array_unique(array_filter(
@@ -216,7 +232,8 @@ final class AdminController extends Controller
     /**
      * POST /admin/barberos/horario — campos: barber (slug), days[weekday][works|from|to]. Guarda el horario semanal
      * de un barbero; solo se aceptan los días en que el local da turnos (los demás no se usan para reservar).
-     * Los turnos ya reservados no se tocan: el cambio vale para las reservas nuevas.
+     * Los turnos ya reservados no se tocan: el cambio vale para las reservas nuevas. Un barbero solo puede guardar
+     * el de su propia ficha (ver canEditHours): si manda otro slug a mano, 403.
      */
     public function saveBarberHours(Request $request): void
     {
@@ -226,6 +243,10 @@ final class AdminController extends Controller
         $barber = Barber::find((string) $request->input('barber', ''));
         if ($barber === null) {
             $this->redirect('/admin/barberos?error=' . rawurlencode('Ese barbero no existe.'));
+        }
+        if (!$this->canEditHours($user, $barber)) {
+            Audit::log('admin_barber_hours_denied', $user->id, 'barbero ' . $barber->key);
+            Response::error(403, 'Sin permiso', 'Solo podés cambiar tu propio horario.');
         }
         $bookable = array_keys(array_filter(Schedule::weekdayStatus(), static fn (string $s) => $s === 'open'));
         $input = $request->input('days');
