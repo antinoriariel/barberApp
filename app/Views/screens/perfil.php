@@ -41,11 +41,11 @@
 
   <div class="section-head"><h2>Ajustes</h2></div>
   <ul class="prof-list">
-    <?php if ($user->isAdmin): ?>
+    <?php if ($user->hasPanel()): ?>
       <li>
         <a class="prof-row" href="/admin">
           <span class="prof-ic"><?= icon('home') ?></span>
-          <span class="prof-text"><strong>Panel de administración</strong><small>Turnos, ingresos y servicios</small></span>
+          <span class="prof-text"><strong><?= $user->isAdmin ? 'Panel de administración' : 'Mi semana' ?></strong><small><?= $user->isAdmin ? 'Turnos, ingresos y servicios' : 'Tus cortes de la semana' ?></small></span>
         </a>
       </li>
     <?php endif; ?>

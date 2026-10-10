@@ -6,36 +6,77 @@ namespace App\Controllers;
 use App\Core\Config;
 use App\Core\Controller;
 use App\Core\Database;
+use App\Core\DbSessionHandler;
 use App\Core\Request;
 use App\Core\Response;
+use App\Models\Appointment;
+use App\Models\Barber;
+use App\Models\BarberHours;
 use App\Models\Dashboard;
 use App\Models\Expense;
+use App\Models\Income;
+use App\Models\Product;
 use App\Models\QueueTicket;
+use App\Models\Schedule;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\Audit;
 use App\Services\Qr;
+use App\Support\Password;
 
 /**
  * Panel de administración: métricas del día (ingresos y turnos atendidos por barbero, comparados con el
- * día anterior) y cierre de los turnos del día. Solo para usuarios con is_admin y con base de datos.
+ * día anterior), cierre de los turnos del día, finanzas, catálogo y usuarios. Requiere base de datos. El administrador
+ * (is_admin) entra a todo; un barbero solo a las secciones que el administrador le habilitó (ver requireSection).
  */
 final class AdminController extends Controller
 {
     /**
-     * Exige sesión, base de datos y rol de administrador.
-     * Sin sesión redirige al login; sin base de datos responde 503; si no es admin, 403 (sin pistas de qué hay).
+     * Renderiza una vista del panel sumando js/admin.js (selector de tema de la cabecera) a los scripts
+     * que pida cada acción, así todas las vistas del panel lo tienen sin repetirlo en cada una.
      */
-    private function requireAdmin(): User
+    protected function view(string $template, array $data = [], string $layout = 'layouts/base'): void
+    {
+        $data['scripts'] = array_merge(['js/admin.js'], $data['scripts'] ?? []);
+        parent::view($template, $data, $layout);
+    }
+
+    /**
+     * Exige sesión, base de datos y permiso sobre una sección del panel (ver User::canSee): el administrador entra
+     * a todas; un barbero, solo a las que se le habilitaron en /admin/usuarios. Sin sesión redirige al login; sin base
+     * de datos responde 503; sin permiso, 403 (sin pistas de qué hay). Excepción: si un barbero sin "resumen" entra a
+     * /admin, se lo manda a la primera sección que sí tiene, así el enlace al panel le sirve igual.
+     */
+    private function requireSection(string $section): User
     {
         $user = $this->requireLogin();
         if (!Database::enabled()) {
             Response::error(503, 'Panel no disponible', 'El panel necesita la base de datos (DB_DRIVER=db).');
         }
-        if (!$user->isAdmin) {
+        if (!$user->canSee($section)) {
+            $first = $user->panelSections()[0] ?? null;
+            if ($section === 'resumen' && $first !== null) {
+                $this->redirect(self::SECTION_URLS[$first]);
+            }
             Response::error(403, 'Sin permiso', 'Tu cuenta no tiene acceso a esta sección.');
         }
         return $user;
+    }
+
+    /** Dirección de cada sección del panel (para mandar a un barbero a la primera que tiene habilitada). */
+    private const SECTION_URLS = [
+        'semana' => '/admin/mi-semana', 'resumen' => '/admin', 'turnos' => '/admin/turnos', 'fila' => '/admin/fila', 'barberos' => '/admin/barberos',
+        'finanzas' => '/admin/finanzas', 'ingresos' => '/admin/ingresos', 'egresos' => '/admin/egresos',
+        'servicios' => '/admin/servicios', 'usuarios' => '/admin/usuarios',
+    ];
+
+    /**
+     * ¿Puede esta cuenta editar el horario de ese barbero? El administrador, el de cualquiera; un barbero, solo el de
+     * su propia ficha (users.barber_id = barbers.id), tomada de la sesión y nunca del formulario.
+     */
+    private function canEditHours(User $user, Barber $barber): bool
+    {
+        return $user->isAdmin || ($user->barberId !== null && $user->barberId === $barber->key);
     }
 
     /** Valida una fecha "YYYY-MM-DD" real; cualquier otra cosa (o vacío) devuelve el día de hoy. */
@@ -66,18 +107,19 @@ final class AdminController extends Controller
     }
 
     /**
-     * GET /admin?fecha=YYYY-MM-DD — resumen: cortes e ingresos del día frente al anterior, egresos del día y
-     * resultado del día (ingresos − egresos), ingresos y egresos del mes, resultado y gráfico de los últimos
-     * 6 meses, y desempeño de los barberos en el día.
+     * GET /admin?fecha=YYYY-MM-DD — resumen: cortes e ingresos del día frente al anterior, egresos e ingresos
+     * extra del día y resultado del día (ingresos + extra − egresos), ingresos y egresos del mes, resultado y
+     * gráfico de los últimos 6 meses, y desempeño de los barberos en el día.
      */
     public function dashboard(Request $request): void
     {
-        $user = $this->requireAdmin();
+        $user = $this->requireSection('resumen');
         $day = $this->day($request->query('fecha'));
         $today = Dashboard::day($day);
         $yesterday = Dashboard::day(date('Y-m-d', strtotime($day . ' -1 day')));
         $finance = Dashboard::finance($day);
         $dayExpenses = Expense::totalForDay($day);
+        $dayExtra = Income::totalForDay($day);
 
         $this->view('pages/admin', $this->dayNav($day) + [
             'title'        => 'Panel · Barbería',
@@ -89,17 +131,40 @@ final class AdminController extends Controller
             'today'        => $today,
             'yesterday'    => $yesterday,
             'dayExpenses'  => $dayExpenses,
-            'dayNet'       => $today['total'] - $dayExpenses,
+            'dayExtra'     => $dayExtra,
+            'dayNet'       => $today['total'] + $dayExtra - $dayExpenses,
             'revenueDelta' => Dashboard::delta($today['total'], $yesterday['total']),
             'servedDelta'  => Dashboard::delta($today['served'], $yesterday['served']),
             'verdict'      => Dashboard::verdict($today, $yesterday),
         ]);
     }
 
+    /**
+     * GET /admin/mi-semana?fecha=YYYY-MM-DD — tablero propio del barbero: solo su fila de la tabla de cortes de la
+     * semana (lunes a domingo de esa fecha), con lo atendido cada día, el total y los ingresos. Toma la ficha de la
+     * sesión (users.barber_id), nunca de la URL, así un barbero no puede ver la semana de otro.
+     */
+    public function myWeek(Request $request): void
+    {
+        $user = $this->requireSection(User::MY_WEEK);
+        $week = Dashboard::week($this->day($request->query('fecha')));
+        $mine = array_values(array_filter($week['barbers'], static fn (array $b) => $b['id'] === $user->barberId));
+        $this->view('pages/admin-mi-semana', [
+            'title'     => 'Mi semana · Barbería',
+            'bodyClass' => 'admin-page',
+            'user'      => $user,
+            'week'      => $week,
+            'rows'      => $mine,
+            'prev'      => date('Y-m-d', strtotime($week['from'] . ' -7 days')),
+            'next'      => date('Y-m-d', strtotime($week['from'] . ' +7 days')),
+            'isCurrent' => $week['from'] === Dashboard::week(date('Y-m-d'))['from'],
+        ]);
+    }
+
     /** GET /admin/turnos?fecha=YYYY-MM-DD — agenda del día para marcar turnos como atendidos o ausentes. */
     public function appointments(Request $request): void
     {
-        $user = $this->requireAdmin();
+        $user = $this->requireSection('turnos');
         $day = $this->day($request->query('fecha'));
         $this->view('pages/admin-turnos', $this->dayNav($day) + [
             'title'        => 'Turnos · Barbería',
@@ -111,11 +176,16 @@ final class AdminController extends Controller
         ]);
     }
 
-    /** GET /admin/barberos?fecha=YYYY-MM-DD — cortes atendidos por barbero en la semana (lunes a domingo) de esa fecha. */
+    /**
+     * GET /admin/barberos?fecha=YYYY-MM-DD — cortes atendidos por barbero en la semana (lunes a domingo) de esa fecha
+     * y, debajo, el horario semanal de cada barbero (lo que usa la agenda para ofrecer turnos).
+     */
     public function barbers(Request $request): void
     {
-        $user = $this->requireAdmin();
+        $user = $this->requireSection('barberos');
         $week = Dashboard::week($this->day($request->query('fecha')));
+        // Un barbero solo ve (y edita) el horario de su propia ficha; el administrador, el de todo el equipo.
+        $editable = array_values(array_filter(Barber::all(), fn (Barber $b) => $this->canEditHours($user, $b)));
         $this->view('pages/admin-barberos', [
             'title'     => 'Barberos · Barbería',
             'bodyClass' => 'admin-page',
@@ -125,13 +195,75 @@ final class AdminController extends Controller
             'prev'      => date('Y-m-d', strtotime($week['from'] . ' -7 days')),
             'next'      => date('Y-m-d', strtotime($week['from'] . ' +7 days')),
             'isCurrent' => $week['from'] === Dashboard::week(date('Y-m-d'))['from'],
+            'team'      => array_map(static fn (Barber $b) => ['barber' => $b, 'hours' => BarberHours::week($b->key)], $editable),
+            'canShopDays' => $user->isAdmin,
+            'weekdays'  => Schedule::weekdayStatus(),
+            'flash'     => (string) $request->query('ok', ''),
+            'error'     => (string) $request->query('error', ''),
+            'stranded'  => (int) $request->query('turnos', 0),
         ]);
+    }
+
+    /**
+     * POST /admin/barberos/dias — campo: open[] (weekdays 0–6 que abre el local). Los que no vienen quedan cerrados.
+     * Si un día recién cerrado ya tenía turnos reservados no se cancelan: se avisa cuántos hay para que el admin decida.
+     * Solo el administrador: un barbero con la sección "barberos" maneja su propio horario, no los días del local.
+     */
+    public function saveShopDays(Request $request): void
+    {
+        $user = $this->requireSection('barberos');
+        $this->requireCsrf($request);
+        if (!$user->isAdmin) {
+            Response::error(403, 'Sin permiso', 'Solo el administrador cambia los días que abre el local.');
+        }
+
+        $input = $request->input('open', []);
+        $open = array_values(array_unique(array_filter(
+            array_map('intval', is_array($input) ? array_filter($input, 'is_string') : []),
+            static fn (int $w) => $w >= 0 && $w <= 6
+        )));
+        Schedule::saveOpenWeekdays($open);
+        Audit::log('admin_shop_days', $user->id, 'abre: ' . (implode(',', $open) ?: 'ninguno'));
+
+        $stranded = Appointment::countUpcomingOnWeekdays(array_values(array_diff(range(0, 6), $open)));
+        $this->redirect('/admin/barberos?ok=dias' . ($stranded > 0 ? '&turnos=' . $stranded : '') . '#dias-local');
+    }
+
+    /**
+     * POST /admin/barberos/horario — campos: barber (slug), days[weekday][works|from|to]. Guarda el horario semanal
+     * de un barbero; solo se aceptan los días en que el local da turnos (los demás no se usan para reservar).
+     * Los turnos ya reservados no se tocan: el cambio vale para las reservas nuevas. Un barbero solo puede guardar
+     * el de su propia ficha (ver canEditHours): si manda otro slug a mano, 403.
+     */
+    public function saveBarberHours(Request $request): void
+    {
+        $user = $this->requireSection('barberos');
+        $this->requireCsrf($request);
+
+        $barber = Barber::find((string) $request->input('barber', ''));
+        if ($barber === null) {
+            $this->redirect('/admin/barberos?error=' . rawurlencode('Ese barbero no existe.'));
+        }
+        if (!$this->canEditHours($user, $barber)) {
+            Audit::log('admin_barber_hours_denied', $user->id, 'barbero ' . $barber->key);
+            Response::error(403, 'Sin permiso', 'Solo podés cambiar tu propio horario.');
+        }
+        $bookable = array_keys(array_filter(Schedule::weekdayStatus(), static fn (string $s) => $s === 'open'));
+        $input = $request->input('days');
+        $input = is_array($input) ? array_intersect_key($input, array_flip($bookable)) : null;
+        [$days, $error] = BarberHours::validate($input);
+        if ($error !== null) {
+            $this->redirect('/admin/barberos?error=' . rawurlencode($barber->firstName() . ': ' . $error) . '#horario-' . rawurlencode($barber->id));
+        }
+        BarberHours::save($barber->key, $days);
+        Audit::log('admin_barber_hours', $user->id, 'barbero ' . $barber->key);
+        $this->redirect('/admin/barberos?ok=1#horario-' . rawurlencode($barber->id));
     }
 
     /** GET /admin/finanzas?mes=YYYY-MM — ingresos vs egresos del mes y gráfico de 6 meses (los egresos se cargan en /admin/egresos). */
     public function finance(Request $request): void
     {
-        $user = $this->requireAdmin();
+        $user = $this->requireSection('finanzas');
         $month = $this->month($request->query('mes'));
         $this->view('pages/admin-finanzas', [
             'title'     => 'Finanzas · Barbería',
@@ -153,7 +285,7 @@ final class AdminController extends Controller
      */
     public function expenses(Request $request): void
     {
-        $user = $this->requireAdmin();
+        $user = $this->requireSection('egresos');
         $month = $this->month($request->query('mes'));
         $this->view('pages/admin-egresos', [
             'title'     => 'Egresos · Barbería',
@@ -175,7 +307,7 @@ final class AdminController extends Controller
     /** POST /admin/egresos — registra un egreso. Valida con Expense::validate, exige CSRF y rol, y audita. */
     public function saveExpense(Request $request): void
     {
-        $user = $this->requireAdmin();
+        $user = $this->requireSection('egresos');
         $this->requireCsrf($request);
 
         [$data, $error] = Expense::validate([
@@ -194,7 +326,7 @@ final class AdminController extends Controller
     /** POST /admin/egresos/borrar — elimina un egreso cargado por error (queda en la auditoría). */
     public function deleteExpense(Request $request): void
     {
-        $user = $this->requireAdmin();
+        $user = $this->requireSection('egresos');
         $this->requireCsrf($request);
 
         $id = (int) $request->input('id', 0);
@@ -205,12 +337,68 @@ final class AdminController extends Controller
     }
 
     /**
+     * GET /admin/ingresos?mes=YYYY-MM — ingresos extra del mes (lo cobrado fuera de los turnos): alta (fecha,
+     * monto, categoría y observación), listado con baja y totales. Se suman al resultado del resumen y finanzas.
+     */
+    public function incomes(Request $request): void
+    {
+        $user = $this->requireSection('ingresos');
+        $month = $this->month($request->query('mes'));
+        $this->view('pages/admin-ingresos', [
+            'title'     => 'Ingreso extra · Barbería',
+            'bodyClass' => 'admin-page',
+            'user'      => $user,
+            'active'    => 'ingresos',
+            'scripts'   => ['js/money-input.js'],
+            'month'     => $month,
+            'prev'      => date('Y-m', strtotime($month . '-01 -1 month')),
+            'next'      => date('Y-m', strtotime($month . '-01 +1 month')),
+            'isCurrent' => $month === date('Y-m'),
+            'totals'    => Dashboard::finance($month . '-01', 1)[0],
+            'incomes'   => Income::forMonth($month),
+            'flash'     => (string) $request->query('ok', ''),
+            'error'     => (string) $request->query('error', ''),
+        ]);
+    }
+
+    /** POST /admin/ingresos — registra un ingreso extra. Valida con Income::validate, exige CSRF y rol, y audita. */
+    public function saveIncome(Request $request): void
+    {
+        $user = $this->requireSection('ingresos');
+        $this->requireCsrf($request);
+
+        [$data, $error] = Income::validate([
+            'received_on' => $request->input('received_on'), 'category' => $request->input('category'),
+            'amount' => $request->input('amount'), 'notes' => $request->input('notes'),
+        ]);
+        if ($error !== null) {
+            $this->redirect('/admin/ingresos?mes=' . $this->month(substr($request->string('received_on'), 0, 7)) . '&error=' . rawurlencode($error));
+        }
+        $id = Income::create($data, $user->id);
+        Audit::log('admin_income_create', $user->id, 'ingreso extra ' . $id . ' · $' . $data['amount']);
+        $this->redirect('/admin/ingresos?mes=' . substr($data['received_on'], 0, 7) . '&ok=1');
+    }
+
+    /** POST /admin/ingresos/borrar — elimina un ingreso extra cargado por error (queda en la auditoría). */
+    public function deleteIncome(Request $request): void
+    {
+        $user = $this->requireSection('ingresos');
+        $this->requireCsrf($request);
+
+        $id = (int) $request->string('id');
+        if ($id > 0 && Income::delete($id)) {
+            Audit::log('admin_income_delete', $user->id, 'ingreso extra ' . $id);
+        }
+        $this->redirect('/admin/ingresos?mes=' . $this->month($request->input('mes')) . '&ok=1');
+    }
+
+    /**
      * POST /admin/turnos/estado — marca un turno reservado como atendido ('done') o ausente ('no_show')
      * y vuelve a la agenda del mismo día. Exige CSRF y rol; queda en la auditoría.
      */
     public function mark(Request $request): void
     {
-        $user = $this->requireAdmin();
+        $user = $this->requireSection('turnos');
         $this->requireCsrf($request);
 
         $day = $this->day($request->input('fecha'));
@@ -230,7 +418,7 @@ final class AdminController extends Controller
      */
     public function queue(Request $request): void
     {
-        $user = $this->requireAdmin();
+        $user = $this->requireSection('fila');
         $url = rtrim((string) Config::get('url'), '/') . '/fila?c=' . rawurlencode((string) Config::get('queue.code'));
         $this->view('pages/admin-fila', [
             'title'     => 'Fila · Barbería',
@@ -247,7 +435,7 @@ final class AdminController extends Controller
     /** POST /admin/fila/llamar — da por atendido al número actual y llama al siguiente que espera. */
     public function queueCall(Request $request): void
     {
-        $user = $this->requireAdmin();
+        $user = $this->requireSection('fila');
         $this->requireCsrf($request);
         $number = QueueTicket::callNext();
         Audit::log('admin_queue_call', $user->id, $number === null ? 'fila vacía' : '#' . $number);
@@ -257,7 +445,7 @@ final class AdminController extends Controller
     /** POST /admin/fila/ausente — campo id: marca un número de hoy como "no vino". */
     public function queueNoShow(Request $request): void
     {
-        $user = $this->requireAdmin();
+        $user = $this->requireSection('fila');
         $this->requireCsrf($request);
         $id = (int) $request->input('id', 0);
         if ($id > 0 && QueueTicket::markNoShow($id)) {
@@ -267,18 +455,34 @@ final class AdminController extends Controller
     }
 
     /**
+     * Exige poder modificar el catálogo (servicios y productos): solo el administrador. Un barbero con la sección
+     * Servicios habilitada la ve en modo lectura y, si igual manda el formulario, recibe 403.
+     */
+    private function requireCatalogEditor(): User
+    {
+        $user = $this->requireSection('servicios');
+        if (!$user->isAdmin) {
+            Response::error(403, 'Solo lectura', 'Los servicios y productos los carga y edita el administrador.');
+        }
+        return $user;
+    }
+
+    /**
      * GET /admin/servicios — editor del catálogo: precio, nombre, descripción y duración de cada servicio,
-     * alta de servicios nuevos y ocultar/mostrar. `ok` y `error` traen el resultado de la acción anterior.
+     * alta de servicios nuevos y ocultar/mostrar. Para un barbero (canEdit = false) es solo una lista de lo que
+     * existe, sin formularios. `ok` y `error` traen el resultado de la acción anterior.
      */
     public function services(Request $request): void
     {
-        $user = $this->requireAdmin();
+        $user = $this->requireSection('servicios');
         $this->view('pages/admin-services', [
             'title'     => 'Servicios · Barbería',
             'bodyClass' => 'admin-page',
             'user'      => $user,
             'active'    => 'servicios',
+            'canEdit'   => $user->isAdmin,
             'services'  => Service::allForAdmin(),
+            'products'  => Product::allForAdmin(),
             'flash'     => (string) $request->query('ok', ''),
             'error'     => (string) $request->query('error', ''),
         ]);
@@ -290,7 +494,7 @@ final class AdminController extends Controller
      */
     public function saveService(Request $request): void
     {
-        $user = $this->requireAdmin();
+        $user = $this->requireCatalogEditor();
         $this->requireCsrf($request);
 
         $id = (int) $request->input('id', 0);
@@ -316,7 +520,7 @@ final class AdminController extends Controller
     /** POST /admin/servicios/estado — oculta ('0') o muestra ('1') un servicio en el catálogo. */
     public function toggleService(Request $request): void
     {
-        $user = $this->requireAdmin();
+        $user = $this->requireCatalogEditor();
         $this->requireCsrf($request);
 
         $id = (int) $request->input('id', 0);
@@ -326,5 +530,238 @@ final class AdminController extends Controller
             Audit::log($active ? 'admin_service_show' : 'admin_service_hide', $user->id, 'servicio ' . $id);
         }
         $this->redirect('/admin/servicios?ok=1');
+    }
+
+    /** POST /admin/productos/guardar — edita un producto existente (id) o crea uno nuevo (sin id): nombre, descripción y precio. */
+    public function saveProduct(Request $request): void
+    {
+        $user = $this->requireCatalogEditor();
+        $this->requireCsrf($request);
+
+        $id = (int) $request->input('id', 0);
+        [$data, $error] = Product::validate([
+            'name' => $request->input('name'), 'description' => $request->input('description'), 'price' => $request->input('price'),
+        ]);
+        if ($error !== null) {
+            $this->redirect('/admin/servicios?error=' . rawurlencode($error) . '#productos');
+        }
+        if ($id > 0) {
+            if (!Product::update($id, $data)) {
+                $this->redirect('/admin/servicios?error=' . rawurlencode('Ese producto no existe.') . '#productos');
+            }
+            Audit::log('admin_product_update', $user->id, 'producto ' . $id . ' · $' . $data['price']);
+        } else {
+            $id = Product::create($data);
+            Audit::log('admin_product_create', $user->id, 'producto ' . $id . ' · ' . $data['name']);
+        }
+        $this->redirect('/admin/servicios?ok=1#producto-' . $id);
+    }
+
+    /** POST /admin/productos/estado — oculta ('0') o muestra ('1') un producto en la app. */
+    public function toggleProduct(Request $request): void
+    {
+        $user = $this->requireCatalogEditor();
+        $this->requireCsrf($request);
+
+        $id = (int) $request->input('id', 0);
+        $active = $request->input('active') === '1';
+        if ($id > 0) {
+            Product::setActive($id, $active);
+            Audit::log($active ? 'admin_product_show' : 'admin_product_hide', $user->id, 'producto ' . $id);
+        }
+        $this->redirect('/admin/servicios?ok=1#producto-' . $id);
+    }
+
+    /**
+     * GET /admin/usuarios — cuentas de la barbería (solo administrador): alta con DNI, nombre, email, contraseña y rol;
+     * por cuenta, edición de datos/rol (al barbero se le eligen las secciones del panel que ve), cambio de contraseña
+     * y baja/reactivación. `ok` y `error` traen el resultado de la acción anterior.
+     */
+    public function users(Request $request): void
+    {
+        $user = $this->requireSection('usuarios');
+        $this->view('pages/admin-usuarios', [
+            'title'     => 'Usuarios · Barbería',
+            'bodyClass' => 'admin-page',
+            'user'      => $user,
+            'scripts'   => ['js/admin-users.js'],
+            'accounts'  => User::allForAdmin(),
+            'deletable' => array_flip(User::deletableIds()),
+            'stranded'  => (int) $request->query('turnos', 0),
+            'barbers'   => Barber::all(),
+            'flash'     => (string) $request->query('ok', ''),
+            'error'     => (string) $request->query('error', ''),
+        ]);
+    }
+
+    /**
+     * Vuelve a /admin/usuarios con un error. Como los avisos de guardado, se ancla a #aviso (arriba de todo) para que
+     * el mensaje quede a la vista después de enviar cualquier formulario de la página.
+     */
+    private function usersError(string $message): never
+    {
+        $this->redirect('/admin/usuarios?error=' . rawurlencode($message) . '#aviso');
+    }
+
+    /**
+     * POST /admin/usuarios/guardar — edita una cuenta (id) o crea una nueva (sin id; trae dni y password).
+     * Valida con User::validate y además: el admin no puede quitarse su propio rol y nunca se le quita el rol al último
+     * administrador activo (nadie podría entrar al panel). Con rol barbero, User::saveFromAdmin crea su ficha del equipo
+     * con el nombre cargado (no se elige una existente); si deja de ser barbero su ficha se oculta y, si tenía turnos
+     * reservados a futuro, se avisa cuántos (no se cancelan solos). Los permisos se leen en cada petición, así que el
+     * cambio vale enseguida para el usuario.
+     */
+    public function saveUser(Request $request): void
+    {
+        $user = $this->requireSection('usuarios');
+        $this->requireCsrf($request);
+
+        $id = (int) $request->input('id', 0);
+        $target = $id > 0 ? User::findById($id) : null;
+        if ($id > 0 && $target === null) {
+            $this->usersError('Esa cuenta no existe.');
+        }
+        [$data, $error] = User::validate([
+            'dni' => $request->input('dni'), 'full_name' => $request->input('full_name'), 'email' => $request->input('email'),
+            'role' => $request->input('role'), 'sections' => $request->input('sections'),
+            'password' => $request->input('password'),
+        ], $target === null);
+        if ($error !== null) {
+            $this->usersError($error);
+        }
+        if ($target?->isAdmin && !$data['is_admin']) {
+            if ($target->id === $user->id) {
+                $this->usersError('No podés quitarte tu propio rol de administrador.');
+            }
+            if ($target->active && User::activeAdminCount() <= 1) {
+                $this->usersError('Tiene que quedar al menos un administrador activo.');
+            }
+        }
+
+        // Si deja de ser barbero, su ficha se oculta: se cuentan antes sus turnos reservados para avisar.
+        $stranded = $target?->barberId !== null && !$data['is_barber'] ? Barber::upcomingCount($target->barberId) : 0;
+
+        try {
+            $id = User::saveFromAdmin($target, $data, $target === null ? Password::hash($data['password']) : null);
+        } catch (\PDOException $e) {
+            if ($e->getCode() === '23000') {
+                $this->usersError('Ya existe una cuenta con ese DNI o email.');
+            }
+            throw $e;
+        }
+        $role = $request->string('role') . ($data['panel_access'] ? ' · ' . $data['panel_access'] : '');
+        if ($target === null) {
+            Audit::log('admin_user_create', $user->id, 'usuario ' . $id . ' · ' . $data['dni'] . ' · ' . $role);
+        } else {
+            Audit::log('admin_user_update', $user->id, 'usuario ' . $id . ' · ' . $role);
+        }
+        $this->redirect('/admin/usuarios?ok=1' . ($stranded > 0 ? '&turnos=' . $stranded : '') . '#aviso');
+    }
+
+    /**
+     * POST /admin/usuarios/clave — campos: id, password, confirm. El administrador le pone una contraseña nueva a una
+     * cuenta (por ejemplo, si no tiene email para recuperarla). Borra sus enlaces de recuperación pendientes y cierra
+     * todas sus sesiones abiertas, salvo que sea la propia cuenta (no se echa a sí mismo del panel).
+     */
+    public function userPassword(Request $request): void
+    {
+        $user = $this->requireSection('usuarios');
+        $this->requireCsrf($request);
+
+        $id = (int) $request->input('id', 0);
+        $target = $id > 0 ? User::findById($id) : null;
+        if ($target === null) {
+            $this->usersError('Esa cuenta no existe.');
+        }
+        $password = $request->string('password');
+        if ($error = Password::validate($password)) {
+            $this->usersError($error);
+        }
+        if (!hash_equals($password, $request->string('confirm'))) {
+            $this->usersError('Las contraseñas no coinciden.');
+        }
+        Database::transaction(function () use ($target, $password, $user) {
+            User::setPassword($target->id, Password::hash($password));
+            Database::execute('DELETE FROM password_resets WHERE user_id = ?', [$target->id]);
+            if ($target->id !== $user->id) {
+                DbSessionHandler::revokeUser($target->id);
+            }
+        });
+        Audit::log('admin_user_password', $user->id, 'usuario ' . $id);
+        $this->redirect('/admin/usuarios?ok=clave#aviso');
+    }
+
+    /**
+     * POST /admin/usuarios/estado — campos: id, active ('0' suspender, '1' dar el alta). Suspender no borra la cuenta
+     * (sus turnos y movimientos se conservan): le impide entrar y cierra sus sesiones; si es barbero, además su ficha
+     * deja de aparecer en la app y de tomar turnos (se avisa cuántos reservados le quedan), y vuelve con el alta.
+     * No se puede suspender la propia cuenta ni al último administrador activo, y no se reactiva un barbero cuya
+     * ficha ya usa otra cuenta activa.
+     */
+    public function toggleUser(Request $request): void
+    {
+        $user = $this->requireSection('usuarios');
+        $this->requireCsrf($request);
+
+        $id = (int) $request->input('id', 0);
+        $active = $request->input('active') === '1';
+        $target = $id > 0 ? User::findById($id) : null;
+        if ($target === null) {
+            $this->usersError('Esa cuenta no existe.');
+        }
+        if (!$active) {
+            if ($target->id === $user->id) {
+                $this->usersError('No podés darte de baja a vos mismo.');
+            }
+            if ($target->isAdmin && $target->active && User::activeAdminCount() <= 1) {
+                $this->usersError('Tiene que quedar al menos un administrador activo.');
+            }
+        } elseif ($target->barberId !== null && User::barberTaken($target->barberId, $id)) {
+            $this->usersError('Su ficha del equipo ya está vinculada a otra cuenta activa: cambiale el rol antes de reactivarla.');
+        }
+        $stranded = !$active && $target->barberId !== null ? Barber::upcomingCount($target->barberId) : 0;
+        Database::transaction(function () use ($id, $active, $target) {
+            User::setActive($id, $active);
+            if ($target->barberId !== null) {
+                Barber::setActive($target->barberId, $active);
+            }
+        });
+        if (!$active) {
+            DbSessionHandler::revokeUser($id);
+        }
+        Audit::log($active ? 'admin_user_enable' : 'admin_user_disable', $user->id, 'usuario ' . $id);
+        $this->redirect('/admin/usuarios?ok=1' . ($stranded > 0 ? '&turnos=' . $stranded : '') . '#aviso');
+    }
+
+    /**
+     * POST /admin/usuarios/borrar — campo id: elimina del todo una cuenta sin historial (p. ej. creada por error).
+     * Con turnos, premios, fila o movimientos no se borra (User::delete devuelve false): esas se suspenden.
+     * No se puede eliminar la propia cuenta ni al último administrador activo.
+     */
+    public function deleteUser(Request $request): void
+    {
+        $user = $this->requireSection('usuarios');
+        $this->requireCsrf($request);
+
+        $id = (int) $request->input('id', 0);
+        $target = $id > 0 ? User::findById($id) : null;
+        if ($target === null) {
+            $this->usersError('Esa cuenta no existe.');
+        }
+        if ($target->id === $user->id) {
+            $this->usersError('No podés eliminar tu propia cuenta.');
+        }
+        if ($target->isAdmin && $target->active && User::activeAdminCount() <= 1) {
+            $this->usersError('Tiene que quedar al menos un administrador activo.');
+        }
+        if (!User::delete($id)) {
+            $this->usersError('Esta cuenta tiene historial (turnos, fila o movimientos): suspendela en lugar de eliminarla.');
+        }
+        // Su ficha del equipo se borra si nunca atendió turnos; si atendió, queda oculta para no perder ese historial.
+        if ($target->barberId !== null) {
+            Barber::retire($target->barberId);
+        }
+        Audit::log('admin_user_delete', $user->id, 'usuario ' . $id . ' · ' . $target->dni);
+        $this->redirect('/admin/usuarios?ok=borrado');
     }
 }

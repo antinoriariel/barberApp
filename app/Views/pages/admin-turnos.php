@@ -8,7 +8,7 @@
 $statusLabel = ['booked' => 'Reservado', 'done' => 'Atendido', 'no_show' => 'No vino', 'cancelled' => 'Cancelado'];
 ?>
 <main class="admin">
-  <?= partial('components/admin-header', ['heading' => 'Turnos', 'sub' => ucfirst(date_es($day)) . ($isToday ? ' · hoy' : ''), 'active' => 'turnos']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Turnos', 'sub' => ucfirst(date_es($day)) . ($isToday ? ' · hoy' : ''), 'sections' => $user->panelSections(), 'active' => 'turnos']) ?>
 
   <nav class="admin-nav" aria-label="Cambiar de día">
     <a class="btn-small" href="/admin/turnos?fecha=<?= e($prev) ?>">← Anterior</a>
@@ -25,8 +25,8 @@ $statusLabel = ['booked' => 'Reservado', 'done' => 'Atendido', 'no_show' => 'No 
     <p class="admin-empty">No hay turnos para este día.</p>
 <?php else: ?>
     <div class="table-wrap">
-      <?php // .stack: en celular cada turno es una tarjeta (data-label = título de la columna); desde 720px, tabla. ?>
-      <table class="admin-table stack">
+      <?php // .oneline: cada turno ocupa un solo renglón también en celular; se desliza de costado con la hora fija (ver admin.css). ?>
+      <table class="admin-table oneline">
         <thead>
           <tr><th>Hora</th><th>Cliente</th><th>Servicio</th><th>Barbero</th><th class="num">Precio</th><th>Estado</th><th></th></tr>
         </thead>

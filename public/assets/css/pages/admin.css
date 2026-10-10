@@ -3,9 +3,19 @@
 
 body.admin-page { background: var(--lather); min-height: 100dvh; }
 .admin { max-width: 1080px; margin: 0 auto; padding: calc(20px + env(safe-area-inset-top, 0px)) 16px calc(32px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; min-width: 0; }
-.admin-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+.admin-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.admin-head > div:first-child { min-width: 0; } /* el título se parte en renglones antes de empujar a los botones */
 .admin-head h1 { font-family: var(--display); font-weight: 900; font-size: clamp(30px, 9vw, 38px); line-height: 1; }
 .admin-sub { color: var(--ink-soft); font-weight: 600; }
+/* Lado derecho de la cabecera: selector de tema a la izquierda de "Cerrar sesión". Los dos comparten alto (40px),
+   borde y fondo para quedar parejos; el botón de tema de layout.css es blanco sobre la barra oscura de la app,
+   acá va sobre el fondo del panel, así que toma los colores del tema. */
+.admin-head-end { flex: none; display: flex; align-items: center; gap: 8px; }
+.admin-head-end .theme-toggle,
+.admin-head-end .btn-small.ghost { height: 40px; border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); }
+.admin-head-end .theme-toggle { width: 40px; }
+.admin-head-end .btn-small { display: inline-flex; align-items: center; padding: 0 16px; white-space: nowrap; }
+.admin-head-end :is(.theme-toggle, .btn-small):hover { border-color: var(--ink-soft); }
 .admin-nav { display: flex; flex-wrap: wrap; gap: 8px; }
 .admin-nav .btn-small { flex: 1 1 auto; text-align: center; } /* en celular los botones de anterior/siguiente se reparten el ancho */
 .admin-back { background: var(--blue); }
@@ -51,6 +61,8 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 /* Editor de servicios (/admin/servicios). */
 .svc-edit { display: grid; gap: 12px; }
 .svc-edit.off { opacity: .65; }
+.admin > .admin-section-title { margin-top: 12px; scroll-margin-top: 16px; } /* Servicios / Productos en /admin/servicios */
+.admin > .svc-edit { scroll-margin-top: 16px; } /* #producto-N tras guardar */
 .svc-edit-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .svc-edit-head strong { font-size: 17px; }
 .svc-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } /* celular: 2 columnas (precio y duración juntos) */
@@ -79,6 +91,11 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .chart-val { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
 .chart-bars { width: 100%; height: 100%; display: flex; align-items: end; justify-content: center; gap: 4px; }
 .chart-bars i { display: block; width: 40%; max-width: 26px; min-height: 2px; border-radius: 4px 4px 0 0; }
+/* Barra de ingresos: columna con el extra (arriba, rojo claro) apilado sobre los turnos (rojo, ocupa el resto). */
+.chart-bars .inc { display: flex; flex-direction: column; width: 40%; max-width: 26px; min-height: 2px; border-radius: 4px 4px 0 0; overflow: hidden; }
+.chart-bars .inc i { width: 100%; max-width: none; min-height: 0; border-radius: 0; }
+.chart-bars .inc .rev { flex: 1; }
+.chart-bars .extra, .chart-legend .extra { background: color-mix(in srgb, var(--red) 40%, var(--paper)); }
 .chart-bars .rev, .chart-legend .rev { background: var(--red); }
 .chart-bars .exp, .chart-legend .exp { background: #6B6B6B; }
 .chart-name { font-size: 12px; color: var(--ink-soft); font-weight: 600; text-transform: capitalize; }
@@ -111,11 +128,110 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .admin-table.sticky-first th:first-child { position: sticky; left: 0; z-index: 1; background: var(--paper); min-width: 120px; }
 .admin-table.sticky-first td { padding-left: 10px; padding-right: 10px; }
 
+/* Tabla .oneline (turnos del día, egresos): un renglón por fila en cualquier ancho; en celular se desliza de costado
+   con la primera columna (la hora) fija a la izquierda. */
+.admin-table.oneline :is(th, td):first-child { position: sticky; left: 0; z-index: 1; background: var(--paper); }
+
+/* Horario semanal de cada barbero (/admin/barberos). Mobile first: cada día ocupa dos renglones (día arriba,
+   desde/hasta abajo) y pasa a uno solo cuando la tarjeta tiene lugar (container query, no depende de la pantalla). */
+.hours-section { display: grid; gap: 12px; margin-top: 10px; }
+.hours-section-head { display: grid; gap: 2px; }
+.admin-section-title { font-family: var(--display); font-weight: 900; font-size: 24px; line-height: 1.1; }
+.hours-grid { display: grid; gap: 12px; }
+.hours-edit { container-type: inline-size; display: grid; gap: 12px; scroll-margin-top: 16px; }
+.hours-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; }
+.hours-head h3 { display: flex; align-items: center; font-size: 17px; font-weight: 800; }
+.hours-count { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.hours-form { display: grid; gap: 12px; }
+.hours-list { list-style: none; margin: 0; padding: 0; }
+.hours-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-areas: "day day day" "from sep to";
+  align-items: center; gap: 6px 8px; padding: 10px 0; border-top: 1px solid var(--line);
+}
+.hours-row:first-child { border-top: 0; padding-top: 0; }
+.hours-row:last-child { padding-bottom: 0; }
+.hours-row.off { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "day note"; }
+.hours-row.off .hours-day { color: var(--ink-soft); }
+.hours-day { grid-area: day; display: flex; align-items: center; gap: 10px; min-height: 32px; font-weight: 700; cursor: pointer; }
+.hours-row.off .hours-day { cursor: default; }
+.hours-day input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--blue); cursor: pointer; }
+.hours-time.from { grid-area: from; }
+.hours-time.to { grid-area: to; }
+.hours-sep { grid-area: sep; font-size: 13px; color: var(--ink-soft); }
+.hours-note { grid-area: note; font-size: 12px; font-weight: 600; color: var(--ink-soft); background: var(--lather); padding: 4px 10px; border-radius: 99px; }
+.hours-time {
+  width: 100%; min-width: 0; min-height: 44px; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 10px;
+  font: inherit; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--ink); background: var(--paper); color-scheme: inherit;
+}
+.hours-time:focus { border-color: var(--blue); outline: none; }
+/* Día sin atención: las horas quedan atenuadas (se guardan igual para cuando se vuelva a activar). */
+.hours-row:has(.hours-day input:not(:checked)) .hours-time { opacity: .4; }
+.hours-row:has(.hours-day input:not(:checked)) .hours-day { color: var(--ink-soft); }
+/* Días del local: un chip por día (tilde = abre). El texto Abierto/Cerrado sale del estado del checkbox, sin JS. */
+.shop-days { display: grid; gap: 12px; scroll-margin-top: 16px; }
+.shop-days h3 { font-size: 17px; font-weight: 800; }
+.day-chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.day-chip {
+  position: relative; display: grid; align-content: start; gap: 2px; min-height: 56px; padding: 10px 12px; border: 1.5px solid var(--line);
+  border-radius: 12px; cursor: pointer; background: var(--paper); transition: border-color .15s, background-color .15s;
+}
+.day-chip input { position: absolute; opacity: 0; pointer-events: none; }
+.day-chip-name { font-weight: 700; }
+.day-chip-state { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.day-chip-state::before { content: "Cerrado"; }
+.day-chip-hint { font-size: 11px; color: var(--ink-soft); }
+.day-chip:has(input:checked) { border-color: var(--blue); background: color-mix(in srgb, var(--blue) 10%, var(--paper)); }
+.day-chip:has(input:checked) .day-chip-state { color: var(--blue); }
+.day-chip:has(input:checked) .day-chip-state::before { content: "Abierto"; }
+.day-chip:has(input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
+.day-chip:has(input:not(:checked)) .day-chip-hint { display: none; }
+
+.hours-save { width: 100%; padding: 12px 14px; text-align: center; } /* celular: botón cómodo para el dedo */
+
+/* Usuarios (/admin/usuarios): tarjeta por cuenta con dos desplegables (editar / contraseña) y secciones del barbero. */
+.admin > [hidden], .svc-fields [hidden] { display: none; } /* el display de las tarjetas y los labels le gana a [hidden] */
+.admin-flashes { display: grid; gap: 8px; scroll-margin-top: 16px; } /* #aviso: resultado de guardar en /admin/usuarios */
+.user-card { scroll-margin-top: 16px; } /* #usuario-N tras guardar */
+.user-id { display: grid; gap: 2px; min-width: 0; }
+.user-id strong { font-size: 17px; overflow-wrap: anywhere; }
+.user-id small { color: var(--ink-soft); font-size: 13px; }
+.user-search { width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 16px; color: var(--ink); background: var(--paper); }
+.user-search:focus { border-color: var(--blue); outline: none; }
+.user-more { border-top: 1px solid var(--line); padding-top: 10px; }
+.user-more summary { cursor: pointer; font-weight: 700; font-size: 14px; color: var(--blue); }
+.user-more[open] summary { margin-bottom: 10px; }
+.btn-small.danger { background: var(--red); color: #fff; }
+/* Validación en vivo (admin-users.js): mensaje debajo del campo y borde rojo. */
+.svc-fields .field-msg { font-size: 12px; font-weight: 600; color: var(--red); }
+.svc-fields [aria-invalid="true"] { border-color: var(--red); }
+.svc-fields [aria-invalid="true"]:focus { border-color: var(--red); box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 18%, transparent); } /* eliminar cuenta (no se puede deshacer) */
+.perm-note { font-size: 13px; color: var(--ink-soft); } /* aviso de la ficha del equipo que se crea con el nombre */
+.perm-box { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 6px; }
+.perm-box legend { padding: 0; margin-bottom: 6px; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+.perm-box small { color: var(--ink-soft); font-size: 12px; }
+.perm-chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.svc-fields .perm-chip {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 12px;
+  cursor: pointer; background: var(--paper); color: var(--ink); font-size: 14px; transition: border-color .15s, background-color .15s;
+}
+.svc-fields .perm-chip input { width: 18px; height: 18px; padding: 0; border: 0; flex: none; accent-color: var(--blue); }
+.perm-chip:has(input:checked) { border-color: var(--blue); background: color-mix(in srgb, var(--blue) 10%, var(--paper)); }
+
+@container (min-width: 400px) {
+  .hours-row { grid-template-columns: minmax(0, 1fr) 7.5em auto 7.5em; grid-template-areas: "day from sep to"; }
+  .hours-row.off { grid-template-columns: minmax(0, 1fr) auto; }
+  .hours-time { min-height: 40px; }
+}
+
 /* ===== Tablet / escritorio ===== */
 @media (min-width: 720px) {
   .admin { padding-left: 24px; padding-right: 24px; gap: 16px; }
   .admin-nav .btn-small { flex: none; }
   .svc-fields { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .day-chips { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .perm-chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .hours-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); align-items: start; gap: 16px; }
+  .hours-save { width: auto; justify-self: end; padding: 9px 18px; }
   .chart { gap: 8px; }
   .chart li { grid-template-rows: auto 140px auto; }
   .chart-val { font-size: 11px; }

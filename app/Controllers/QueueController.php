@@ -54,13 +54,19 @@ final class QueueController extends Controller
         ]);
     }
 
-    /** POST /fila — campos: c (código del QR). Da el número siguiente (o el que ya tenía) y vuelve a Inicio. */
+    /**
+     * POST /fila — campos: c (código del QR). Da el número siguiente (o el que ya tenía) y vuelve a Inicio.
+     * Un administrador no puede sacar número: la fila es para clientes (la pantalla ya no le muestra el botón).
+     */
     public function take(Request $request): void
     {
         $this->requireCsrf($request);
         $user = $this->requireLogin();
         if (!$this->validCode($request->input('c', '')) || !Database::enabled()) {
             Response::error(404, 'QR no válido', 'Escaneá el QR que está en el mostrador del local.');
+        }
+        if ($user->isAdmin) {
+            Response::error(403, 'No disponible', 'Las cuentas de administrador no pueden tomar número en la fila.');
         }
         $ticket = QueueTicket::take($user);
         Audit::log('queue_take', $user->id, '#' . $ticket['number']);

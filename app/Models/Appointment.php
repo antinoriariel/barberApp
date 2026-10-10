@@ -125,6 +125,23 @@ final class Appointment
         ));
     }
 
+    /**
+     * Cantidad de turnos reservados y futuros (de todos los clientes) que caen en esos días de semana (0 = domingo).
+     * Sirve para avisar al admin que cerró un día que ya tenía reservas (los turnos no se cancelan solos).
+     * @param int[] $weekdays
+     */
+    public static function countUpcomingOnWeekdays(array $weekdays): int
+    {
+        if (!$weekdays) {
+            return 0;
+        }
+        $in = implode(',', array_fill(0, count($weekdays), '?'));
+        return (int) (Database::selectOne(
+            "SELECT COUNT(*) AS n FROM appointments WHERE status = 'booked' AND starts_at > ? AND DAYOFWEEK(starts_at) - 1 IN ({$in})",
+            [self::sql(time()), ...array_values($weekdays)]
+        )['n'] ?? 0);
+    }
+
     /** Cantidad de turnos reservados y futuros del cliente. */
     public static function countUpcoming(User $user): int
     {

@@ -38,7 +38,7 @@
         <label class="barber-pick<?= $b->photo ? ' has-photo' : '' ?><?= $b->isTopRated() ? ' is-top' : '' ?>" style="--tone: <?= e(css_color($b->tone)) ?>">
           <input type="radio" name="barber" value="<?= e($b->id) ?>" data-label="<?= e($b->name) ?>">
           <span class="barber-pick-body">
-            <span class="barber-pick-top"><span class="rating"><?= icon('star') ?><?= e($b->rating) ?></span></span>
+            <span class="barber-pick-top"><span class="rating"><?php if ($b->isNew()): ?>Nuevo<?php else: ?><?= icon('star') ?><?= e($b->rating) ?><?php endif; ?></span></span>
             <span class="barber-pick-face">
               <?php if ($b->photo): ?>
                 <img class="barber-pick-photo" src="<?= e($b->photo) ?>" alt="Ilustración de <?= e($b->name) ?>" width="76" height="76" decoding="async">

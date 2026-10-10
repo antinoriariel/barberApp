@@ -141,3 +141,16 @@ function delta_text(array $d, bool $money, string $vs): array
         default => ['flat', '= igual que ' . $vs],
     };
 }
+
+/**
+ * Slug ASCII para URLs y claves a partir de un nombre: "Corte & Barba Ñandú" → "corte-barba-nandu" (máximo 24
+ * caracteres; $fallback si no queda nada). Usa strtr y no iconv//TRANSLIT porque su resultado cambia según la
+ * plataforma (en Windows deja "n~").
+ */
+function slugify(string $text, string $fallback = 'item'): string
+{
+    $ascii = strtolower(strtr($text, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n',
+                                      'Á' => 'a', 'É' => 'e', 'Í' => 'i', 'Ó' => 'o', 'Ú' => 'u', 'Ü' => 'u', 'Ñ' => 'n']));
+    $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', $ascii), '-');
+    return substr($slug !== '' ? $slug : $fallback, 0, 24);
+}
