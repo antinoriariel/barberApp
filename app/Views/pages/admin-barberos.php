@@ -5,8 +5,10 @@
  * Debajo, los días que abre el local (opening_hours, se eligen con un tilde por día) y el horario semanal de cada barbero: qué días atiende y de qué hora a qué hora. La agenda solo le ofrece
  * turnos dentro de esa franja; los días que el local cierra o atiende por orden de llegada no se configuran.
  * Cada ficha permite cambiar o quitar la foto del barbero, y al final se da de alta un barbero nuevo (con foto opcional).
+ * Solo el administrador los edita: un barbero con la sección habilitada ($canEdit = false) ve lo mismo en modo
+ * lectura (días y franjas como texto, sin formularios).
  *
- * Variables: $week (Dashboard::week), $prev/$next (YYYY-MM-DD: semana anterior/siguiente), $isCurrent (bool),
+ * Variables: $canEdit (bool: es admin), $week (Dashboard::week), $prev/$next (YYYY-MM-DD: semana anterior/siguiente), $isCurrent (bool),
  *            $team (lista de ['barber' => Barber, 'hours' => BarberHours::week]), $weekdays (Schedule::weekdayStatus),
  *            $flash ('1' horario guardado | 'dias' días del local guardados | 'nuevo' barbero creado | 'foto' foto cambiada | ''),
  *            $error (string),
@@ -50,7 +52,7 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
   <section class="hours-section" aria-labelledby="hours-title">
     <header class="hours-section-head">
       <h2 id="hours-title" class="admin-section-title">Horarios de atención</h2>
-      <p class="admin-sub">La agenda solo ofrece turnos dentro de la franja de cada barbero.</p>
+      <p class="admin-sub">La agenda solo ofrece turnos dentro de la franja de cada barbero.<?= $canEdit ? '' : ' Los carga y edita el administrador.' ?></p>
     </header>
     <?php // Días que abre el local: un tilde por día. Los cerrados no ofrecen turnos y no se configuran por barbero. ?>
     <section class="admin-card shop-days" id="dias-local" aria-labelledby="dias-title">
@@ -58,6 +60,7 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
         <h3 id="dias-title">Días del local</h3>
         <span class="hours-count">Abre <?= count(array_filter($weekdays, static fn (string $st) => $st !== 'closed')) ?> de 7 días</span>
       </header>
+<?php if ($canEdit): ?>
       <form method="post" action="/admin/barberos/dias" class="hours-form">
         <?= csrf_field() ?>
         <div class="day-chips">
@@ -74,6 +77,19 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
         </div>
         <button class="btn-small hours-save" type="submit">Guardar días</button>
       </form>
+<?php else: ?>
+      <ul class="day-chips">
+<?php foreach ($order as $w => $dayName): $isOpen = $weekdays[$w] !== 'closed'; ?>
+        <li class="day-chip static<?= $isOpen ? ' on' : '' ?>">
+          <span class="day-chip-name"><?= e($dayName) ?></span>
+          <span class="day-chip-state"><?= $isOpen ? 'Abierto' : 'Cerrado' ?></span>
+<?php if ($weekdays[$w] === 'walkin'): ?>
+          <small class="day-chip-hint">Por orden de llegada</small>
+<?php endif; ?>
+        </li>
+<?php endforeach; ?>
+      </ul>
+<?php endif; ?>
     </section>
 
     <div class="hours-grid">
@@ -94,6 +110,7 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
 <?php else: ?>
           <span class="bp-avatar empty" style="--tone: <?= e(css_color($b->tone)) ?>" aria-hidden="true"><?= e(mb_substr($b->name, 0, 1)) ?></span>
 <?php endif; ?>
+<?php if ($canEdit): ?>
           <form method="post" action="/admin/barberos/foto" enctype="multipart/form-data" class="bp-form">
             <?= csrf_field() ?>
             <input type="hidden" name="barber" value="<?= e($b->id) ?>">
@@ -107,7 +124,9 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
             <button class="btn-small" type="submit" name="remove" value="1">Quitar foto</button>
           </form>
 <?php endif; ?>
+<?php endif; ?>
         </div>
+<?php if ($canEdit): ?>
         <form method="post" action="/admin/barberos/horario" class="hours-form">
           <?= csrf_field() ?>
           <input type="hidden" name="barber" value="<?= e($b->id) ?>">
@@ -128,12 +147,27 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
           </ul>
           <button class="btn-small hours-save" type="submit">Guardar horario</button>
         </form>
+<?php else: ?>
+        <ul class="hours-list">
+<?php foreach ($order as $w => $dayName): $h = $hours[$w]; $works = $weekdays[$w] === 'open' && $h['works']; ?>
+          <li class="hours-row <?= $works ? 'ro' : 'off' ?>">
+            <span class="hours-day"><?= e($dayName) ?></span>
+<?php if ($works): ?>
+            <span class="hours-range"><?= e($h['from']) ?> a <?= e($h['to']) ?></span>
+<?php else: ?>
+            <span class="hours-note"><?= e($notes[$weekdays[$w]] ?? 'No atiende') ?></span>
+<?php endif; ?>
+          </li>
+<?php endforeach; ?>
+        </ul>
+<?php endif; ?>
       </section>
 <?php endforeach; ?>
     </div>
   </section>
 
-  <?php // Alta de un barbero: aparece en la app al instante; la foto se recorta al cuadrado y se guarda como WebP. ?>
+<?php if ($canEdit): ?>
+  <?php // Alta de un barbero (solo el administrador): aparece en la app al instante; la foto se recorta al cuadrado y se guarda como WebP. ?>
   <section class="admin-card svc-edit" id="nuevo-barbero" aria-labelledby="barber-new">
     <h2 id="barber-new">Nuevo barbero</h2>
     <form method="post" action="/admin/barberos/nuevo" enctype="multipart/form-data" class="svc-edit">
@@ -152,4 +186,5 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
       </div>
     </form>
   </section>
+<?php endif; ?>
 </main>
