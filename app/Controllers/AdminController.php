@@ -32,6 +32,16 @@ use App\Support\Password;
 final class AdminController extends Controller
 {
     /**
+     * Renderiza una vista del panel sumando js/admin.js (selector de tema de la cabecera) a los scripts
+     * que pida cada acción, así todas las vistas del panel lo tienen sin repetirlo en cada una.
+     */
+    protected function view(string $template, array $data = [], string $layout = 'layouts/base'): void
+    {
+        $data['scripts'] = array_merge(['js/admin.js'], $data['scripts'] ?? []);
+        parent::view($template, $data, $layout);
+    }
+
+    /**
      * Exige sesión, base de datos y permiso sobre una sección del panel (ver User::canSee): el administrador entra
      * a todas; un barbero, solo a las que se le habilitaron en /admin/usuarios. Sin sesión redirige al login; sin base
      * de datos responde 503; sin permiso, 403 (sin pistas de qué hay). Excepción: si un barbero sin "resumen" entra a

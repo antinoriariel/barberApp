@@ -3,9 +3,19 @@
 
 body.admin-page { background: var(--lather); min-height: 100dvh; }
 .admin { max-width: 1080px; margin: 0 auto; padding: calc(20px + env(safe-area-inset-top, 0px)) 16px calc(32px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; min-width: 0; }
-.admin-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+.admin-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.admin-head > div:first-child { min-width: 0; } /* el título se parte en renglones antes de empujar a los botones */
 .admin-head h1 { font-family: var(--display); font-weight: 900; font-size: clamp(30px, 9vw, 38px); line-height: 1; }
 .admin-sub { color: var(--ink-soft); font-weight: 600; }
+/* Lado derecho de la cabecera: selector de tema a la izquierda de "Cerrar sesión". Los dos comparten alto (40px),
+   borde y fondo para quedar parejos; el botón de tema de layout.css es blanco sobre la barra oscura de la app,
+   acá va sobre el fondo del panel, así que toma los colores del tema. */
+.admin-head-end { flex: none; display: flex; align-items: center; gap: 8px; }
+.admin-head-end .theme-toggle,
+.admin-head-end .btn-small.ghost { height: 40px; border: 1.5px solid var(--line); background: var(--paper); color: var(--ink); }
+.admin-head-end .theme-toggle { width: 40px; }
+.admin-head-end .btn-small { display: inline-flex; align-items: center; padding: 0 16px; white-space: nowrap; }
+.admin-head-end :is(.theme-toggle, .btn-small):hover { border-color: var(--ink-soft); }
 .admin-nav { display: flex; flex-wrap: wrap; gap: 8px; }
 .admin-nav .btn-small { flex: 1 1 auto; text-align: center; } /* en celular los botones de anterior/siguiente se reparten el ancho */
 .admin-back { background: var(--blue); }
@@ -81,6 +91,11 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .chart-val { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
 .chart-bars { width: 100%; height: 100%; display: flex; align-items: end; justify-content: center; gap: 4px; }
 .chart-bars i { display: block; width: 40%; max-width: 26px; min-height: 2px; border-radius: 4px 4px 0 0; }
+/* Barra de ingresos: columna con el extra (arriba, rojo claro) apilado sobre los turnos (rojo, ocupa el resto). */
+.chart-bars .inc { display: flex; flex-direction: column; width: 40%; max-width: 26px; min-height: 2px; border-radius: 4px 4px 0 0; overflow: hidden; }
+.chart-bars .inc i { width: 100%; max-width: none; min-height: 0; border-radius: 0; }
+.chart-bars .inc .rev { flex: 1; }
+.chart-bars .extra, .chart-legend .extra { background: color-mix(in srgb, var(--red) 40%, var(--paper)); }
 .chart-bars .rev, .chart-legend .rev { background: var(--red); }
 .chart-bars .exp, .chart-legend .exp { background: #6B6B6B; }
 .chart-name { font-size: 12px; color: var(--ink-soft); font-weight: 600; text-transform: capitalize; }
