@@ -42,6 +42,13 @@ final class Request
         return is_string($v) ? substr($v, 0, $max) : $default;
     }
 
+    /** Archivo subido en un formulario multipart (entrada de $_FILES: name, tmp_name, size, error…) o null si no vino. */
+    public function file(string $key): ?array
+    {
+        $file = $_FILES[$key] ?? null;
+        return is_array($file) ? $file : null;
+    }
+
     /** Cabecera de la petición por nombre ('X-CSRF-Token'), o null. */
     public function header(string $name): ?string
     {
