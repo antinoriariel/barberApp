@@ -18,12 +18,14 @@
   <section class="admin-card" aria-labelledby="svc-list">
     <h2 id="svc-list">Servicios</h2>
     <div class="table-wrap">
-      <table class="admin-table stack">
-        <thead><tr><th>Servicio</th><th class="num">Duración</th><th class="num">Precio</th><th>Estado</th></tr></thead>
+      <?php // .oneline: cada servicio ocupa un solo renglón también en celular; se desliza de costado con el nombre fijo (ver admin.css). ?>
+      <table class="admin-table oneline">
+        <thead><tr><th>Servicio</th><th>Descripción</th><th class="num">Duración</th><th class="num">Precio</th><th>Estado</th></tr></thead>
         <tbody>
 <?php foreach ($services as $s): ?>
           <tr>
-            <td class="cell-main"><b><?= e($s['name']) ?></b><?php if ($s['description'] !== ''): ?><br><small><?= e($s['description']) ?></small><?php endif; ?></td>
+            <td class="cell-main"><b><?= e($s['name']) ?></b></td>
+            <td data-label="Descripción"><small><?= $s['description'] !== '' ? e($s['description']) : '—' ?></small></td>
             <td class="num" data-label="Duración"><?= $s['minutes'] ?> min</td>
             <td class="num" data-label="Precio"><b><?= money($s['price']) ?></b></td>
             <td data-label="Estado"><span class="status <?= $s['active'] ? 'done' : 'cancelled' ?>"><?= $s['active'] ? 'Visible' : 'Oculto' ?></span></td>
@@ -40,12 +42,14 @@
     <p class="admin-empty">No hay productos cargados.</p>
 <?php else: ?>
     <div class="table-wrap">
-      <table class="admin-table stack">
-        <thead><tr><th>Producto</th><th class="num">Precio</th><th>Estado</th></tr></thead>
+      <?php // .oneline: cada producto ocupa un solo renglón también en celular; se desliza de costado con el nombre fijo (ver admin.css). ?>
+      <table class="admin-table oneline">
+        <thead><tr><th>Producto</th><th>Descripción</th><th class="num">Precio</th><th>Estado</th></tr></thead>
         <tbody>
 <?php foreach ($products as $p): ?>
           <tr>
-            <td class="cell-main"><b><?= e($p['name']) ?></b><?php if ($p['description'] !== ''): ?><br><small><?= e($p['description']) ?></small><?php endif; ?></td>
+            <td class="cell-main"><b><?= e($p['name']) ?></b></td>
+            <td data-label="Descripción"><small><?= $p['description'] !== '' ? e($p['description']) : '—' ?></small></td>
             <td class="num" data-label="Precio"><b><?= money($p['price']) ?></b></td>
             <td data-label="Estado"><span class="status <?= $p['active'] ? 'done' : 'cancelled' ?>"><?= $p['active'] ? 'Visible' : 'Oculto' ?></span></td>
           </tr>

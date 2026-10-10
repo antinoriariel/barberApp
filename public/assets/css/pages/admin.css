@@ -148,7 +148,7 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .admin-table.sticky-first th:first-child { position: sticky; left: 0; z-index: 1; background: var(--paper); min-width: 120px; }
 .admin-table.sticky-first td { padding-left: 10px; padding-right: 10px; }
 
-/* Tabla .oneline (turnos del día, egresos): un renglón por fila en cualquier ancho; en celular se desliza de costado
+/* Tabla .oneline (turnos del día, egresos, ingresos, servicios y productos en solo lectura): un renglón por fila en cualquier ancho; en celular se desliza de costado
    con la primera columna (la hora) fija a la izquierda. */
 .admin-table.oneline :is(th, td):first-child { position: sticky; left: 0; z-index: 1; background: var(--paper); }
 
