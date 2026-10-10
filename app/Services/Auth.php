@@ -37,11 +37,15 @@ final class Auth
     /** Hash de relleno para igualar el tiempo de respuesta cuando el DNI no existe. */
     private static ?string $dummyHash = null;
 
-    /** Usuario de la sesión actual o null si no hay sesión (o el DNI guardado ya no existe). */
+    /**
+     * Usuario de la sesión actual o null si no hay sesión, el DNI guardado ya no existe o la cuenta fue dada de baja
+     * (la baja también borra sus sesiones; esto cubre una sesión que siga viva en el navegador).
+     */
     public static function user(): ?User
     {
         $dni = Session::get('dni');
-        return is_string($dni) ? User::find($dni) : null;
+        $user = is_string($dni) ? User::find($dni) : null;
+        return $user?->active ? $user : null;
     }
 
     /**

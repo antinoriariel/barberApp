@@ -86,7 +86,11 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/logout           
 Para ver el bloqueo por intentos: repetir 5 veces un `POST /login` con un DNI inexistente y un token válido → cada fallo avisa cuántos intentos quedan y el quinto ya responde **429** con "Podés volver a intentar en N minutos" (y `Retry-After` en segundos). El conteo es el mismo exista o no el DNI, así que no revela cuentas.
 Los contadores viven en la tabla `login_attempts` (con `DB_DRIVER=files`, en `storage/ratelimit/`); para desbloquear en desarrollo se pueden borrar sin riesgo.
 
-Editor de servicios (`/admin/servicios`): solo administradores, POST con CSRF, validación en `Service::validate` y auditoría (`admin_service_update/create/hide/show`). Los turnos ya reservados conservan el precio con el que se tomaron.
+Usuarios (`/admin/usuarios`): exclusivo del administrador (nunca se le habilita a un barbero). Alta, edición de rol, cambio de contraseña y baja son POST con CSRF y quedan en la auditoría (`admin_user_create/update/password/enable/disable`); la contraseña nunca se registra. El cambio de contraseña borra los enlaces de recuperación y cierra las sesiones de esa cuenta. La baja es lógica (`users.active = 0`): el login falla con el mismo mensaje que una contraseña mala, se borran sus sesiones y `Auth::user()` ignora cualquier sesión que quede. No se puede dar de baja ni quitar el rol a uno mismo ni al último administrador activo.
+
+Permisos del panel: cada acción de `AdminController` exige su sección (`requireSection`, ver `User::canSee`); el admin ve todas y el barbero solo las de `users.panel_access`, comprobadas en cada petición (también en los POST), no solo ocultando pestañas.
+
+Editor de servicios (`/admin/servicios`): administradores (o barberos con la sección Servicios), POST con CSRF, validación en `Service::validate` y auditoría (`admin_service_update/create/hide/show`). Los turnos ya reservados conservan el precio con el que se tomaron.
 
 API de turnos: sin sesión responde 401 JSON; las POST exigen CSRF (campo `_csrf` o cabecera `X-CSRF-Token`) y las escrituras filtran siempre por el usuario de la sesión. El servidor revalida servicio, barbero, fecha y hora, y recalcula precio y duración; un cliente no puede tener más de `booking.max_active` turnos futuros.
 

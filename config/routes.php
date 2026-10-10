@@ -43,7 +43,7 @@ return static function (Router $router): void {
     $router->post('/fila/salir', [QueueController::class, 'leave']);
     $router->get('/api/fila', [QueueController::class, 'status']);
 
-    // Panel de administración (requiere sesión de administrador).
+    // Panel de administración (administrador, o barbero en las secciones que tenga habilitadas; usuarios: solo admin).
     $router->get('/admin', [AdminController::class, 'dashboard']);
     $router->get('/admin/turnos', [AdminController::class, 'appointments']);
     $router->post('/admin/turnos/estado', [AdminController::class, 'mark']);
@@ -65,6 +65,10 @@ return static function (Router $router): void {
     $router->get('/admin/fila', [AdminController::class, 'queue']);
     $router->post('/admin/fila/llamar', [AdminController::class, 'queueCall']);
     $router->post('/admin/fila/ausente', [AdminController::class, 'queueNoShow']);
+    $router->get('/admin/usuarios', [AdminController::class, 'users']);
+    $router->post('/admin/usuarios/guardar', [AdminController::class, 'saveUser']);
+    $router->post('/admin/usuarios/clave', [AdminController::class, 'userPassword']);
+    $router->post('/admin/usuarios/estado', [AdminController::class, 'toggleUser']);
 
     // Minijuegos de la pantalla de inicio (JSON; sesión + CSRF).
     $router->post('/juegos/iniciar', [GameController::class, 'start']);

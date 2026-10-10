@@ -19,7 +19,7 @@ final class AuthController extends Controller
     public function showLogin(Request $request): void
     {
         if ($user = Auth::user()) {
-            $this->redirect($user->isAdmin ? '/admin' : '/');
+            $this->redirect($user->hasPanel() ? '/admin' : '/');
         }
         $this->renderLogin();
     }
@@ -44,8 +44,8 @@ final class AuthController extends Controller
             if (is_string($after) && str_starts_with($after, '/fila?')) {
                 $this->redirect($after);
             }
-            // El administrador entra directo a su panel.
-            $this->redirect(Auth::user()?->isAdmin ? '/admin' : '/');
+            // El administrador (y el barbero con secciones del panel habilitadas) entra directo al panel.
+            $this->redirect(Auth::user()?->hasPanel() ? '/admin' : '/');
         }
         $this->throttleHeaders($error);
         $this->renderLogin($error, Dni::normalize($raw));

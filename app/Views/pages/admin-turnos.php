@@ -8,7 +8,7 @@
 $statusLabel = ['booked' => 'Reservado', 'done' => 'Atendido', 'no_show' => 'No vino', 'cancelled' => 'Cancelado'];
 ?>
 <main class="admin">
-  <?= partial('components/admin-header', ['heading' => 'Turnos', 'sub' => ucfirst(date_es($day)) . ($isToday ? ' · hoy' : ''), 'active' => 'turnos']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Turnos', 'sub' => ucfirst(date_es($day)) . ($isToday ? ' · hoy' : ''), 'sections' => $user->panelSections(), 'active' => 'turnos']) ?>
 
   <nav class="admin-nav" aria-label="Cambiar de día">
     <a class="btn-small" href="/admin/turnos?fecha=<?= e($prev) ?>">← Anterior</a>

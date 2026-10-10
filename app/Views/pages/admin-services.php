@@ -9,7 +9,7 @@
  */
 ?>
 <main class="admin">
-  <?= partial('components/admin-header', ['heading' => 'Servicios y productos', 'sub' => 'Los cambios se ven al instante en la app.', 'active' => 'servicios']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Servicios y productos', 'sub' => 'Los cambios se ven al instante en la app.', 'sections' => $user->panelSections(), 'active' => 'servicios']) ?>
 
   <?php if ($flash === '1'): ?><p class="admin-flash ok" role="status">Cambios guardados.</p><?php endif; ?>
   <?php if ($error !== ''): ?><p class="admin-flash bad" role="alert"><?= e($error) ?></p><?php endif; ?>

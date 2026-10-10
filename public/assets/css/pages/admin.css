@@ -173,6 +173,28 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 
 .hours-save { width: 100%; padding: 12px 14px; text-align: center; } /* celular: botón cómodo para el dedo */
 
+/* Usuarios (/admin/usuarios): tarjeta por cuenta con dos desplegables (editar / contraseña) y secciones del barbero. */
+.admin > [hidden], .svc-fields [hidden] { display: none; } /* el display de las tarjetas y los labels le gana a [hidden] */
+.user-card { scroll-margin-top: 16px; } /* #usuario-N tras guardar */
+.user-id { display: grid; gap: 2px; min-width: 0; }
+.user-id strong { font-size: 17px; overflow-wrap: anywhere; }
+.user-id small { color: var(--ink-soft); font-size: 13px; }
+.user-search { width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; font: inherit; font-size: 16px; color: var(--ink); background: var(--paper); }
+.user-search:focus { border-color: var(--blue); outline: none; }
+.user-more { border-top: 1px solid var(--line); padding-top: 10px; }
+.user-more summary { cursor: pointer; font-weight: 700; font-size: 14px; color: var(--blue); }
+.user-more[open] summary { margin-bottom: 10px; }
+.perm-box { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 6px; }
+.perm-box legend { padding: 0; margin-bottom: 6px; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+.perm-box small { color: var(--ink-soft); font-size: 12px; }
+.perm-chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.svc-fields .perm-chip {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 12px;
+  cursor: pointer; background: var(--paper); color: var(--ink); font-size: 14px; transition: border-color .15s, background-color .15s;
+}
+.svc-fields .perm-chip input { width: 18px; height: 18px; padding: 0; border: 0; flex: none; accent-color: var(--blue); }
+.perm-chip:has(input:checked) { border-color: var(--blue); background: color-mix(in srgb, var(--blue) 10%, var(--paper)); }
+
 @container (min-width: 400px) {
   .hours-row { grid-template-columns: minmax(0, 1fr) 7.5em auto 7.5em; grid-template-areas: "day from sep to"; }
   .hours-row.off { grid-template-columns: minmax(0, 1fr) auto; }
@@ -185,6 +207,7 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
   .admin-nav .btn-small { flex: none; }
   .svc-fields { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
   .day-chips { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .perm-chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .hours-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); align-items: start; gap: 16px; }
   .hours-save { width: auto; justify-self: end; padding: 9px 18px; }
   .chart { gap: 8px; }

@@ -16,7 +16,7 @@ $maxRevenue = max(1, ...array_column($today['barbers'], 'revenue'));
 $before = array_column($yesterday['barbers'], null, 'id');
 ?>
 <main class="admin">
-  <?= partial('components/admin-header', ['heading' => 'Panel Administrativo', 'sub' => ucfirst(date_es($day)) . ($isToday ? ' · hoy' : ''), 'active' => 'resumen']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Panel Administrativo', 'sub' => ucfirst(date_es($day)) . ($isToday ? ' · hoy' : ''), 'sections' => $user->panelSections(), 'active' => 'resumen']) ?>
 
   <nav class="admin-nav" aria-label="Cambiar de día">
     <a class="btn-small" href="/admin?fecha=<?= e($prev) ?>">← Anterior</a>

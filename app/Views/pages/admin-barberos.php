@@ -16,7 +16,7 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
     . ' al ' . date('j', strtotime($week['to'])) . ' de ' . month_es((int) date('n', strtotime($week['to'])));
 ?>
 <main class="admin">
-  <?= partial('components/admin-header', ['heading' => 'Barberos', 'sub' => 'Semana del ' . $range . ($isCurrent ? ' · esta semana' : ''), 'active' => 'barberos']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Barberos', 'sub' => 'Semana del ' . $range . ($isCurrent ? ' · esta semana' : ''), 'sections' => $user->panelSections(), 'active' => 'barberos']) ?>
 
   <?php if ($flash === '1'): ?><p class="admin-flash ok" role="status">Horario guardado. Vale para las reservas nuevas.</p><?php endif; ?>
   <?php if ($flash === 'dias'): ?><p class="admin-flash ok" role="status">Días del local guardados.</p><?php endif; ?>
