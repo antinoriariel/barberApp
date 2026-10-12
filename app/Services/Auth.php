@@ -8,6 +8,7 @@ use App\Core\Database;
 use App\Core\DbSessionHandler;
 use App\Core\RateLimiter;
 use App\Core\Session;
+use App\Models\Superuser;
 use App\Models\User;
 use App\Support\Dni;
 use App\Support\Password;
@@ -45,7 +46,34 @@ final class Auth
     {
         $dni = Session::get('dni');
         $user = is_string($dni) ? User::find($dni) : null;
-        return $user?->active ? $user : null;
+        if (!$user?->active) {
+            return null;
+        }
+        Device::touch($user, (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+        return $user;
+    }
+
+    /**
+     * ¿La sesión actual es del superusuario? Además de la marca en la sesión exige que:
+     *  - la contraseña no haya cambiado desde que entró (session_version, ver Superuser);
+     *  - no haya pasado más de security.superuser_idle segundos sin actividad (la sesión de superusuario dura poco,
+     *    aunque la cookie viva 30 días como la del resto).
+     * Si algo no se cumple, borra la marca: hay que volver a entrar.
+     */
+    public static function isSuperuser(): bool
+    {
+        $version = Session::get('su');
+        if (!is_int($version)) {
+            return false;
+        }
+        $last = (int) Session::get('su_seen');
+        if ($version !== Superuser::sessionVersion() || $last < time() - (int) Config::get('security.superuser_idle')) {
+            Session::remove('su');
+            Session::remove('su_seen');
+            return false;
+        }
+        Session::set('su_seen', time());
+        return true;
     }
 
     /**
@@ -65,15 +93,20 @@ final class Auth
      * Contraseñas vacías, más largas que Password::MAX o con bytes nulos nunca se verifican (cuentan como fallo):
      * el hash falso se calcula igual para que el tiempo de respuesta no delate nada.
      *
+     * Si en el campo DNI se escribe "superuser" (Superuser::matches) se verifica contra la contraseña del superusuario,
+     * con los mismos límites (la clave del contador es "login:dni:superuser") y el mismo mensaje de error; si sale
+     * bien la sesión queda marcada como de superusuario (startSuperSession) en vez de asociarse a una cuenta.
+     *
      * @return string|null null si salió bien, o el mensaje de error para mostrar
      */
     public static function attempt(string $rawDni, string $password, string $ip): ?string
     {
-        $dni = Dni::normalize(substr($rawDni, 0, 32));
+        $isSu = Superuser::matches($rawDni);
+        $dni = $isSu ? Superuser::LOGIN : Dni::normalize(substr($rawDni, 0, 32));
         $window = (int) Config::get('security.login_window');
         $ipKey = 'login:ip:' . RateLimiter::ipBucket($ip);
         $dniKey = 'login:dni:' . $dni;
-        $validDni = Dni::isValid($dni);
+        $validDni = $isSu || Dni::isValid($dni);
         $maxIp = (int) Config::get('security.login_max_attempts_ip');
         $maxDni = (int) Config::get('security.login_max_attempts_dni');
         self::$retryAfter = 0;
@@ -91,9 +124,17 @@ final class Auth
         }
 
         $usable = $validDni && $password !== '' && mb_strlen($password) <= Password::MAX && !str_contains($password, "\0");
-        $hash = $usable ? User::passwordHash($dni) : null;
+        $hash = $usable ? ($isSu ? Superuser::passwordHash() : User::passwordHash($dni)) : null;
         $ok = Password::verify($usable ? $password : '', $hash ?? self::dummyHash()) && $hash !== null;
-        $user = $ok ? User::find($dni) : null;
+
+        if ($isSu && $ok) {
+            RateLimiter::release($ipKey);
+            RateLimiter::clear($dniKey);
+            self::startSuperSession();
+            Audit::log('su_login_ok');
+            return null;
+        }
+        $user = $ok && !$isSu ? User::find($dni) : null;
 
         if ($user === null) {
             Audit::log('login_fail', null, mb_substr($dni, 0, 12));
@@ -142,6 +183,20 @@ final class Auth
         Session::remove('csrf');
         Session::set('dni', $user->dni);
         DbSessionHandler::bindUser($user->id ?: null);
+    }
+
+    /**
+     * Sesión de superusuario: id nuevo (anti-fijación), CSRF nuevo, sin cuenta asociada (no hay dni ni user_id) y con
+     * la versión vigente de la contraseña (ver isSuperuser).
+     */
+    private static function startSuperSession(): void
+    {
+        Session::regenerate();
+        Session::remove('csrf');
+        Session::remove('dni');
+        Session::set('su', Superuser::sessionVersion());
+        Session::set('su_seen', time());
+        DbSessionHandler::bindUser(null);
     }
 
     /** Hash falso (calculado una vez por petición) contra el que se verifica cuando el DNI no existe. */
@@ -281,6 +336,8 @@ final class Auth
         $user = self::user();
         if ($user) {
             Audit::log('logout', $user->id);
+        } elseif (self::isSuperuser()) {
+            Audit::log('su_logout');
         }
         Session::destroy();
     }

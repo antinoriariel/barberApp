@@ -168,22 +168,8 @@ final class AdminController extends Controller
     }
 
     /**
-     * Exige poder modificar los días del local y los horarios de los barberos: solo el administrador. Un barbero con
-     * la sección Barberos habilitada los ve en modo lectura y, si igual manda el formulario, recibe 403.
-     */
-    private function requireHoursEditor(): User
-    {
-        $user = $this->requireSection('barberos');
-        if (!$user->isAdmin) {
-            Response::error(403, 'Solo lectura', 'Los días del local y los horarios los carga y edita el administrador.');
-        }
-        return $user;
-    }
-
-    /**
      * GET /admin/barberos?fecha=YYYY-MM-DD — cortes atendidos por barbero en la semana (lunes a domingo) de esa fecha
-     * y, debajo, el horario semanal de cada barbero (lo que usa la agenda para ofrecer turnos). Para un barbero
-     * (canEdit = false) los días del local y los horarios se muestran en modo lectura, sin formularios.
+     * y, debajo, el horario semanal de cada barbero (lo que usa la agenda para ofrecer turnos).
      */
     public function barbers(Request $request): void
     {
@@ -194,7 +180,6 @@ final class AdminController extends Controller
             'bodyClass' => 'admin-page',
             'user'      => $user,
             'active'    => 'barberos',
-            'canEdit'   => $user->isAdmin,
             'week'      => $week,
             'prev'      => date('Y-m-d', strtotime($week['from'] . ' -7 days')),
             'next'      => date('Y-m-d', strtotime($week['from'] . ' +7 days')),
@@ -213,7 +198,7 @@ final class AdminController extends Controller
      */
     public function saveShopDays(Request $request): void
     {
-        $user = $this->requireHoursEditor();
+        $user = $this->requireSection('barberos');
         $this->requireCsrf($request);
 
         $input = $request->input('open', []);
@@ -235,7 +220,7 @@ final class AdminController extends Controller
      */
     public function saveBarberHours(Request $request): void
     {
-        $user = $this->requireHoursEditor();
+        $user = $this->requireSection('barberos');
         $this->requireCsrf($request);
 
         $barber = Barber::find((string) $request->input('barber', ''));
