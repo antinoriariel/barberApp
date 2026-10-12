@@ -10,7 +10,8 @@ navegador ◄── HTML ◄── Layout ◄── Page ◄── Screens/Compo
 ```
 
 1. `public/index.php` carga `app/bootstrap.php` (autoload, manejo de errores, helpers, sesión), envía las cabeceras de
-   seguridad (`Security::sendHeaders()`) y construye el `Router` con las rutas de `config/routes.php`.
+   seguridad (`Security::sendHeaders()`), responde **403** si la IP o el navegador (cookie `navaja_dev`) están
+   bloqueados (`Models\Ban::blocks`, solo con base de datos) y construye el `Router` con las rutas de `config/routes.php`.
 2. El `Router` busca `(método, ruta)` y ejecuta `[Controlador::class, 'acción']`; ruta con otro método → 405, ruta
    desconocida → 404 (ambos vía `Response::error()`).
 3. El **controlador** valida la entrada (en `POST`: `requireCsrf()`), pide datos a los **modelos** y llama a `view()`.
@@ -25,13 +26,23 @@ Representan los datos del dominio y no conocen HTTP ni HTML.
 
 | Modelo        | Responsabilidad |
 |---------------|-----------------|
-| `User`        | Cuenta (cliente, barbero o admin). `find($dni)`, `all()`, `isBarber()`; `isAdmin` y `barberId` indican el rol |
-| `LoyaltyCard` | Progreso al corte gratis: `visitsLeft()`, `percent()`, `title()`, `status()` |
+| `User`        | Cuenta (cliente, barbero o admin). `find($dni)`, `findById()`, `isBarber()`, `role()`; permisos del panel: `canSee()`, `panelSections()`, `hasPanel()`; gestión: `validate()`, `saveFromAdmin()`, `setActive()`, `delete()` (sin historial), `purge()` (con historial, solo superusuario) |
+| `LoyaltyCard` | Progreso al corte gratis por ciclos: `stamps()`, `visitsLeft()`, `percent()`, `isComplete()`, `status()` |
 | `Service`     | Catálogo: `all()`, `popular($n)`; edición del admin: `allForAdmin()`, `validate()`, `update()`, `create()`, `setActive()` |
-| `Barber`      | Equipo: `all()`, `firstName()` |
+| `Product`     | Productos del mostrador: `all()`, `allForAdmin()`, `validate()`, `create()`, `update()`, `setActive()` (tabla `products`) |
+| `Barber`      | Equipo: `all()`, `find()`, `firstName()`, `isNew()`; ficha automática de las cuentas de barbero: `provision()`, `retire()` |
+| `BarberHours` | Horario semanal de cada barbero: `week()`, `window($barbero, $fecha)`, `validate()`, `save()` (tabla `barber_hours`) |
 | `Appointment` | `next($user)`, `history($user)` y las consultas/escrituras de turnos (las reglas viven en `Services\Booking`) |
-| `Schedule`    | `openDays($n)` (salta cierres y feriados), `isOpen($fecha)`, `slotTimes()`, `slots($fecha, $barbero, $minutos)` (disponibilidad real) |
+| `Schedule`    | `openDays($n)` (salta cierres y feriados), `isOpen($fecha)`, `slotTimes()`, `slots($fecha, $barbero, $minutos)` (disponibilidad real, respeta el horario del barbero), `weekdayStatus()`, `saveOpenWeekdays()` |
 | `Shop`        | Datos del local |
+| `QueueTicket` | Fila por orden de llegada: `take()`, `currentFor()`, `leave()`, `callNext()` |
+| `GameReward`  | Premios de los minijuegos de Inicio |
+| `Dashboard`   | Números del panel: `day()`, `week()` (cortes por barbero), `finance()` (turnos + extra − egresos por mes), `delta()` |
+| `Expense` / `Income` | Egresos e ingresos extra: `validate()`, `create()`, `delete()`, `forMonth()`, `totalForDay()` |
+| `Superuser`   | Cuenta `superuser`: `matches()`, `passwordHash()`, `setPassword()`, `sessionVersion()` |
+| `Ban`         | Bloqueos de IP (con vencimiento) y de navegador: `blocks()`, `banIp()`, `banDevice()`, `unban*()`, `normalizeIp()` |
+| `AuditLog`    | Lectura de `audit_log` para el superusuario: `filters()`, `search()`, `actor()`, alertas (`suspiciousIps()`, `targetedAccounts()`…) |
+| `UserActivity`| Navegadores (`devicesByUser()`) y últimas acciones (`recentActions()`) de cada cuenta; `browser()` resume el user agent |
 
 Los modelos son la única frontera con el origen de datos. Con `database.driver = db` consultan MySQL/MariaDB a través de
 `Core\Database` (PDO, sentencias preparadas, `transaction()`); con `files` leen `data/<nombre>.php` vía `Core\Data::get()`.
@@ -63,12 +74,17 @@ Reglas:
 
 | Controlador       | Acciones |
 |-------------------|----------|
-| `ShellController` | `index`: reúne los datos de todos los modelos y renderiza `pages/shell` |
-| `AuthController`  | `showLogin`, `login`, `logout` |
+| `ShellController` | `index`: reúne los datos de todos los modelos y renderiza `pages/shell` (el personal va a `/admin`) |
+| `AuthController`  | Login (también del superusuario), alta, recuperación y cierre de sesión |
+| `AppointmentController` | API JSON de turnos: disponibilidad, reservar, cancelar, reprogramar |
+| `QueueController` | Fila: página del QR (`/fila`), tomar y dejar número, estado en JSON |
+| `GameController`  | Minijuegos de Inicio (iniciar partida y reclamar premio) |
+| `AdminController` | Panel: cada acción empieza con `requireSection('<clave>')`; las de escritura del catálogo y de los horarios con `requireCatalogEditor()` / `requireHoursEditor()` (solo admin) |
+| `SuperController` | Panel del superusuario (`requireSuper()`; 404 para el resto): cuentas, bloqueos, seguridad y auditoría |
 | `PwaController`   | `manifest`, `icon` |
 
 Heredan de `Core\Controller`, que ofrece `view()` (con `Cache-Control: no-store`), `redirect()` (solo rutas internas),
-`requireLogin()` y `requireCsrf()`.
+`requireLogin()` y `requireCsrf()`. Roles y permisos en detalle: [`panel-y-roles.md`](panel-y-roles.md).
 
 ### Núcleo — `app/Core/`
 
@@ -87,9 +103,18 @@ Heredan de `Core\Controller`, que ofrece `view()` (con `Cache-Control: no-store`
 
 ### Servicios y soporte
 
-- `Services\Auth`: login por DNI con límite de intentos. `attempt($dni, $ip)` devuelve `null` si entró o el mensaje de error.
+- `Services\Auth`: login por DNI + contraseña con límite de intentos. `attempt($dni, $password, $ip)` devuelve `null`
+  si entró o el mensaje de error; si el DNI es `superuser` verifica contra `Models\Superuser` y marca la sesión
+  (`isSuperuser()`). `user()` ignora cuentas suspendidas y registra el navegador (`Device::touch`). También `register()`,
+  `requestReset()` y `resetPassword()`.
+- `Services\Booking` (+ `BookingException` con el código HTTP): reglas de reservar, cancelar y reprogramar.
+- `Services\Audit`: `log($evento, $userId, $detalle)` en `audit_log` con IP y user agent.
+- `Services\Device`: cookie `navaja_dev` por navegador (`hash()` = su sha256) y registro en `user_devices`.
+- `Services\BarberPhoto`: recodifica con GD las fotos subidas de los barberos (WebP 400×400 en `public/img/barberos/subidas/`).
+- `Services\Integrity`: firma HMAC de las filas de estadísticas de juegos (`storage/integrity.key` o `APP_KEY`).
+- `Services\Qr`: códigos QR en SVG sin dependencias (versiones 1–6, nivel L).
 - `Services\IconGenerator`: dibuja el ícono PNG de la PWA con GD.
-- `Support\Dni`: normalizar, validar y formatear DNI.
+- `Support\Dni`: normalizar, validar y formatear DNI. `Support\Password`: hash Argon2id, verificación y reglas.
 
 ## Front-end
 
@@ -107,7 +132,7 @@ La app es **una sola página** que contiene todas las pantallas; `navigation.js`
 Una hoja por módulo; el orden de carga está en `config/app.php` → `assets.styles`.
 
 ```
-base.css  layout.css  components/*.css  pages/login.css  pages/admin.css  a11y.css
+base.css  layout.css  components/*.css  pages/login.css  pages/admin.css  pages/su.css  a11y.css
 ```
 
 La interfaz es **mobile first** y tiene un solo layout: en una PC se muestra como una columna del ancho de un celular, centrada. El layout de escritorio anterior (barra lateral y grillas) quedó archivado en `docs/archivo/desktop.css` y ya no se carga.
@@ -123,10 +148,25 @@ Módulos ES, cada uno con una responsabilidad. `main.js` solo los inicializa.
 | `booking.js`    | Resumen en vivo, confirmar y atajos `data-book-service` / `data-book-barber` |
 | `pwa.js`        | Registro del service worker |
 | `login.js`      | Formato del DNI, botones de DNI de prueba y purga de páginas cacheadas del service worker |
+| `api.js`        | Llamadas a la API de turnos: las POST llevan `X-CSRF-Token`, un 401 manda al login y nunca lanza: devuelve `{ ok, status, body }` |
+| `catalog.js`    | Pestañas Servicios / Productos |
+| `queue.js`      | Consulta periódica de `/api/fila` para el número de la fila en Inicio |
+| `scanner.js`    | Cámara + `BarcodeDetector` para leer el QR del mostrador |
+| `arcade.js`, `games/*` | Minijuegos de Inicio (motor común + flappy, pacman, runner) |
+| `theme.js`, `theme-init.js` | Tema claro/oscuro (el `init` se carga antes del CSS para no parpadear) |
+| `money-input.js`| Formato de montos con punto de miles en los formularios |
+| `admin.js`      | Panel: selector de tema |
+| `admin-users.js`| `/admin/usuarios` y `/su`: rol ↔ secciones, buscador, validación en vivo y diálogo de confirmación propio |
 
 ## Cómo extender
 
-**Agregar un servicio o un barbero**: editar `data/services.php` o `data/barbers.php`. No hay que tocar código.
+**Agregar un servicio o un barbero**: editar `data/services.php` o `data/barbers.php`. No hay que tocar código. Con
+base de datos, los servicios y productos se cargan desde `/admin/servicios`, y la ficha de un barbero se crea sola al
+darle a una cuenta el rol barbero en `/admin/usuarios`.
+
+**Agregar una sección al panel**: clave en `User::SECTIONS` (si el admin puede concedérsela a un barbero), su URL en
+`AdminController::SECTION_URLS`, la pestaña en `components/admin-header.php`, la ruta y una acción que empiece con
+`requireSection('<clave>')`.
 
 **Agregar una pantalla** (p. ej. "Promos"):
 1. Crear `app/Views/screens/promos.php` con `<section class="view" id="view-promos" data-title="…" data-skel="list" hidden>`.

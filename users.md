@@ -25,12 +25,18 @@ Entra a `/su`: todas las cuentas con sus IP, navegadores, última conexión y ú
 
 ## Qué puede hacer cada rol
 
-- **Administrador** (`users.is_admin = 1`): todo lo del cliente más el panel `GET /admin` (ingresos del día, cierre de
-  turnos como `done` / `no_show`) y el editor de servicios `/admin/servicios` (precio, nombre, descripción, duración; alta y ocultar). Sin sesión de admin, `/admin` responde 403.
+- **Administrador** (`users.is_admin = 1`): al entrar va directo al panel `/admin` (no ve la app de clientes) y usa
+  todas sus secciones: Resumen, Turnos (cierre como `done` / `no_show`), Fila, Barberos (días del local y horario de
+  cada barbero), Finanzas, Ingreso extra, Egresos, Servicios (servicios y productos) y Usuarios (cuentas, roles,
+  contraseñas, suspensión y baja).
 - **Barbero** (`users.barber_id` apunta a su ficha de `barbers`; la cuenta de Nico Ledesma es la del barbero `nico`):
-  entra a la app como cualquier cuenta y, además, al panel `/admin` **solo en las secciones que el administrador le
-  habilite** en `/admin/usuarios` (Turnos, Fila, Finanzas…; "Usuarios" es siempre exclusivo del admin). Sin secciones
-  habilitadas no ve el panel.
+  al entrar va al panel, a **"Mi semana"** (sus cortes atendidos de la semana). Además ve **solo las secciones que el
+  administrador le habilite** en `/admin/usuarios`; Barberos y Servicios los ve en modo lectura, y "Usuarios" es siempre
+  exclusivo del admin. Las cuentas de barbero nuevas crean su ficha del equipo automáticamente con su nombre.
+- **Superusuario** (fuera de esta tabla, ver arriba): `/su`, con todas las cuentas, bloqueos de IP y navegadores,
+  alertas de seguridad y auditoría.
+
+Detalle de cada sección y de los permisos en [`docs/panel-y-roles.md`](docs/panel-y-roles.md).
 - **Cliente** (sin rol): reserva, reprograma y cancela turnos, ve su tarjeta de fidelidad.
   Mateo (7 visitas) y Camila (10 visitas, corte gratis) traen historial y un próximo turno de ejemplo.
   Las cuentas de administrador y barbero no reciben turnos de ejemplo.
@@ -38,8 +44,9 @@ Entra a `/su`: todas las cuentas con sus IP, navegadores, última conexión y ú
 ## Cómo usarlas
 
 ```bash
-php bin/migrate.php   # aplica 004_barber_role.sql (columna users.barber_id)
+php bin/migrate.php   # aplica las migraciones pendientes (roles: 003, 004 y 014)
 php bin/seed.php      # crea/actualiza las cuatro cuentas
+php bin/superuser.php # contraseña del superusuario (se muestra una sola vez)
 ```
 
 - Desde el panel: `/admin/usuarios` da de alta y de baja cuentas, cambia contraseñas y asigna rol (y secciones del barbero).
