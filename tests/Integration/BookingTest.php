@@ -23,6 +23,10 @@ final class BookingTest extends DbTestCase
         }
     }
 
+    /**
+     * Un turno nuevo guarda el servicio, el barbero y la hora pedidos, el precio sale del catálogo (no del cliente),
+     * dura lo que dice el servicio y queda en estado booked.
+     */
     public function testCrearYLeerElTurno(): void
     {
         $u = $this->makeUser('99000001');
@@ -38,6 +42,10 @@ final class BookingTest extends DbTestCase
         $this->assertSame('booked', $row['status']);
     }
 
+    /**
+     * Otro cliente no puede tomar el mismo barbero y horario (409), ni siquiera con un servicio más largo que se
+     * superpone.
+     */
     public function testNoSePuedeReservarElMismoBarberoYHorario(): void
     {
         $a = $this->makeUser('99000001');
@@ -50,6 +58,7 @@ final class BookingTest extends DbTestCase
         $this->assertSame(409, $this->statusOf(fn () => Booking::create($b, 'color', 'nico', $day, '10:00')));
     }
 
+    /** Dos reservas con barbero "any" a la misma hora quedan con barberos distintos. */
     public function testCualquieraAsignaElSiguienteBarberoLibre(): void
     {
         $a = $this->makeUser('99000001');
@@ -60,6 +69,10 @@ final class BookingTest extends DbTestCase
         $this->assertNotSame($first['barber_id'], $second['barber_id']);
     }
 
+    /**
+     * Booking::create responde 422 a servicio o barbero inexistente, hora fuera de la grilla, fecha pasada, demasiado
+     * lejana o inválida, lunes cerrado, miércoles por orden de llegada y turno que termina después del cierre.
+     */
     public function testValidacionesDelServidor(): void
     {
         $u = $this->makeUser('99000001');
@@ -77,6 +90,10 @@ final class BookingTest extends DbTestCase
         $this->assertSame(422, $this->statusOf(fn () => Booking::create($u, 'color', 'any', $day, '19:15')), 'termina después del cierre');
     }
 
+    /**
+     * Un cliente no puede tener dos turnos superpuestos (aunque sean con barberos distintos) ni pasar el máximo de
+     * turnos futuros; ambos casos dan 409.
+     */
     public function testNoSePuedeSuperponerConUnoPropioNiPasarElLimite(): void
     {
         $u = $this->makeUser('99000001');
@@ -89,6 +106,10 @@ final class BookingTest extends DbTestCase
         $this->assertSame(409, $this->statusOf(fn () => Booking::create($u, 'cejas', 'fran', $day, '15:30')), 'máximo de turnos futuros');
     }
 
+    /**
+     * Cancelar un turno ajeno o ya cancelado da 404 (no revela que existe); al cancelar, el horario vuelve a quedar
+     * libre para otro cliente.
+     */
     public function testCancelarSoloLoPropioYUnaVez(): void
     {
         $owner = $this->makeUser('99000001');
@@ -103,6 +124,10 @@ final class BookingTest extends DbTestCase
         $this->addToAssertionCount(1);
     }
 
+    /**
+     * Reprogramar crea el turno nuevo y cancela el viejo en la misma transacción; si el horario nuevo es inválido, el
+     * turno original sigue reservado.
+     */
     public function testReprogramarEsAtomico(): void
     {
         $u = $this->makeUser('99000001');
@@ -118,6 +143,10 @@ final class BookingTest extends DbTestCase
         $this->assertSame('booked', Database::selectOne('SELECT status FROM appointments WHERE id = ?', [$new['id']])['status']);
     }
 
+    /**
+     * Varios servicios en un turno suman precio y duración, se guardan en appointment_services y ocupan los horarios
+     * que pisan; uno inválido o más del máximo permitido dan 422.
+     */
     public function testVariosServiciosEnUnTurno(): void
     {
         $u = $this->makeUser('99000001');
@@ -139,6 +168,10 @@ final class BookingTest extends DbTestCase
         $this->assertSame(422, $this->statusOf(fn () => Booking::create($u, 'corte,barba,fade,cejas,color', 'any', $day, '14:00')), 'más del máximo');
     }
 
+    /**
+     * Schedule::slots marca ocupados los horarios que pisa un turno (incluido el siguiente si dura más), deja libres
+     * al resto de los barberos y a "Cualquiera", y no ofrece nada los días cerrados ni los miércoles.
+     */
     public function testDisponibilidadReflejaLosTurnos(): void
     {
         $u = $this->makeUser('99000001');
@@ -158,6 +191,7 @@ final class BookingTest extends DbTestCase
         $this->assertNotContains('Mié', array_column(Schedule::openDays(7), 'label'), 'los miércoles no se ofrecen');
     }
 
+    /** Appointment::next e history solo devuelven los turnos del cliente pedido. */
     public function testHistorialYProximoSoloDelCliente(): void
     {
         $a = $this->makeUser('99000001');

@@ -104,6 +104,10 @@ foreach (Data::get('users') as $dni => $u) {
         continue;
     }
 
+    /**
+     * Inserta un turno de ejemplo del cliente $uid: el fin se calcula con la duración del servicio y el precio es el
+     * del catálogo salvo que se pase $price (precio histórico). También agrega su fila en appointment_services.
+     */
     $insert = static function (array $svc, array $barber, string $start, string $status, ?int $price = null) use ($run, $uid): void {
         $end = date('Y-m-d H:i:s', strtotime($start) + $svc['minutes'] * 60);
         $run('INSERT INTO appointments (user_id, barber_id, service_id, starts_at, ends_at, price, status)

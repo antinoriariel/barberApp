@@ -12,6 +12,10 @@ use App\Core\Config;
  */
 final class LoyaltyCard
 {
+    /**
+     * Guarda el total histórico de visitas atendidas ($visits) y la meta del ciclo ($goal). Es inmutable: los sellos,
+     * los cortes restantes y si el próximo es gratis se calculan a pedido con los métodos de abajo. Usar for().
+     */
     public function __construct(
         public readonly int $visits,
         public readonly int $goal,

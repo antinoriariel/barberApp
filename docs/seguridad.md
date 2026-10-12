@@ -2,8 +2,9 @@
 
 Estado de la seguridad de la app, qué se implementó y qué falta antes de producción.
 
-> **Advertencia:** la autenticación sigue siendo por DNI sin contraseña (demo). Todo lo de este documento reduce el
-> riesgo, pero **la app no está lista para datos reales** hasta resolver la sección [Pendiente antes de producción](#pendiente-antes-de-producción).
+> **Advertencia:** la autenticación es por DNI + contraseña (Argon2id), pero la semilla crea cuentas de demostración
+> con contraseñas públicas. **La app no está lista para datos reales** hasta resolver la sección
+> [Pendiente antes de producción](#pendiente-antes-de-producción).
 
 ## Controles implementados
 
@@ -28,6 +29,11 @@ Estado de la seguridad de la app, qué se implementó y qué falta antes de prod
 | Métodos incorrectos | 405 con `Allow` en vez de 404 | `Core\Router` |
 | Datos de usuario en caché del navegador | `Cache-Control: no-store` en páginas dinámicas; el service worker borra las páginas cacheadas al llegar al login | `Controller::view()`, `sw.js`, `login.js` |
 | DoS por parámetros | El tamaño del ícono se limita a 48–1024 px | `IconGenerator` |
+| Superusuario | Cuenta única `superuser` fuera de `users` (contraseña en la tabla `superuser`, fijada con `php bin/superuser.php`). Mismo límite de intentos y mismo mensaje de error que el login común. Su sesión vence tras 2 h sin actividad (`security.superuser_idle`) y se invalida al cambiar la contraseña (`session_version`). `/su` responde 404 a cualquier cuenta común. | `Services\Auth`, `Models\Superuser`, `SuperController` |
+| Detección de ataques | `/su/seguridad` muestra en las últimas 24 h las IP con 3+ logins fallidos (con bloqueo de 1 h / 24 h en un click), los DNI atacados (incluido `superuser`), las cuentas usadas desde 3+ IP, los navegadores nuevos en cuentas que ya tenían otros y los accesos del superusuario. `/su/auditoria` filtra y exporta todo el registro (CSV con las celdas `= + - @` neutralizadas contra inyección de fórmulas). | `Models\AuditLog`, `SuperController` |
+| Escalada de privilegios en el panel | Cada acción de `AdminController` exige su sección en el servidor (`requireSection`); las escrituras del catálogo y de los días/horarios exigen además ser administrador (`requireCatalogEditor`, `requireHoursEditor` → **403** a un barbero aunque tenga la sección). `panel_access` solo guarda claves de `User::SECTIONS` ("usuarios" nunca es concedible). Nadie puede quitarse a sí mismo el rol de admin ni dejar el local sin administradores activos. | `AdminController`, `Models\User` |
+| Cuenta suspendida con sesión abierta | `users.active = 0` hace que `Auth::user()` devuelva `null` en la siguiente petición y que el login falle con el mismo mensaje que una contraseña mala; además se borran sus sesiones. | `Services\Auth`, `Models\User` |
+| Abuso desde una IP o un navegador | El superusuario bloquea IP (`ip_bans`) o navegadores ("Permaban", `device_bans`): el front controller responde **403** antes de cualquier ruta. El navegador se identifica con la cookie `navaja_dev` (32 bytes aleatorios, HttpOnly, 10 años; en la base solo su sha256). No se puede bloquear la IP ni el navegador propios; `php bin/superuser.php --desbloquear-todo` es la salida de emergencia. Los archivos estáticos que sirve Apache no pasan por PHP, así que no quedan bloqueados (no tienen datos). | `public/index.php`, `Models\Ban`, `Services\Device` |
 
 ### Política CSP
 
@@ -71,7 +77,8 @@ object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
 | Media | Proxy / balanceador | `Request::ip()` usa `REMOTE_ADDR`. Detrás de un proxy propio hay que configurar la IP confiable o todos los usuarios compartirán el límite de intentos. |
 | Baja | Limitador | Ya usa la tabla `login_attempts`; si hace falta más escala, pasar a Redis. |
 | Baja | Expiración por inactividad | La sesión dura 30 días fijos (decisión de producto por la PWA instalada). Evaluar un tope por inactividad o "recordarme". |
-| Baja | Retención de auditoría | `audit_log` crece sin límite: definir cuánto se conserva y purgar. |
+| Media | Retención de auditoría | `/su/seguridad` permite borrar lo de más de 90/180/365 días (queda registrado). No se hace solo: definir una política (p. ej. 180 días) y aplicarla periódicamente. |
+| Media | Alcance del Permaban | Borrar los datos del sitio o usar modo incógnito genera una cookie `navaja_dev` nueva. Por eso el Permaban total también da de baja la cuenta; combinarlo con el bloqueo de IP si hace falta. Bloquear una IP compartida (wifi del local, CGNAT del proveedor) deja afuera a todos los que la usan. |
 
 ## Verificación manual rápida
 
@@ -89,6 +96,10 @@ Los contadores viven en la tabla `login_attempts` (con `DB_DRIVER=files`, en `st
 Usuarios (`/admin/usuarios`): exclusivo del administrador (nunca se le habilita a un barbero). Alta, edición de rol, cambio de contraseña y baja son POST con CSRF y quedan en la auditoría (`admin_user_create/update/password/enable/disable/delete`); la contraseña nunca se registra. El cambio de contraseña borra los enlaces de recuperación y cierra las sesiones de esa cuenta. La baja es lógica (`users.active = 0`): el login falla con el mismo mensaje que una contraseña mala, se borran sus sesiones y `Auth::user()` ignora cualquier sesión que quede. La baja definitiva (`/admin/usuarios/borrar`) solo borra cuentas sin turnos, premios, fila ni movimientos. No se puede suspender, eliminar ni quitar el rol a uno mismo ni al último administrador activo.
 
 Permisos del panel: cada acción de `AdminController` exige su sección (`requireSection`, ver `User::canSee`); el admin ve todas y el barbero solo las de `users.panel_access`, comprobadas en cada petición (también en los POST), no solo ocultando pestañas.
+
+Días del local y horarios (`/admin/barberos`): un barbero con la sección Barberos los ve como texto (sin formularios); si igual manda `POST /admin/barberos/dias` o `/horario` recibe 403 (`requireHoursEditor`). Los cambios quedan en la auditoría (`admin_shop_days`, `admin_barber_hours`).
+
+Superusuario: con una sesión de cuenta común, `GET /su` responde **404** (no 403: no revela que existe); sin ninguna sesión, redirige a `/login` como cualquier página. Para probar el bloqueo, desde `/su` bloquear una IP de prueba por 1 hora y pedir cualquier página desde esa IP → 403; `/su/seguridad` muestra el contador de rechazos. Si el superusuario se queda afuera: `php bin/superuser.php --desbloquear-todo`.
 
 Editor de servicios (`/admin/servicios`): solo administradores (un barbero con la sección Servicios la ve en modo lectura y sus POST reciben 403, ver `requireCatalogEditor`), POST con CSRF, validación en `Service::validate` y auditoría (`admin_service_update/create/hide/show`). Los turnos ya reservados conservan el precio con el que se tomaron.
 

@@ -9,12 +9,17 @@ use App\Models\Product;
 /** Productos del local: el administrador los agrega, les cambia el precio y los oculta. */
 final class ProductTest extends DbTestCase
 {
+    /** Borra los productos de prueba (slug "prueba…") y luego limpia usuarios de prueba. */
     protected function tearDown(): void
     {
         Database::execute("DELETE FROM products WHERE slug LIKE 'prueba%'");
         parent::tearDown();
     }
 
+    /**
+     * Alta con slug sin acentos ni eñes, edición de precio, update de un id inexistente (false) y ocultar: deja de
+     * verse en la app pero el admin lo sigue viendo.
+     */
     public function testAgregarEditarYOcultar(): void
     {
         [$data] = Product::validate(['name' => 'Prueba Ñandú', 'description' => 'x', 'price' => '4200']);
@@ -31,6 +36,10 @@ final class ProductTest extends DbTestCase
         $this->assertContains($id, array_column(Product::allForAdmin(), 'id'), 'el admin lo sigue viendo');
     }
 
+    /**
+     * Product::validate rechaza nombre corto, precio negativo o con decimales; precio 0 y descripción vacía son
+     * válidos.
+     */
     public function testValidacion(): void
     {
         $this->assertNotNull(Product::validate(['name' => 'X', 'price' => '100'])[1], 'nombre corto');

@@ -9,6 +9,10 @@ use App\Core\Database;
 /** Servicio del catálogo (corte, barba, combo…). */
 final class Service
 {
+    /**
+     * Objeto de valor inmutable de un servicio: slug, nombre, descripción, duración en minutos (la usa la agenda para
+     * calcular los huecos, no se le muestra al cliente) y precio en pesos. Lo arman fromRow() o data/services.php.
+     */
     public function __construct(
         public readonly string $id,          // slug: lo que usan las vistas (data-book-service)
         public readonly string $name,

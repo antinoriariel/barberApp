@@ -236,6 +236,29 @@ Front-end:
 - Documentar en `README.md` cómo crear la base, correr `bin/migrate.php` y `bin/seed.php`.
 - Retirar `Core\Data` y los modelos "files" cuando el driver `db` lleve un tiempo estable.
 
+### Después del plan: migraciones 006 a 016
+
+Con las cinco fases completas, el esquema siguió creciendo con el panel y la seguridad. Cada cambio es una migración
+nueva (nunca se edita una aplicada); `php bin/migrate.php` aplica solo las pendientes. La próxima es la **017**.
+
+| Migración | Para qué |
+|-----------|----------|
+| `006_expenses.sql`, `010_expense_notes.sql` | Egresos del local con observación (`/admin/egresos`) |
+| `007_barber_photo.sql` | Foto de cada barbero (`barbers.photo`) |
+| `008_appointment_services.sql` | Varios servicios en un mismo turno (precio y duración sumados) |
+| `009_queue.sql` | Fila por orden de llegada (`queue_tickets`, números que vuelven a 1 cada día) |
+| `011_barber_hours.sql` | Horario semanal por barbero; sin fila = todo el día del local |
+| `012_products.sql` | Productos editables desde el panel (antes solo en `data/products.php`) |
+| `013_incomes.sql` | Ingresos extra que se suman al resultado del día y del mes |
+| `014_user_admin.sql` | `users.active` (suspensión) y `users.panel_access` (secciones del barbero) |
+| `015_superuser.sql` | Superusuario, navegadores por cuenta, bloqueos de IP y de navegador, user agent en la auditoría |
+| `016_audit_tools.sql` | Bloqueos temporales, contador de rechazos e índices de `audit_log` para filtrar por IP y fecha |
+
+Hay dos archivos `002_*` (`002_auth_audit.sql` y `002_game_rewards.sql`); el migrador los registra por nombre, así que
+conviven sin problema. Ojo con las colaciones: `users` es `utf8mb4_unicode_ci` y las tablas nuevas `utf8mb4_general_ci`,
+así que un JOIN por texto entre ellas necesita `COLLATE`. Detalle funcional de 011–016 en
+[`panel-y-roles.md`](panel-y-roles.md).
+
 ## 4. Riesgos y cómo se mitigan
 
 | Riesgo | Mitigación |

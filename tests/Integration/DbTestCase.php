@@ -17,6 +17,11 @@ abstract class DbTestCase extends TestCase
     /** @var string[] DNI de los usuarios creados en el test */
     private array $dnis = [];
 
+    /**
+     * Borra los usuarios de prueba anotados y todo lo que cuelga de ellos (turnos, números de fila, auditoría,
+     * enlaces de recuperación, sesiones), además de los intentos de login y la auditoría anónima. Los datos de la
+     * semilla no se tocan.
+     */
     protected function tearDown(): void
     {
         foreach ($this->dnis as $dni) {
