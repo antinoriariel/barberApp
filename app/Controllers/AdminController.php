@@ -644,7 +644,7 @@ final class AdminController extends Controller
     }
 
     /**
-     * GET /admin/usuarios — cuentas de la barbería (solo administrador): alta con DNI, nombre, email, contraseña y rol;
+     * GET /admin/usuarios — cuentas de la barbería (solo administrador): alta con DNI, nombre, teléfono, contraseña y rol;
      * por cuenta, edición de datos/rol (al barbero se le eligen las secciones del panel que ve), cambio de contraseña
      * y baja/reactivación. `ok` y `error` traen el resultado de la acción anterior.
      */
@@ -693,7 +693,7 @@ final class AdminController extends Controller
             $this->usersError('Esa cuenta no existe.');
         }
         [$data, $error] = User::validate([
-            'dni' => $request->input('dni'), 'full_name' => $request->input('full_name'), 'email' => $request->input('email'),
+            'dni' => $request->input('dni'), 'full_name' => $request->input('full_name'), 'phone' => $request->input('phone'),
             'role' => $request->input('role'), 'sections' => $request->input('sections'),
             'password' => $request->input('password'),
         ], $target === null);
@@ -716,7 +716,7 @@ final class AdminController extends Controller
             $id = User::saveFromAdmin($target, $data, $target === null ? Password::hash($data['password']) : null);
         } catch (\PDOException $e) {
             if ($e->getCode() === '23000') {
-                $this->usersError('Ya existe una cuenta con ese DNI o email.');
+                $this->usersError('Ya existe una cuenta con ese DNI o ese teléfono.');
             }
             throw $e;
         }
@@ -731,7 +731,8 @@ final class AdminController extends Controller
 
     /**
      * POST /admin/usuarios/clave — campos: id, password, confirm. El administrador le pone una contraseña nueva a una
-     * cuenta (por ejemplo, si no tiene email para recuperarla). Borra sus enlaces de recuperación pendientes y cierra
+     * cuenta (es como se resuelve "Olvidé mi contraseña": el cliente escribe por WhatsApp). Borra sus enlaces de
+     * recuperación viejos (de cuando se recuperaba por email) y cierra
      * todas sus sesiones abiertas, salvo que sea la propia cuenta (no se echa a sí mismo del panel).
      */
     public function userPassword(Request $request): void

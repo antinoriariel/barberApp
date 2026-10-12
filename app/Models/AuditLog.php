@@ -26,12 +26,13 @@ final class AuditLog
 
     /** Eventos de login y cuenta (incluye los del superusuario). */
     private const LOGIN_EVENTS = ['login_ok', 'login_fail', 'login_throttled', 'logout', 'logout_all', 'register',
-        'password_reset_request', 'password_reset', 'su_login_ok', 'su_logout'];
+        'register_blocked_device', 'register_blocked_ip', 'password_reset_request', 'password_reset', 'su_login_ok', 'su_logout'];
 
     /** Grupos del filtro "Tipo" (clave => [etiqueta, condición SQL sobre a.event sin datos del usuario]). */
     public const GROUPS = [
         'fallos'  => ['Logins fallidos y bloqueos', "a.event IN ('login_fail', 'login_throttled')"],
         'login'   => ['Ingresos, salidas y contraseñas', 'LOGIN'],
+        'registro' => ['Altas de cuenta y rechazos', "(a.event LIKE 'register%' OR a.event = 'su_registration_release')"],
         'turnos'  => ['Turnos', "(a.event LIKE 'appointment\\_%' OR a.event LIKE 'admin\\_appointment\\_%')"],
         'fila'    => ['Fila', "(a.event LIKE 'queue\\_%' OR a.event LIKE 'admin\\_queue\\_%')"],
         'panel'   => ['Panel de administración', "a.event LIKE 'admin\\_%'"],
@@ -40,7 +41,7 @@ final class AuditLog
 
     /**
      * Normaliza los filtros que llegan por la query string: grupo (clave de GROUPS), usuario (id), ip, q (texto que se
-     * busca en nombre, DNI y detalle), desde / hasta (fechas Y-m-d reales). Lo que no es válido se descarta.
+     * busca en nombre, DNI, teléfono y detalle), desde / hasta (fechas Y-m-d reales). Lo que no es válido se descarta.
      * @return array{grupo: string, usuario: int, ip: string, q: string, desde: string, hasta: string}
      */
     public static function filters(array $in): array
@@ -88,8 +89,8 @@ final class AuditLog
         }
         if ($f['q'] !== '') {
             $like = '%' . addcslashes($f['q'], '%_\\') . '%';
-            $sql[] = '(u.full_name LIKE ? OR u.dni LIKE ? OR a.detail LIKE ?)';
-            array_push($params, $like, $like, $like);
+            $sql[] = '(u.full_name LIKE ? OR u.dni LIKE ? OR u.phone LIKE ? OR a.detail LIKE ?)';
+            array_push($params, $like, $like, $like, $like);
         }
         if ($f['desde'] !== '') {
             $sql[] = 'a.created_at >= ?';

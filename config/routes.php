@@ -24,13 +24,10 @@ return static function (Router $router): void {
     $router->post('/logout', [AuthController::class, 'logout']);
     $router->post('/logout-todo', [AuthController::class, 'logoutAll']);
 
-    // Alta de cuenta y recuperación de contraseña (requieren base de datos).
+    // Alta de cuenta (requiere base de datos; una por navegador). /recuperar redirige al WhatsApp de soporte.
     $router->get('/registro', [AuthController::class, 'showRegister']);
     $router->post('/registro', [AuthController::class, 'register']);
     $router->get('/recuperar', [AuthController::class, 'showForgot']);
-    $router->post('/recuperar', [AuthController::class, 'forgot']);
-    $router->get('/restablecer', [AuthController::class, 'showReset']);
-    $router->post('/restablecer', [AuthController::class, 'reset']);
 
     // API de turnos (JSON; requiere sesión y, las POST, token CSRF).
     $router->get('/api/disponibilidad', [AppointmentController::class, 'availability']);
@@ -90,6 +87,8 @@ return static function (Router $router): void {
     $router->post('/su/ip/desbloquear', [SuperController::class, 'unbanIp']);
     $router->post('/su/permaban', [SuperController::class, 'permaban']);
     $router->post('/su/permaban/quitar', [SuperController::class, 'unbanDevice']);
+    $router->get('/su/registros', [SuperController::class, 'registrations']);
+    $router->post('/su/registros/liberar', [SuperController::class, 'releaseRegistration']);
 
     // Minijuegos de la pantalla de inicio (JSON; sesión + CSRF). Tiempo y puntaje los valida el servidor.
     $router->post('/juegos/iniciar', [GameController::class, 'start']);

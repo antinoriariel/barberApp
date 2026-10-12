@@ -12,7 +12,7 @@ use App\Core\Session;
 use App\Services\Auth;
 use App\Support\Dni;
 
-/** Login, alta de cuenta, recuperación de contraseña y cierre de sesión. */
+/** Login, alta de cuenta, "Olvidé mi contraseña" (WhatsApp de soporte) y cierre de sesión. */
 final class AuthController extends Controller
 {
     /** GET /login — muestra el formulario (o redirige a la app si ya hay sesión). */
@@ -57,7 +57,10 @@ final class AuthController extends Controller
         $this->renderLogin($error, Dni::normalize($raw));
     }
 
-    /** GET /registro — formulario de alta (requiere base de datos). */
+    /**
+     * GET /registro — formulario de alta (requiere base de datos). Si este navegador ya creó una cuenta muestra el
+     * aviso en lugar del formulario (Auth::canRegisterHere): solo se permite una cuenta por navegador.
+     */
     public function showRegister(Request $request): void
     {
         $this->requireDatabase();
@@ -76,9 +79,9 @@ final class AuthController extends Controller
         $values = [
             'dni'       => Dni::normalize($request->string('dni')),
             'full_name' => $request->string('full_name'),
-            'email'     => $request->string('email'),
+            'phone'     => $request->string('phone', '', 30),
         ];
-        $error = Auth::register($values['dni'], $values['full_name'], $values['email'],
+        $error = Auth::register($values['dni'], $values['full_name'], $values['phone'],
             $request->string('password'), $request->string('password2'), $request->ip());
 
         if ($error === null) {
@@ -88,58 +91,14 @@ final class AuthController extends Controller
         $this->renderRegister($error, $values);
     }
 
-    /** GET /recuperar — pide el email para mandar el enlace. */
+    /**
+     * GET /recuperar — la contraseña no se recupera desde la app: manda al WhatsApp de soporte con el mensaje ya escrito
+     * (Auth::supportWhatsappUrl). El login enlaza directo a WhatsApp; esta ruta queda para enlaces viejos o guardados.
+     */
     public function showForgot(Request $request): void
     {
-        $this->requireDatabase();
-        $this->view('pages/forgot', $this->authPage('Recuperar contraseña'));
-    }
-
-    /** POST /recuperar — responde siempre lo mismo, exista o no la cuenta (no revela qué emails están registrados). */
-    public function forgot(Request $request): void
-    {
-        $this->requireDatabase();
-        $this->requireCsrf($request);
-
-        $sent = Auth::requestReset($request->string('email'), $request->ip());
-        if (!$sent) {
-            http_response_code(429);
-            header('Retry-After: 900');
-        }
-        $this->view('pages/forgot', $this->authPage('Recuperar contraseña', [
-            'error' => $sent ? '' : Auth::ERROR_THROTTLED,
-            'sent'  => $sent,
-        ]));
-    }
-
-    /** GET /restablecer?token= — formulario de contraseña nueva si el enlace es válido. */
-    public function showReset(Request $request): void
-    {
-        $this->requireDatabase();
-        $token = (string) $request->query('token', '');
-        $this->view('pages/reset', $this->authPage('Nueva contraseña', [
-            'token' => $token,
-            'valid' => Auth::resetTokenValid($token),
-        ]));
-    }
-
-    /** POST /restablecer — guarda la contraseña nueva (y cierra las sesiones abiertas de esa cuenta). */
-    public function reset(Request $request): void
-    {
-        $this->requireDatabase();
-        $this->requireCsrf($request);
-
-        $token = $request->string('token');
-        $error = Auth::resetPassword($token, $request->string('password'), $request->string('password2'));
-        if ($error === null) {
-            $this->view('pages/reset', $this->authPage('Nueva contraseña', ['token' => '', 'valid' => false, 'done' => true]));
-            return;
-        }
-        $this->view('pages/reset', $this->authPage('Nueva contraseña', [
-            'token' => $token,
-            'valid' => Auth::resetTokenValid($token),
-            'error' => $error,
-        ]));
+        header('Location: ' . Auth::supportWhatsappUrl(), true, 302);
+        exit;
     }
 
     /** POST /logout — cierra la sesión (POST + CSRF: un enlace de otro sitio no puede desloguear al usuario). */
@@ -159,7 +118,7 @@ final class AuthController extends Controller
         $this->redirect('/login');
     }
 
-    /** Alta y recuperación necesitan dónde guardar: sin base de datos (driver files) no existen. */
+    /** El alta necesita dónde guardar: sin base de datos (driver files) no existe. */
     private function requireDatabase(): void
     {
         if (!Database::enabled()) {
@@ -169,7 +128,7 @@ final class AuthController extends Controller
 
     /**
      * Si el error fue por exceso de intentos responde 429 con Retry-After: los segundos reales del bloqueo
-     * del login, o la ventana completa para alta y recuperación.
+     * del login, o la ventana completa para el alta.
      */
     private function throttleHeaders(?string $error): void
     {
@@ -201,16 +160,22 @@ final class AuthController extends Controller
         $this->view('pages/login', $this->authPage('Ingresar', [
             'error'     => $error,
             'dni'       => $dni,
-            'canSignUp' => Database::enabled(),
+            'canSignUp' => Auth::canRegisterHere(),
+            'forgotUrl' => Auth::supportWhatsappUrl(),
         ]));
     }
 
-    /** Renderiza el formulario de alta con los valores ya escritos. */
+    /**
+     * Renderiza el formulario de alta con los valores ya escritos, o el aviso de que este navegador ya creó una
+     * cuenta (allowed = false).
+     */
     private function renderRegister(string $error = '', array $values = []): void
     {
         $this->view('pages/register', $this->authPage('Crear cuenta', [
-            'error'  => $error,
-            'values' => $values + ['dni' => '', 'full_name' => '', 'email' => ''],
+            'error'     => $error,
+            'values'    => $values + ['dni' => '', 'full_name' => '', 'phone' => ''],
+            'allowed'   => Auth::canRegisterHere(),
+            'forgotUrl' => Auth::supportWhatsappUrl(),
         ]));
     }
 }

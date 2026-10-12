@@ -11,6 +11,7 @@ use App\Core\Response;
 use App\Models\AuditLog;
 use App\Models\Ban;
 use App\Models\Barber;
+use App\Models\Registration;
 use App\Models\User;
 use App\Models\UserActivity;
 use App\Services\Audit;
@@ -21,7 +22,7 @@ use App\Support\Password;
 /**
  * Panel del superusuario (/su): todas las cuentas con sus IP, navegadores (user agent), última conexión y últimas
  * 3 acciones; edición, contraseña, suspensión y borrado completo; bloqueo de IP (temporal o permanente) y "Permaban" de
- * navegadores. Además el registro de auditoría completo (/su/auditoria, con exportación CSV) y el panel de seguridad
+ * navegadores; las altas de cuenta por navegador (/su/registros, con liberación del navegador). Además el registro de auditoría completo (/su/auditoria, con exportación CSV) y el panel de seguridad
  * (/su/seguridad: fuerza bruta, cuentas desde muchas IP, navegadores nuevos, accesos del superusuario y retención).
  *
  * A diferencia de /admin/usuarios no tiene las salvaguardas de "último administrador" (el superusuario está por
@@ -59,10 +60,11 @@ final class SuperController extends Controller
         'permaban'     => 'Permaban aplicado: ese navegador ya no puede usar la app.',
         'permaban-sin' => 'Cuenta suspendida. No tenía navegadores registrados para bloquear (todavía no había entrado con el rastreo activo).',
         'limpiado'     => 'Registros viejos de auditoría borrados.',
+        'liberado'     => 'Navegador liberado: desde ahí se puede crear una cuenta nueva.',
     ];
 
     /** Pantallas a las que puede volver una acción (campo POST "volver"); cualquier otra cosa vuelve a /su. */
-    private const BACK = ['seguridad' => '/su/seguridad', 'auditoria' => '/su/auditoria'];
+    private const BACK = ['seguridad' => '/su/seguridad', 'auditoria' => '/su/auditoria', 'registros' => '/su/registros'];
 
     /** Dirección a la que vuelve la acción actual según el campo "volver" (solo valores de BACK: nada externo). */
     private function back(): string
@@ -139,6 +141,45 @@ final class SuperController extends Controller
             'myDevice'   => Device::hash(),
             'onlineFrom' => $onlineFrom,
         ]));
+    }
+
+    /**
+     * GET /su/registros — altas de cuenta hechas desde /registro (una por navegador, ver Auth::register): fecha, datos
+     * con los que se registró (DNI, nombre, teléfono), IP, navegador y estado actual de la cuenta, con filtros (texto,
+     * IP, desde/hasta) y paginado. Marca las IP desde las que salió más de una alta y los navegadores con Permaban;
+     * arriba los totales, incluidos los intentos rechazados por navegador o IP (enlazan a la auditoría).
+     */
+    public function registrations(Request $request): void
+    {
+        $this->requireSuper();
+        $filters = Registration::filters($_GET);
+        $page = max(1, (int) $request->query('pagina', 1));
+        $this->view('pages/su-registros', $this->page($request, 'Registros', [
+            'filters'  => $filters,
+            'result'   => Registration::search($filters, $page),
+            'page'     => $page,
+            'totals'   => Registration::totals(),
+            'maxIp'    => (int) \App\Core\Config::get('security.register_max_ip_day'),
+            'myIp'     => $request->ip(),
+            'myDevice' => Device::hash(),
+        ]));
+    }
+
+    /**
+     * POST /su/registros/liberar — campo id (alta): libera ese navegador para que pueda crear otra cuenta (por ejemplo,
+     * una familia que comparte el celular). El alta sigue en la lista con la fecha de liberación, y queda auditado.
+     */
+    public function releaseRegistration(Request $request): void
+    {
+        $this->requireSuper();
+        $this->requireCsrf($request);
+        $id = (int) $request->input('id', 0);
+        $row = $id > 0 ? Registration::find($id) : null;
+        if ($row === null || !Registration::release($id)) {
+            $this->fail('Esa alta no existe o su navegador ya estaba liberado.');
+        }
+        Audit::log('su_registration_release', null, 'alta ' . $id . ' · DNI ' . $row['dni'] . ' · navegador ' . substr($row['device_hash'], 0, 12));
+        $this->done('liberado');
     }
 
     /**
@@ -236,7 +277,7 @@ final class SuperController extends Controller
     }
 
     /**
-     * POST /su/usuarios/guardar — edita nombre, email, rol y secciones de una cuenta (mismas reglas que
+     * POST /su/usuarios/guardar — edita nombre, teléfono, rol y secciones de una cuenta (mismas reglas que
      * /admin/usuarios: User::validate + User::saveFromAdmin, que también resuelve la ficha del barbero).
      */
     public function saveUser(Request $request): void
@@ -246,7 +287,7 @@ final class SuperController extends Controller
         $target = $this->target($request);
 
         [$data, $error] = User::validate([
-            'full_name' => $request->input('full_name'), 'email' => $request->input('email'),
+            'full_name' => $request->input('full_name'), 'phone' => $request->input('phone'),
             'role' => $request->input('role'), 'sections' => $request->input('sections'),
         ], false);
         if ($error !== null) {
@@ -256,7 +297,7 @@ final class SuperController extends Controller
             User::saveFromAdmin($target, $data);
         } catch (\PDOException $e) {
             if ($e->getCode() === '23000') {
-                $this->fail('Ese email ya es de otra cuenta.');
+                $this->fail('Ese teléfono ya es de otra cuenta.');
             }
             throw $e;
         }

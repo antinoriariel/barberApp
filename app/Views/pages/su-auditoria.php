@@ -19,7 +19,7 @@ $query = static function (array $over = []) use ($filters): string {
 $page = min($page, $result['pages']);
 ?>
 <main class="admin su">
-  <?= partial('components/admin-header', ['heading' => 'Auditoría', 'sub' => 'Todo lo que pasó en la app, quién, cuándo y desde dónde', 'sections' => ['su', 'su-seguridad', 'su-auditoria'], 'active' => 'su-auditoria']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Auditoría', 'sub' => 'Todo lo que pasó en la app, quién, cuándo y desde dónde', 'sections' => ['su', 'su-registros', 'su-seguridad', 'su-auditoria'], 'active' => 'su-auditoria']) ?>
 
   <?php if ($notice !== '' || $error !== ''): ?>
   <div class="admin-flashes" id="aviso">
@@ -42,7 +42,7 @@ $page = min($page, $result['pages']);
           </select>
         </label>
         <label>IP<input type="text" name="ip" value="<?= e($filters['ip']) ?>" maxlength="45" autocomplete="off" placeholder="Exacta"></label>
-        <label class="wide">Buscar<input type="search" name="q" value="<?= e($filters['q']) ?>" maxlength="60" autocomplete="off" placeholder="Nombre, DNI o detalle"></label>
+        <label class="wide">Buscar<input type="search" name="q" value="<?= e($filters['q']) ?>" maxlength="60" autocomplete="off" placeholder="Nombre, DNI, teléfono o detalle"></label>
         <label>Desde<input type="date" name="desde" value="<?= e($filters['desde']) ?>"></label>
         <label>Hasta<input type="date" name="hasta" value="<?= e($filters['hasta']) ?>"></label>
       </div>
@@ -65,7 +65,7 @@ $page = min($page, $result['pages']);
   <section class="admin-card">
     <ul class="su-list su-log">
     <?php foreach ($result['rows'] as $r): ?>
-      <?php $bad = in_array($r['event'], ['login_fail', 'login_throttled'], true); ?>
+      <?php $bad = in_array($r['event'], ['login_fail', 'login_throttled', 'register_blocked_device', 'register_blocked_ip'], true); ?>
       <li class="<?= $bad ? 'su-warn' : '' ?>">
         <div>
           <strong><?= e(UserActivity::label($r['event'])) ?> · <?= e(AuditLog::actor($r)) ?></strong>

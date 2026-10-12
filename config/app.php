@@ -22,21 +22,21 @@ return [
     // Base de datos (ver config/database.php y docs/plan-base-de-datos.md).
     'database' => require __DIR__ . '/database.php',
 
-    // URL pública base (para armar los enlaces de los emails). Fijarla en producción: no se toma del encabezado Host.
+    // URL pública base (la usa el QR de la fila). Fijarla en producción: no se toma del encabezado Host.
     'url' => getenv('APP_URL') ?: 'http://localhost:8000',
 
-    // Cuentas: contraseña mínima, vigencia del enlace de recuperación (segundos) y contraseña de las cuentas
-    // de demostración que crea bin/seed.php (cambiarla o borrar esas cuentas antes de producción).
+    // Cuentas: contraseña mínima y contraseña de las cuentas de demostración que crea bin/seed.php
+    // (cambiarla o borrar esas cuentas antes de producción).
     'auth' => [
         'min_password'  => 8,
-        'reset_ttl'     => 60 * 60,
         'demo_password' => getenv('DEMO_PASSWORD') ?: 'Navaja2026!',
     ],
 
-    // Email: driver 'log' (escribe en storage/mail.log, para desarrollo) o 'mail' (mail() de PHP).
-    'mail' => [
-        'driver' => getenv('MAIL_DRIVER') ?: 'log',
-        'from'   => getenv('MAIL_FROM') ?: 'no-reply@navaja.local',
+    // Soporte: "Olvidé mi contraseña" abre un chat de WhatsApp con este número (internacional, solo dígitos)
+    // y este mensaje ya escrito. La contraseña nueva la pone el administrador desde /admin/usuarios.
+    'support' => [
+        'whatsapp'       => getenv('SUPPORT_WHATSAPP') ?: '5493781401440',
+        'forgot_message' => 'Olvidé mi contraseña de la app de barbería, solicito asistencia',
     ],
 
     // Reservas: cuántos días hacia adelante se puede reservar, cuántos turnos futuros puede tener a la vez
@@ -68,9 +68,11 @@ return [
         'login_max_attempts_ip'  => getenv('LOGIN_RATELIMIT') === '0' ? PHP_INT_MAX : 10,
         'login_max_attempts_dni' => getenv('LOGIN_RATELIMIT') === '0' ? PHP_INT_MAX : 5,
         'login_window'           => 15 * 60, // segundos que dura el bloqueo
-        // Altas de cuenta y pedidos de recuperación por IP, por ventana.
+        // Intentos de alta de cuenta por IP, por ventana.
         'register_max_attempts_ip' => 5,
-        'reset_max_attempts_ip'    => 5,
+        // Cuentas creadas por IP cada 24 h (además del límite de una por navegador). Bajo para frenar spam, pero
+        // no 1: en un wifi compartido o con la IP compartida de las compañías de celular puede haber varias personas.
+        'register_max_ip_day'      => 3,
         // HSTS (solo se envía bajo HTTPS): segundos que el navegador recordará usar solo HTTPS.
         'hsts_max_age'           => 60 * 60 * 24 * 180,
         // Segundos sin actividad tras los que la sesión del superusuario se cierra sola (2 horas).

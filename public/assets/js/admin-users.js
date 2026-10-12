@@ -3,7 +3,7 @@
  *
  * - En cada formulario con [data-role-form], los campos [data-barber-only] (aviso de la ficha del equipo y secciones del
  *   panel) solo se muestran si el rol elegido es "barbero"; con otro rol el servidor los ignora de todas formas.
- * - El buscador [data-user-search] filtra las tarjetas por nombre, DNI (con o sin puntos) o email.
+ * - El buscador [data-user-search] filtra las tarjetas por nombre, DNI (con o sin puntos) o teléfono.
  * - Los botones con [data-confirm] (dar de baja, Permaban, eliminar) piden confirmación en un diálogo propio antes de enviar.
  * - Los campos con [data-validate] se validan con las mismas reglas y mensajes que el servidor (User::validate,
  *   Password::validate) al salir del campo y al enviar; el error se muestra debajo del campo. El DNI se formatea
@@ -25,13 +25,16 @@ document.querySelectorAll('[data-role-form]').forEach((form) => {
   form.querySelector('[data-role-select]')?.addEventListener('change', () => syncRole(form));
 });
 
-/** Filtra las tarjetas de cuentas: coincide si el texto (o el texto sin puntos, para el DNI) aparece en la tarjeta. */
+/**
+ * Filtra las tarjetas de cuentas: coincide si el texto aparece en la tarjeta, o el texto sin puntos, espacios, guiones,
+ * paréntesis ni "+" (así se encuentra un DNI con puntos o un teléfono escrito como "3781 40-1440").
+ */
 const search = document.querySelector('[data-user-search]');
 const cards = [...document.querySelectorAll('[data-user-text]')];
 const none = document.querySelector('[data-user-none]');
 search?.addEventListener('input', () => {
   const q = search.value.trim().toLowerCase();
-  const digits = q.replace(/\./g, '');
+  const digits = q.replace(/[\s.()+-]/g, '');
   let shown = 0;
   cards.forEach((card) => {
     const text = card.dataset.userText;
@@ -109,6 +112,44 @@ function formatDni(raw) {
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
+/** Códigos de área argentinos de 3 dígitos (como Support\Phone::AREA3): sirven para ubicar el 15 del celular. */
+const AREA3 = ['220', '221', '223', '230', '236', '237', '249', '260', '261', '263', '264', '266', '280', '291', '294',
+  '297', '298', '299', '341', '342', '343', '345', '348', '351', '353', '358', '362', '364', '370', '376', '379', '380',
+  '381', '383', '385', '387', '388'];
+
+/**
+ * Celular argentino → número nacional de 10 dígitos, o null si no es válido. Misma lógica que Support\Phone::normalize:
+ * acepta +54 / 0054 / 54 (con o sin 9), el 0 de larga distancia y el 15 (si su posición no es ambigua).
+ */
+function normalizePhone(raw) {
+  const value = raw.trim();
+  if (value === '' || value.length > 30 || !/^\+?[\d\s().-]+$/.test(value)) return null;
+  let digits = value.replace(/\D/g, '');
+  const international = value.startsWith('+') || digits.startsWith('00');
+  if (international) digits = digits.replace(/^0+/, '');
+  if (international || (digits.startsWith('54') && (digits.length === 12 || digits.length === 13))) {
+    if (!digits.startsWith('54')) return null;
+    digits = digits.slice(2);
+    if (digits.startsWith('9')) digits = digits.slice(1);
+  } else if (digits.startsWith('0')) {
+    digits = digits.slice(1);
+  }
+  if (digits.length === 12) {
+    const found = [2, 3, 4].filter((len) => {
+      if (digits.slice(len, len + 2) !== '15') return false;
+      const area = digits.slice(0, len);
+      if (len === 2) return area === '11';
+      if (len === 3) return AREA3.includes(area);
+      return /^[23]/.test(area);
+    });
+    if (found.length !== 1) return null;
+    digits = digits.slice(0, found[0]) + digits.slice(found[0] + 2);
+  }
+  if (digits.length !== 10 || !/^(11[2-9]|[23]\d)/.test(digits)) return null;
+  if (/^(\d)+$/.test(digits.slice(-7))) return null;
+  return digits;
+}
+
 /** Nombre y apellido: al menos dos palabras de letras (con tildes), apóstrofo, punto o guion; como User::validate. */
 const NAME_RE = /^[\p{L}\p{M}'.-]+( [\p{L}\p{M}'.-]+)+$/u;
 
@@ -126,10 +167,9 @@ const RULES = {
     if (value.length > 120) return 'El nombre es demasiado largo (máximo 120 caracteres).';
     return NAME_RE.test(value) ? '' : 'Usá solo letras, espacios, apóstrofo, punto o guion.';
   },
-  email(input) {
-    const value = input.value.trim();
-    if (value === '') return '';
-    return value.length <= 190 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? '' : 'Ingresá un email válido (o dejalo vacío).';
+  phone(input) {
+    if (input.value.trim() === '') return '';
+    return normalizePhone(input.value) ? '' : 'Ingresá un celular argentino con código de área (ej: 3781 40-1440). O dejalo vacío.';
   },
   password(input) {
     const min = input.minLength > 0 ? input.minLength : 8;
@@ -189,10 +229,10 @@ document.querySelectorAll('form').forEach((form) => {
 
   fields.forEach((input) => {
     const type = input.dataset.validate;
-    // Al salir del campo: se normaliza (espacios de más, email sin espacios) y se valida si escribió algo.
+    // Al salir del campo: se normaliza (espacios de más) y se valida si escribió algo.
     input.addEventListener('blur', () => {
       if (type === 'name') input.value = input.value.trim().replace(/\s+/g, ' ');
-      if (type === 'email') input.value = input.value.trim();
+      if (type === 'phone') input.value = input.value.trim();
       if (input.value !== '' || input.hasAttribute('aria-invalid')) check(input);
     });
     // Mientras escribe: el DNI se formatea con puntos y, si el campo ya marcaba error, se revalida para sacarlo apenas se corrige.

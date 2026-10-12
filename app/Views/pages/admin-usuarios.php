@@ -1,6 +1,6 @@
 <?php
 /**
- * pages/admin-usuarios.php — Cuentas de la barbería (solo administrador). Arriba el alta (DNI, nombre, email,
+ * pages/admin-usuarios.php — Cuentas de la barbería (solo administrador). Arriba el alta (DNI, nombre, celular,
  * contraseña y rol); debajo un buscador y una tarjeta por cuenta con su estado (el badge suspende o da el alta),
  * la edición de datos y rol, el cambio de contraseña y la baja definitiva (solo cuentas sin historial). Si el rol es
  * barbero se eligen las secciones extra del panel que ve; su ficha del equipo no se elige: se crea con el nombre de la
@@ -80,7 +80,7 @@ $roleFields = static function (?User $account): void {
                pattern="\d{1,2}\.\d{3}\.\d{3}" title="7 u 8 números (los puntos se ponen solos)" data-validate="dni"></label>
         <label>Contraseña<input type="password" name="password" autocomplete="new-password" minlength="<?= $minPassword ?>" maxlength="<?= $maxPassword ?>" required data-validate="password"></label>
         <label class="wide">Nombre y apellido<input type="text" name="full_name" maxlength="120" autocomplete="off" autocapitalize="words" required placeholder="Ej: Juan Pérez" data-validate="name"></label>
-        <label class="wide">Email<input type="email" name="email" maxlength="190" autocomplete="off" placeholder="Opcional: sirve para recuperar la contraseña" data-validate="email"></label>
+        <label class="wide">Celular<input type="tel" name="phone" inputmode="tel" maxlength="30" autocomplete="off" placeholder="Opcional. Ej: 3781 40-1440" data-validate="phone"></label>
         <?php $roleFields(null); ?>
       </div>
       <div class="svc-row-actions"><button class="btn-small" type="submit">Agregar usuario</button></div>
@@ -88,14 +88,14 @@ $roleFields = static function (?User $account): void {
   </section>
 
   <h2 class="admin-section-title">Cuentas</h2>
-  <input class="user-search" type="search" placeholder="Buscar por nombre, DNI o email…" aria-label="Buscar cuenta" data-user-search autocomplete="off">
+  <input class="user-search" type="search" placeholder="Buscar por nombre, DNI o teléfono…" aria-label="Buscar cuenta" data-user-search autocomplete="off">
   <p class="admin-empty" data-user-none hidden>Ninguna cuenta coincide con la búsqueda.</p>
 
   <?php foreach ($accounts as $a): ?>
     <?php $self = $a->id === $user->id; ?>
     <section class="admin-card svc-edit user-card<?= $a->active ? '' : ' off' ?>" id="usuario-<?= $a->id ?>"
              aria-label="<?= e($a->fullName) ?>"
-             data-user-text="<?= e(mb_strtolower($a->fullName . ' ' . $a->dni . ' ' . $a->email)) ?>">
+             data-user-text="<?= e(mb_strtolower($a->fullName . ' ' . $a->dni . ' ' . $a->phone)) ?>">
       <div class="svc-edit-head">
         <div class="user-id">
           <strong><?= e($a->fullName) ?><?= $self ? ' (vos)' : '' ?></strong>
@@ -103,6 +103,7 @@ $roleFields = static function (?User $account): void {
             DNI <?= e(\App\Support\Dni::format($a->dni)) ?> · <?= e(User::ROLES[$a->role()]) ?>
             <?php if ($a->isBarber()): ?> · <?= e($barberNames[$a->barberId] ?? 'oculto en la app') ?><?php endif; ?>
             <?php if ($a->role() === 'cliente'): ?> · <?= $a->visits ?> <?= $a->visits === 1 ? 'visita' : 'visitas' ?><?php endif; ?>
+            <?php if ($a->phone !== ''): ?> · <?= e(fmt_phone($a->phone)) ?><?php endif; ?>
           </small>
           <?php if ($a->isBarber() && !$a->isAdmin): ?>
             <small>Panel: <?= $a->panelAccess ? 'Mi semana, ' . e(implode(', ', array_map(static fn (string $k) => User::SECTIONS[$k], $a->panelAccess))) : 'solo Mi semana' ?></small>
@@ -131,7 +132,7 @@ $roleFields = static function (?User $account): void {
           <input type="hidden" name="id" value="<?= $a->id ?>">
           <div class="svc-fields">
             <label class="wide">Nombre y apellido<input type="text" name="full_name" value="<?= e($a->fullName) ?>" maxlength="120" autocapitalize="words" required data-validate="name"></label>
-            <label class="wide">Email<input type="email" name="email" value="<?= e($a->email) ?>" maxlength="190" placeholder="Opcional" data-validate="email"></label>
+            <label class="wide">Celular<input type="tel" name="phone" inputmode="tel" value="<?= e($a->phone !== '' ? fmt_phone($a->phone) : '') ?>" maxlength="30" placeholder="Opcional" data-validate="phone"></label>
             <?php $roleFields($a); ?>
           </div>
           <div class="svc-row-actions"><button class="btn-small" type="submit">Guardar</button></div>

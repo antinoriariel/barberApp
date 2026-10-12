@@ -16,7 +16,7 @@ final class UserAdminTest extends DbTestCase
     private function form(array $over = []): array
     {
         return $over + [
-            'dni' => '99.700.001', 'full_name' => '  Juana   Pérez ', 'email' => ' Juana@Test.Local ',
+            'dni' => '99.700.001', 'full_name' => '  Juana   Pérez ', 'phone' => ' (0379) 15 411-9988 ',
             'role' => 'cliente', 'barber' => '', 'sections' => [], 'password' => 'clave-de-prueba',
         ];
     }
@@ -28,15 +28,16 @@ final class UserAdminTest extends DbTestCase
         $this->assertSame('99700001', $data['dni']);
         $this->assertSame('Juana Pérez', $data['full_name']);
         $this->assertSame('Juana', $data['name']);
-        $this->assertSame('juana@test.local', $data['email']);
+        $this->assertSame('3794119988', $data['phone'], 'el teléfono se guarda normalizado (sin 0 ni 15)');
         $this->assertSame(0, $data['is_admin']);
         $this->assertNull($data['barber_id']);
         $this->assertNull($data['panel_access']);
 
-        $this->assertNull(User::validate($this->form(['email' => '']), true)[0]['email'], 'el email es opcional');
+        $this->assertNull(User::validate($this->form(['phone' => '']), true)[0]['phone'], 'el teléfono es opcional');
         $this->assertNotNull(User::validate($this->form(['dni' => '12']), true)[1]);
         $this->assertNotNull(User::validate($this->form(['full_name' => 'Juana']), true)[1], 'falta el apellido');
-        $this->assertNotNull(User::validate($this->form(['email' => 'no-es-mail']), true)[1]);
+        $this->assertNotNull(User::validate($this->form(['phone' => '+1 415 555 0100']), true)[1], 'solo Argentina');
+        $this->assertNotNull(User::validate($this->form(['phone' => '12345']), true)[1]);
         $this->assertNotNull(User::validate($this->form(['role' => 'superadmin']), true)[1]);
         $this->assertNotNull(User::validate($this->form(['password' => 'corta']), true)[1]);
         $this->assertNotNull(User::validate($this->form(['full_name' => ['a', 'b']]), true)[1], 'arreglo en vez de texto');
@@ -61,7 +62,7 @@ final class UserAdminTest extends DbTestCase
     private function createBarber(string $dni, string $fullName, array $sections = []): User
     {
         $this->track($dni);
-        [$data, $error] = User::validate($this->form(['dni' => $dni, 'full_name' => $fullName, 'email' => '', 'role' => 'barbero', 'sections' => $sections]), true);
+        [$data, $error] = User::validate($this->form(['dni' => $dni, 'full_name' => $fullName, 'phone' => '', 'role' => 'barbero', 'sections' => $sections]), true);
         $this->assertNull($error);
         $user = User::findById(User::saveFromAdmin(null, $data, Password::hash($data['password'])));
         $this->barbers[] = $user->barberId;
@@ -71,7 +72,7 @@ final class UserAdminTest extends DbTestCase
     /** Edita una cuenta por el mismo camino que el panel. */
     private function edit(User $u, array $over): User
     {
-        [$data, $error] = User::validate($this->form($over + ['email' => '', 'full_name' => $u->fullName]), false);
+        [$data, $error] = User::validate($this->form($over + ['phone' => '', 'full_name' => $u->fullName]), false);
         $this->assertNull($error);
         return User::findById(User::saveFromAdmin($u, $data));
     }
@@ -126,7 +127,7 @@ final class UserAdminTest extends DbTestCase
     {
         $this->makeUser('99700003');
         $before = (int) \App\Core\Database::selectOne('SELECT COUNT(*) AS n FROM barbers')['n'];
-        [$data] = User::validate($this->form(['dni' => '99700003', 'email' => '', 'role' => 'barbero']), true);
+        [$data] = User::validate($this->form(['dni' => '99700003', 'phone' => '', 'role' => 'barbero']), true);
         try {
             User::saveFromAdmin(null, $data, Password::hash('clave-de-prueba'));
             $this->fail('debía chocar con el DNI repetido');
@@ -195,14 +196,15 @@ final class UserAdminTest extends DbTestCase
         $this->assertSame(3 * (int) $service['price'], $mine['revenue']);
     }
 
-    public function testDniOEmailRepetidosChocanConLosIndicesUnicos(): void
+    public function testDniOTelefonoRepetidosChocanConLosIndicesUnicos(): void
     {
-        $this->makeUser('99700003', 'repetido@test.local');
-        [$data] = User::validate($this->form(['dni' => '99700004', 'email' => 'repetido@test.local']), true);
+        $this->makeUser('99700003', '3794119977');
+        // El mismo número escrito de otra forma se normaliza igual y choca con el índice único.
+        [$data] = User::validate($this->form(['dni' => '99700004', 'phone' => '+54 9 379 411-9977']), true);
         $this->track('99700004');
         try {
             User::createFromAdmin($data, Password::hash('clave-de-prueba'));
-            $this->fail('debía chocar con el email repetido');
+            $this->fail('debía chocar con el teléfono repetido');
         } catch (\PDOException $e) {
             $this->assertSame('23000', $e->getCode());
         }

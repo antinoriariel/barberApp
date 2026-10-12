@@ -83,11 +83,11 @@ foreach (Data::get('users') as $dni => $u) {
         $st->execute([$u['barber']]);
         $barberId = $st->fetchColumn() ?: throw new RuntimeException("No existe el barbero '{$u['barber']}'.");
     }
-    $run('INSERT INTO users (dni, name, full_name, email, password_hash, is_admin, barber_id) VALUES (?, ?, ?, ?, ?, ?, ?)
-          ON DUPLICATE KEY UPDATE name = VALUES(name), full_name = VALUES(full_name), email = VALUES(email),
+    $run('INSERT INTO users (dni, name, full_name, phone, password_hash, is_admin, barber_id) VALUES (?, ?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE name = VALUES(name), full_name = VALUES(full_name), phone = VALUES(phone),
                                   is_admin = VALUES(is_admin), barber_id = VALUES(barber_id),
                                   password_hash = COALESCE(password_hash, VALUES(password_hash))',
-        [$dni, $u['name'], $u['full'], $u['email'], Password::hash((string) Config::get('auth.demo_password')),
+        [$dni, $u['name'], $u['full'], $u['phone'] ?? null, Password::hash((string) Config::get('auth.demo_password')),
          empty($u['admin']) ? 0 : 1, $barberId]);
     $st = $pdo->prepare('SELECT id FROM users WHERE dni = ?');
     $st->execute([$dni]);

@@ -8,13 +8,16 @@ use App\Core\Database;
 use App\Core\DbSessionHandler;
 use App\Core\RateLimiter;
 use App\Core\Session;
+use App\Models\Registration;
 use App\Models\Superuser;
 use App\Models\User;
 use App\Support\Dni;
 use App\Support\Password;
+use App\Support\Phone;
 
 /**
- * Autenticación por DNI + contraseña, alta de cuentas y recuperación de contraseña.
+ * Autenticación por DNI + contraseña y alta de cuentas (con celular argentino, una por navegador). La contraseña
+ * olvidada no se recupera por la app: "Olvidé mi contraseña" abre un WhatsApp de soporte (supportWhatsappUrl).
  *
  * - Un único mensaje de error en el login (ERROR_CREDENTIALS) para DNI inválido, inexistente o contraseña
  *   incorrecta, y se verifica un hash falso cuando el DNI no existe, así no se enumeran cuentas ni por el
@@ -22,7 +25,7 @@ use App\Support\Password;
  * - Los intentos fallidos se limitan por IP y por DNI con RateLimiter.
  * - Todo evento relevante queda en Audit.
  * - Con driver files (maqueta) solo se puede iniciar sesión (con la contraseña de demostración);
- *   el alta y la recuperación requieren base de datos.
+ *   el alta requiere base de datos.
  */
 final class Auth
 {
@@ -33,7 +36,6 @@ final class Auth
 
     /** Segundos de espera del último bloqueo de login (para la cabecera Retry-After); 0 si no hubo bloqueo. */
     private static int $retryAfter = 0;
-    public const ERROR_RESET_INVALID = 'El enlace no es válido o venció. Pedí uno nuevo.';
 
     /** Hash de relleno para igualar el tiempo de respuesta cuando el DNI no existe. */
     private static ?string $dummyHash = null;
@@ -211,19 +213,30 @@ final class Auth
         return 'Ingresá un DNI válido, entre ' . Dni::format((string) Dni::MIN_REGISTRO)
             . ' y ' . Dni::format((string) Dni::MAX_REGISTRO) . '.';
     }
+    /** Mensaje cuando el navegador ya creó una cuenta (ver register). */
+    public const ERROR_DEVICE_USED = 'Desde este navegador ya se creó una cuenta. Ingresá con tu DNI y contraseña.';
 
     /**
      * Crea una cuenta nueva y deja la sesión iniciada.
      *
-     * Valida todo en el servidor. Un DNI o email repetido da un mensaje genérico ("ya existe una cuenta"):
-     * el DNI es lo que se usa para entrar, así que no hay forma de evitar del todo que se sepa si está
-     * registrado; el límite por IP frena el barrido masivo.
+     * Valida todo en el servidor:
+     *  - DNI, nombre y apellido, y un celular argentino (Phone::normalize: se guarda siempre igual, así el índice
+     *    único de users.phone impide que dos cuentas tengan el mismo número aunque lo escriban distinto);
+     *  - una sola cuenta por navegador: el navegador tiene que traer su cookie (Device::known; sin ella cada pedido
+     *    sería un navegador "nuevo") y no haber creado otra cuenta (Registration::deviceUsed). El alta se anota en
+     *    device_registrations en la misma transacción que crea la cuenta; su índice único frena dos altas en paralelo;
+     *  - como mucho security.register_max_ip_day altas por IP cada 24 h (si borran la cookie o usan incógnito, la IP
+     *    sigue siendo la misma).
+     * Los rechazos por navegador o IP quedan auditados (register_blocked_device / register_blocked_ip) para el
+     * superusuario. Un DNI o teléfono repetido da un mensaje genérico ("ya existe una cuenta"): el DNI es lo que se usa
+     * para entrar, así que no hay forma de evitar del todo que se sepa si está registrado; el límite por IP frena el
+     * barrido masivo.
      *
      * @return string|null null si salió bien, o el mensaje de error
      */
-    public static function register(string $rawDni, string $fullName, string $email, string $password, string $confirm, string $ip): ?string
+    public static function register(string $rawDni, string $fullName, string $rawPhone, string $password, string $confirm, string $ip): ?string
     {
-        // Reserva atómica (ver attempt): en paralelo no se pueden colar más altas que el límite.
+        // Reserva atómica (ver attempt): en paralelo no se pueden colar más intentos que el límite.
         $key = 'register:ip:' . RateLimiter::ipBucket($ip);
         if (RateLimiter::hit($key, (int) Config::get('security.login_window')) > (int) Config::get('security.register_max_attempts_ip')) {
             return self::ERROR_THROTTLED;
@@ -231,7 +244,7 @@ final class Auth
 
         $dni = Dni::normalize($rawDni);
         $fullName = trim(preg_replace('/\s+/', ' ', $fullName));
-        $email = mb_strtolower(trim($email));
+        $phone = Phone::normalize($rawPhone);
 
         if (!Dni::isRegistrable($dni)) {
             return self::dniRangeError();
@@ -239,102 +252,65 @@ final class Auth
         if (!preg_match("/^[\p{L}\p{M}'.-]+( [\p{L}\p{M}'.-]+)+$/u", $fullName) || mb_strlen($fullName) > 120) {
             return 'Ingresá tu nombre y apellido.';
         }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 190) {
-            return 'Ingresá un email válido.';
+        if ($phone === null) {
+            return Phone::ERROR;
         }
         if ($error = Password::validate($password)) {
             return $error;
         }
         if (!hash_equals($password, $confirm)) {
             return 'Las contraseñas no coinciden.';
+        }
+        if (!Device::known()) {
+            return 'Tu navegador no guardó la cookie de la app. Activá las cookies (o salí del modo incógnito) y volvé a intentar.';
+        }
+        $device = Device::hash();
+        if (Registration::deviceUsed($device)) {
+            Audit::log('register_blocked_device', null, 'DNI ' . $dni . ' · navegador ' . substr($device, 0, 12));
+            return self::ERROR_DEVICE_USED;
+        }
+        if (Registration::countFromIp($ip) >= (int) Config::get('security.register_max_ip_day')) {
+            Audit::log('register_blocked_ip', null, 'DNI ' . $dni);
+            return 'Desde esta conexión ya se crearon varias cuentas hoy. Probá más tarde o pedí ayuda por WhatsApp.';
         }
 
         try {
-            $user = User::create($dni, $fullName, $email, Password::hash($password));
+            $user = Database::transaction(function () use ($dni, $fullName, $phone, $password, $device, $ip) {
+                $user = User::create($dni, $fullName, $phone, Password::hash($password));
+                Registration::record($device, $user->id, $dni, $fullName, $phone, $ip, Device::userAgent());
+                return $user;
+            });
         } catch (\PDOException $e) {
-            if ($e->getCode() === '23000') {
-                return 'Ya existe una cuenta con ese DNI o email.';
+            if ($e->getCode() !== '23000') {
+                throw $e;
             }
-            throw $e;
+            if (Registration::deviceUsed($device)) {
+                return self::ERROR_DEVICE_USED; // otra alta desde el mismo navegador ganó la carrera
+            }
+            return 'Ya existe una cuenta con ese DNI o ese teléfono.';
         }
         self::startSession($user);
-        Audit::log('register', $user->id);
+        Audit::log('register', $user->id, 'navegador ' . substr($device, 0, 12));
         return null;
     }
 
     /**
-     * Pide recuperar la contraseña: si el email tiene cuenta, genera un token de un solo uso (se guarda
-     * hasheado, vence en auth.reset_ttl) y manda el enlace. El resultado hacia el usuario es siempre el mismo,
-     * exista o no la cuenta. Devuelve false solo si se superó el límite por IP.
+     * ¿Este navegador todavía puede crear una cuenta? (no creó ninguna o el superusuario la liberó). Sin base de datos
+     * no hay registro, así que da false.
      */
-    public static function requestReset(string $email, string $ip): bool
+    public static function canRegisterHere(): bool
     {
-        // Reserva atómica (ver attempt): en paralelo no se pueden mandar más mails que el límite.
-        $key = 'reset:ip:' . RateLimiter::ipBucket($ip);
-        if (RateLimiter::hit($key, (int) Config::get('security.login_window')) > (int) Config::get('security.reset_max_attempts_ip')) {
-            return false;
-        }
-
-        $user = filter_var(trim($email), FILTER_VALIDATE_EMAIL) ? User::findByEmail(trim($email)) : null;
-        if ($user === null || $user->email === '') {
-            return true;
-        }
-        $token = bin2hex(random_bytes(32));
-        Database::execute(
-            'INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)',
-            [hash('sha256', $token), $user->id, date('Y-m-d H:i:s', time() + (int) Config::get('auth.reset_ttl'))]
-        );
-        Mailer::send($user->email, 'Recuperá tu contraseña · Barbería',
-            "Hola {$user->name},\n\nPara elegir una contraseña nueva entrá a este enlace (vale 1 hora y se usa una sola vez):\n\n"
-            . rtrim((string) Config::get('url'), '/') . '/restablecer?token=' . $token
-            . "\n\nSi no lo pediste vos, ignorá este mensaje.");
-        Audit::log('password_reset_request', $user->id);
-        return true;
-    }
-
-    /** ¿El token de recuperación existe y no venció? */
-    public static function resetTokenValid(string $token): bool
-    {
-        return self::resetUserId($token) !== null;
-    }
-
-    /** Id del usuario dueño de un token vigente, o null. */
-    private static function resetUserId(string $token): ?int
-    {
-        if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
-            return null;
-        }
-        $r = Database::selectOne(
-            'SELECT user_id FROM password_resets WHERE token_hash = ? AND expires_at > ?',
-            [hash('sha256', $token), date('Y-m-d H:i:s')]
-        );
-        return $r ? (int) $r['user_id'] : null;
+        return Database::enabled() && !Registration::deviceUsed(Device::hash());
     }
 
     /**
-     * Cambia la contraseña con un token de recuperación: valida, guarda el hash nuevo, borra los tokens del usuario
-     * y cierra todas sus sesiones abiertas.
-     * @return string|null null si salió bien, o el mensaje de error
+     * Enlace de WhatsApp de soporte para "Olvidé mi contraseña": el número y el mensaje salen de config (support.*).
+     * La contraseña no se recupera sola: la cambia el administrador (o el superusuario) desde el panel.
      */
-    public static function resetPassword(string $token, string $password, string $confirm): ?string
+    public static function supportWhatsappUrl(): string
     {
-        $userId = self::resetUserId($token);
-        if ($userId === null) {
-            return self::ERROR_RESET_INVALID;
-        }
-        if ($error = Password::validate($password)) {
-            return $error;
-        }
-        if (!hash_equals($password, $confirm)) {
-            return 'Las contraseñas no coinciden.';
-        }
-        Database::transaction(function () use ($userId, $password) {
-            User::setPassword($userId, Password::hash($password));
-            Database::execute('DELETE FROM password_resets WHERE user_id = ?', [$userId]);
-            DbSessionHandler::revokeUser($userId);
-        });
-        Audit::log('password_reset', $userId);
-        return null;
+        return 'https://wa.me/' . preg_replace('/\D+/', '', (string) Config::get('support.whatsapp'))
+            . '?text=' . rawurlencode((string) Config::get('support.forgot_message'));
     }
 
     /** Cierra la sesión actual. */

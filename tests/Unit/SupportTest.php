@@ -10,10 +10,11 @@ use App\Models\Schedule;
 use App\Models\User;
 use App\Support\Dni;
 use App\Support\Password;
+use App\Support\Phone;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-/** Pruebas sin base de datos de las utilidades puras: Dni, Password, LoyaltyCard y Schedule::isDate. */
+/** Pruebas sin base de datos de las utilidades puras: Dni, Phone, Password, LoyaltyCard y Schedule::isDate. */
 final class SupportTest extends TestCase
 {
     public function testRequestStringIgnoraArreglosYCortaElLargo(): void
@@ -68,6 +69,46 @@ final class SupportTest extends TestCase
     {
         return [['16500000', true], ['40123456', true], ['70000000', true], ['16499999', false],
             ['70000001', false], ['1234567', false], ['99000023', false], ['', false]];
+    }
+
+    /** Formas habituales de escribir un celular argentino → número nacional de 10 dígitos (null = rechazado). */
+    public static function telefonos(): array
+    {
+        return [
+            'nacional'                  => ['3781401440', '3781401440'],
+            'con espacios y guion'      => ['3781 40-1440', '3781401440'],
+            'con 0 y 15'                => ['03781 15 401440', '3781401440'],
+            'internacional con 9'       => ['+54 9 3781 40-1440', '3781401440'],
+            'internacional sin 9'       => ['+54 3781 401440', '3781401440'],
+            'con 00'                    => ['0054 9 3781 401440', '3781401440'],
+            '549 sin +'                 => ['5493781401440', '3781401440'],
+            'AMBA con 15'               => ['011 15 2345-6789', '1123456789'],
+            'AMBA internacional'        => ['+54 9 11 2345-6789', '1123456789'],
+            'código de 3 con 15'        => ['(0351) 15-612-3456', '3516123456'],
+            'otro país'                 => ['+1 415 555 0100', null],
+            'otro país con 00'          => ['0034 612 345 678', null],
+            'corto'                     => ['401440', null],
+            'largo'                     => ['3781 40-1440 123', null],
+            'letras'                    => ['3781-CASA', null],
+            'no empieza con 11, 2 o 3'  => ['4781401440', null],
+            'número repetido'           => ['3781 111-1111', null],
+            'vacío'                     => ['', null],
+        ];
+    }
+
+    #[DataProvider('telefonos')]
+    public function testTelefonoArgentino(string $raw, ?string $esperado): void
+    {
+        $this->assertSame($esperado, Phone::normalize($raw));
+    }
+
+    public function testTelefonoFormatoYWhatsapp(): void
+    {
+        $this->assertSame('+54 9 3781 40-1440', Phone::format('3781401440'));
+        $this->assertSame('+54 9 11 2345-6789', Phone::format('1123456789'));
+        $this->assertSame('+54 9 351 612-3456', Phone::format('3516123456'));
+        $this->assertSame('5493781401440', Phone::whatsapp('3781401440'));
+        $this->assertSame(Phone::normalize(Phone::format('3781401440')), '3781401440', 'lo que se muestra se vuelve a aceptar igual');
     }
 
     public function testPasswordHashVerificaYValida(): void

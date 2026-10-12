@@ -5,10 +5,14 @@ namespace Tests\Integration;
 
 use App\Core\Database;
 use App\Core\Session;
+use App\Core\Config;
+use App\Models\Registration;
 use App\Models\User;
 use App\Services\Auth;
+use App\Services\Device;
+use App\Support\Phone;
 
-/** Login, límite de intentos, alta y recuperación de contraseña contra la base de pruebas. */
+/** Login, límite de intentos, alta (celular argentino, una por navegador) y "Olvidé mi contraseña" contra la base de pruebas. */
 final class AuthTest extends DbTestCase
 {
     protected function setUp(): void
@@ -22,58 +26,60 @@ final class AuthTest extends DbTestCase
     protected function tearDown(): void
     {
         $_SESSION = [];
+        unset($_COOKIE[Device::COOKIE]);
+        Device::reset();
         parent::tearDown();
     }
 
     public function testLoginCorrectoEIncorrectoConElMismoMensaje(): void
     {
-        $this->makeUser('99000021');
+        $this->makeUser('69990021');
 
         // Cada DNI arranca con 5 intentos; la IP (10) todavía no es la que limita.
-        $this->assertSame(Auth::ERROR_CREDENTIALS . ' Te quedan 4 intentos.', Auth::attempt('99000021', 'mala', '10.0.0.1'));
+        $this->assertSame(Auth::ERROR_CREDENTIALS . ' Te quedan 4 intentos.', Auth::attempt('69990021', 'mala', '10.0.0.1'));
         $this->assertSame(Auth::ERROR_CREDENTIALS . ' Te quedan 4 intentos.', Auth::attempt('99999999', 'clave-de-prueba', '10.0.0.1'), 'DNI inexistente: mismo mensaje');
         $this->assertSame(Auth::ERROR_CREDENTIALS . ' Te quedan 7 intentos.', Auth::attempt('abc', 'clave-de-prueba', '10.0.0.1'), 'formato inválido: solo cuenta la IP');
         $this->assertNull(Session::get('dni'));
 
         $this->assertNull(Auth::attempt('99.000.021', 'clave-de-prueba', '10.0.0.1'));
-        $this->assertSame('99000021', Session::get('dni'));
-        $this->assertSame('99000021', Auth::user()?->dni);
+        $this->assertSame('69990021', Session::get('dni'));
+        $this->assertSame('69990021', Auth::user()?->dni);
     }
 
     public function testBloqueoPorIntentosFallidos(): void
     {
-        $this->makeUser('99000022');
+        $this->makeUser('69990022');
         for ($left = 4; $left >= 2; $left--) {
-            $this->assertSame(Auth::ERROR_CREDENTIALS . " Te quedan $left intentos.", Auth::attempt('99000022', 'mala', '10.0.0.2'));
+            $this->assertSame(Auth::ERROR_CREDENTIALS . " Te quedan $left intentos.", Auth::attempt('69990022', 'mala', '10.0.0.2'));
         }
-        $this->assertSame(Auth::ERROR_CREDENTIALS . ' Te queda 1 intento.', Auth::attempt('99000022', 'mala', '10.0.0.2'));
+        $this->assertSame(Auth::ERROR_CREDENTIALS . ' Te queda 1 intento.', Auth::attempt('69990022', 'mala', '10.0.0.2'));
         // El quinto fallo ya avisa el bloqueo con el tiempo de espera (la ventana es de 15 minutos).
-        $this->assertSame(Auth::THROTTLED_PREFIX . ' Podés volver a intentar en 15 minutos.', Auth::attempt('99000022', 'mala', '10.0.0.2'));
+        $this->assertSame(Auth::THROTTLED_PREFIX . ' Podés volver a intentar en 15 minutos.', Auth::attempt('69990022', 'mala', '10.0.0.2'));
         // Bloqueado: ni siquiera la contraseña correcta entra, aunque cambie la IP.
-        $error = Auth::attempt('99000022', 'clave-de-prueba', '10.0.0.3');
+        $error = Auth::attempt('69990022', 'clave-de-prueba', '10.0.0.3');
         $this->assertStringStartsWith(Auth::THROTTLED_PREFIX . ' Podés volver a intentar en ', $error);
         $this->assertGreaterThan(0, Auth::retryAfter());
     }
 
     public function testContraseniasRarasCuentanComoFalloSinRomper(): void
     {
-        $this->makeUser('99000025');
+        $this->makeUser('69990025');
         $ip = '10.0.0.8';
         // Vacía, con byte nulo (truco para cortar bcrypt) o gigante: nunca se verifican, pero suman intento.
-        $this->assertSame(Auth::ERROR_CREDENTIALS . ' Te quedan 4 intentos.', Auth::attempt('99000025', '', $ip));
-        $this->assertSame(Auth::ERROR_CREDENTIALS . ' Te quedan 3 intentos.', Auth::attempt('99000025', "clave-de-prueba\0x", $ip));
-        $this->assertSame(Auth::ERROR_CREDENTIALS . ' Te quedan 2 intentos.', Auth::attempt('99000025', str_repeat('a', 5000), $ip));
+        $this->assertSame(Auth::ERROR_CREDENTIALS . ' Te quedan 4 intentos.', Auth::attempt('69990025', '', $ip));
+        $this->assertSame(Auth::ERROR_CREDENTIALS . ' Te quedan 3 intentos.', Auth::attempt('69990025', "clave-de-prueba\0x", $ip));
+        $this->assertSame(Auth::ERROR_CREDENTIALS . ' Te quedan 2 intentos.', Auth::attempt('69990025', str_repeat('a', 5000), $ip));
         // Un DNI con basura alrededor se normaliza, pero sin pasar de 32 caracteres.
         $this->assertStringStartsWith(Auth::ERROR_CREDENTIALS, Auth::attempt(str_repeat('9', 40), 'x', $ip));
-        $this->assertNull(Auth::attempt('99000025', 'clave-de-prueba', $ip));
+        $this->assertNull(Auth::attempt('69990025', 'clave-de-prueba', $ip));
     }
 
     public function testLoginCorrectoNoGastaElCupoDeLaIp(): void
     {
-        $this->makeUser('99000026');
+        $this->makeUser('69990026');
         // 15 logins correctos seguidos desde la misma IP (el límite por IP es 10 fallos): ninguno cuenta.
         for ($i = 0; $i < 15; $i++) {
-            $this->assertNull(Auth::attempt('99000026', 'clave-de-prueba', '10.0.0.9'));
+            $this->assertNull(Auth::attempt('69990026', 'clave-de-prueba', '10.0.0.9'));
         }
     }
 
@@ -86,57 +92,112 @@ final class AuthTest extends DbTestCase
         $this->assertStringStartsWith(Auth::THROTTLED_PREFIX, Auth::attempt('abc', 'x', '2001:db8:1:2::ffff'));
     }
 
+    /** Simula un navegador que ya trae su cookie navaja_dev (como después de abrir /registro). */
+    private function browser(): string
+    {
+        $_COOKIE[Device::COOKIE] = bin2hex(random_bytes(32));
+        Device::reset();
+        return Device::hash();
+    }
+
     public function testRegistroValidaYRechazaDuplicados(): void
     {
         $this->track('69990023');
         $ip = '10.0.0.4';
+        $this->browser();
         // Fuera del rango 16.500.000–70.000.000 no se puede crear cuenta (otra IP: el alta admite 5 intentos por IP).
         foreach (['16499999', '70000001', '99000023', '1234567'] as $fuera) {
-            $this->assertSame(Auth::dniRangeError(), Auth::register($fuera, 'Ana Pérez', 'ana23@test.local', 'clave-larga-1', 'clave-larga-1', '10.0.0.6'));
+            $this->assertSame(Auth::dniRangeError(), Auth::register($fuera, 'Ana Pérez', '3781 40-1440', 'clave-larga-1', 'clave-larga-1', '10.0.0.6'));
         }
-        $this->assertNotNull(Auth::register('69990023', 'Ana', 'ana23@test.local', 'clave-larga-1', 'clave-larga-1', $ip), 'falta apellido');
-        $this->assertNotNull(Auth::register('69990023', 'Ana Pérez', 'no-es-email', 'clave-larga-1', 'clave-larga-1', $ip));
-        $this->assertNotNull(Auth::register('69990023', 'Ana Pérez', 'ana23@test.local', 'corta', 'corta', $ip));
-        $this->assertNotNull(Auth::register('69990023', 'Ana Pérez', 'ana23@test.local', 'clave-larga-1', 'distinta-1234', $ip));
-        $this->assertNull(Auth::register('69990023', 'Ana Pérez', 'ana23@test.local', 'clave-larga-1', 'clave-larga-1', $ip));
+        $this->assertNotNull(Auth::register('69990023', 'Ana', '3781 40-1440', 'clave-larga-1', 'clave-larga-1', $ip), 'falta apellido');
+        $this->assertSame(Phone::ERROR, Auth::register('69990023', 'Ana Pérez', 'ana@test.local', 'clave-larga-1', 'clave-larga-1', $ip));
+        $this->assertSame(Phone::ERROR, Auth::register('69990023', 'Ana Pérez', '+598 99 123 456', 'clave-larga-1', 'clave-larga-1', $ip), 'Uruguay: no');
+        $this->assertNotNull(Auth::register('69990023', 'Ana Pérez', '3781 40-1440', 'corta', 'corta', $ip));
+        $this->assertNull(Auth::register('69990023', 'Ana Pérez', '03781 15 40-1440', 'clave-larga-1', 'clave-larga-1', $ip));
         $this->assertSame('69990023', Session::get('dni'));
-
-        $this->assertStringContainsString('Ya existe', (string) Auth::register('69990023', 'Otra Persona', 'otra23@test.local', 'clave-larga-1', 'clave-larga-1', '10.0.0.5'));
         $user = User::find('69990023');
         $this->assertSame('Ana', $user->name);
+        $this->assertSame('3781401440', $user->phone, 'se guarda normalizado');
         $this->assertNotSame('clave-larga-1', User::passwordHash('69990023'), 'la contraseña se guarda hasheada');
+
+        // Otro navegador: mismo DNI, o mismo celular escrito distinto → ya existe.
+        $this->browser();
+        $this->assertStringContainsString('Ya existe', (string) Auth::register('69990023', 'Otra Persona', '3794 11-0000', 'clave-larga-1', 'clave-larga-1', '10.0.0.5'));
+        $this->track('69990027');
+        $this->assertStringContainsString('Ya existe', (string) Auth::register('69990027', 'Otra Persona', '+54 9 3781 401440', 'clave-larga-1', 'clave-larga-1', '10.0.0.5'));
+        $this->assertNull(User::find('69990027'), 'no quedó nada a medias');
     }
 
-    public function testRecuperacionDeContrasena(): void
+    public function testUnaSolaCuentaPorNavegador(): void
     {
-        $user = $this->makeUser('99000024', 'r24@test.local');
-        @unlink(BASE_PATH . '/storage/mail.log');
+        $this->track('69990031');
+        $this->track('69990032');
+        $device = $this->browser();
+        $this->assertTrue(Auth::canRegisterHere());
+        $this->assertNull(Auth::register('69990031', 'Primera Cuenta', '3794 22-0031', 'clave-larga-1', 'clave-larga-1', '10.0.0.10'));
+        $this->assertFalse(Auth::canRegisterHere(), 'apenas se crea la cuenta, ese navegador ya no puede registrar otra');
 
-        $this->assertTrue(Auth::requestReset('r24@test.local', '10.0.0.6'));
-        $this->assertTrue(Auth::requestReset('nadie@test.local', '10.0.0.6'), 'misma respuesta aunque no exista');
-        preg_match('/token=([a-f0-9]{64})/', (string) file_get_contents(BASE_PATH . '/storage/mail.log'), $m);
-        $token = $m[1] ?? $this->fail('El email de recuperación no trae el enlace.');
+        // Aunque cambie de IP, el mismo navegador no puede crear una segunda cuenta; el intento queda auditado.
+        $this->assertSame(Auth::ERROR_DEVICE_USED, Auth::register('69990032', 'Segunda Cuenta', '3794 22-0032', 'clave-larga-1', 'clave-larga-1', '10.0.0.11'));
+        $this->assertNull(User::find('69990032'));
+        $this->assertNotNull(Database::selectOne("SELECT id FROM audit_log WHERE event = 'register_blocked_device' AND detail LIKE ?", ['DNI 69990032%']));
 
-        $this->assertNotSame($token, Database::selectOne('SELECT token_hash FROM password_resets WHERE user_id = ?', [$user->id])['token_hash'], 'se guarda hasheado');
-        $this->assertTrue(Auth::resetTokenValid($token));
-        $this->assertNotNull(Auth::resetPassword($token, 'corta', 'corta'));
-        $this->assertNull(Auth::resetPassword($token, 'clave-nueva-123', 'clave-nueva-123'));
-        $this->assertFalse(Auth::resetTokenValid($token), 'el token es de un solo uso');
-        $this->assertSame(Auth::ERROR_RESET_INVALID, Auth::resetPassword($token, 'otra-clave-123', 'otra-clave-123'));
+        // El alta queda registrada para el superusuario, con los datos y el navegador.
+        $row = Database::selectOne('SELECT * FROM device_registrations WHERE dni = ?', ['69990031']);
+        $this->assertSame($device, $row['device_hash']);
+        $this->assertSame('3794220031', $row['phone']);
+        $this->assertSame('10.0.0.10', $row['ip']);
+        $this->assertSame(1, Registration::search(Registration::filters(['q' => '3794 22-0031']))['total'], 'se busca por teléfono');
 
-        $this->assertStringStartsWith(Auth::ERROR_CREDENTIALS, Auth::attempt('99000024', 'clave-de-prueba', '10.0.0.7'));
-        $this->assertNull(Auth::attempt('99000024', 'clave-nueva-123', '10.0.0.7'));
-        @unlink(BASE_PATH . '/storage/mail.log');
+        // Si el superusuario libera el navegador, puede crear otra; el alta liberada queda en la lista.
+        $this->assertTrue(Registration::release((int) $row['id']));
+        $this->assertFalse(Registration::release((int) $row['id']), 'ya estaba liberado');
+        $this->assertTrue(Auth::canRegisterHere());
+        $this->assertNull(Auth::register('69990032', 'Segunda Cuenta', '3794 22-0032', 'clave-larga-1', 'clave-larga-1', '10.0.0.11'));
+        $this->assertFalse(Auth::canRegisterHere());
+        $this->assertSame(2, (int) Database::selectOne('SELECT COUNT(*) AS n FROM device_registrations WHERE device_hash = ?', [$device])['n']);
     }
 
-    public function testTokenVencidoONoValido(): void
+    public function testBorrarLaCuentaNoLiberaElNavegador(): void
     {
-        $user = $this->makeUser('99000025', 'r25@test.local');
-        $token = bin2hex(random_bytes(32));
-        Database::execute('INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)',
-            [hash('sha256', $token), $user->id, date('Y-m-d H:i:s', time() - 60)]);
-        $this->assertFalse(Auth::resetTokenValid($token), 'vencido');
-        $this->assertFalse(Auth::resetTokenValid('no-es-un-token'));
-        $this->assertFalse(Auth::resetTokenValid(str_repeat('0', 64)));
+        $this->track('69990033');
+        $this->browser();
+        $this->assertNull(Auth::register('69990033', 'Cuenta Borrada', '3794 22-0033', 'clave-larga-1', 'clave-larga-1', '10.0.0.12'));
+        User::purge(User::find('69990033')->id);
+        $this->assertFalse(Auth::canRegisterHere(), 'borrar una cuenta spam no habilita otra desde el mismo navegador');
+        $this->assertNull(Database::selectOne('SELECT user_id FROM device_registrations WHERE dni = ?', ['69990033'])['user_id']);
+    }
+
+    public function testSinCookieNoSeRegistra(): void
+    {
+        $this->track('69990034');
+        unset($_COOKIE[Device::COOKIE]);
+        Device::reset();
+        $this->assertStringContainsString('cookies', (string) Auth::register('69990034', 'Sin Cookie', '3794 22-0034', 'clave-larga-1', 'clave-larga-1', '10.0.0.13'));
+        $this->assertNull(User::find('69990034'));
+    }
+
+    public function testTopeDeAltasPorIp(): void
+    {
+        $max = (int) Config::get('security.register_max_ip_day');
+        for ($i = 0; $i < $max; $i++) {
+            $dni = '6999004' . $i;
+            $this->track($dni);
+            $this->browser(); // otro navegador (o la cookie borrada), misma conexión
+            $this->assertNull(Auth::register($dni, 'Cuenta Ip', '3794 33-004' . $i, 'clave-larga-1', 'clave-larga-1', '10.0.0.14'));
+        }
+        $this->track('69990049');
+        $this->browser();
+        $error = Auth::register('69990049', 'Cuenta Ip', '3794 33-0049', 'clave-larga-1', 'clave-larga-1', '10.0.0.14');
+        $this->assertStringContainsString('varias cuentas', (string) $error);
+        $this->assertNull(User::find('69990049'));
+        $this->assertNotNull(Database::selectOne("SELECT id FROM audit_log WHERE event = 'register_blocked_ip' AND detail = ?", ['DNI 69990049']));
+    }
+
+    public function testOlvideMiContrasenaAbreWhatsapp(): void
+    {
+        $url = Auth::supportWhatsappUrl();
+        $this->assertStringStartsWith('https://wa.me/5493781401440?text=', $url);
+        $this->assertSame('Olvidé mi contraseña de la app de barbería, solicito asistencia', rawurldecode(explode('?text=', $url)[1]));
     }
 }

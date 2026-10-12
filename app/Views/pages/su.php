@@ -32,7 +32,7 @@ $hits = static fn (array $ban): string => (int) $ban['hits'] > 0
     : 'sin intentos desde que se bloqueó';
 ?>
 <main class="admin su">
-  <?= partial('components/admin-header', ['heading' => 'Superusuario', 'sub' => 'Todas las cuentas, conexiones y bloqueos', 'sections' => ['su', 'su-seguridad', 'su-auditoria'], 'active' => 'su']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Superusuario', 'sub' => 'Todas las cuentas, conexiones y bloqueos', 'sections' => ['su', 'su-registros', 'su-seguridad', 'su-auditoria'], 'active' => 'su']) ?>
 
   <?php if ($notice !== '' || $error !== ''): ?>
   <div class="admin-flashes" id="aviso">
@@ -120,7 +120,7 @@ $hits = static fn (array $ban): string => (int) $ban['hits'] > 0
     <h2 class="admin-section-title"><?= e($listView !== '' ? SuperController::VIEWS[$listView] : 'Cuentas') ?> (<?= count($accounts) ?>)</h2>
     <?php if ($listView !== ''): ?><a class="btn-small ghost" href="/su#cuentas">Ver todas</a><?php endif; ?>
   </div>
-  <input class="user-search" type="search" placeholder="Buscar por nombre, DNI, email o IP…" aria-label="Buscar cuenta" data-user-search autocomplete="off">
+  <input class="user-search" type="search" placeholder="Buscar por nombre, DNI, teléfono o IP…" aria-label="Buscar cuenta" data-user-search autocomplete="off">
   <p class="admin-empty" data-user-none hidden>Ninguna cuenta coincide con la búsqueda.</p>
   <?php if (!$accounts): ?>
     <p class="admin-empty"><?= $listView === 'en-linea' ? 'Nadie usó la app en los últimos 5 minutos.' : 'No hay cuentas para mostrar.' ?></p>
@@ -135,14 +135,14 @@ $hits = static fn (array $ban): string => (int) $ban['hits'] > 0
     $records = $history[$a->id] ?? 0;
     ?>
     <section class="admin-card svc-edit user-card<?= $a->active ? '' : ' off' ?>" id="usuario-<?= $a->id ?>" aria-label="<?= e($a->fullName) ?>"
-             data-user-text="<?= e(mb_strtolower($a->fullName . ' ' . $a->dni . ' ' . $a->email . ' ' . implode(' ', $ips))) ?>">
+             data-user-text="<?= e(mb_strtolower($a->fullName . ' ' . $a->dni . ' ' . $a->phone . ' ' . implode(' ', $ips))) ?>">
       <div class="svc-edit-head">
         <div class="user-id">
           <strong><?= e($a->fullName) ?><?php if ($isOnline): ?> <span class="status done su-online">en línea</span><?php endif; ?></strong>
           <small>
             DNI <?= e(\App\Support\Dni::format($a->dni)) ?> · <?= e(User::ROLES[$a->role()]) ?>
             <?php if ($a->isBarber()): ?> · <?= e($barberNames[$a->barberId] ?? 'oculto en la app') ?><?php endif; ?>
-            <?php if ($a->email !== ''): ?> · <?= e($a->email) ?><?php endif; ?>
+            <?php if ($a->phone !== ''): ?> · <?= e(fmt_phone($a->phone)) ?><?php endif; ?>
           </small>
           <small>
             Última conexión: <?= e($when($last['last_seen_at'] ?? null)) ?>
@@ -227,7 +227,7 @@ $hits = static fn (array $ban): string => (int) $ban['hits'] > 0
           <input type="hidden" name="id" value="<?= $a->id ?>">
           <div class="svc-fields">
             <label class="wide">Nombre y apellido<input type="text" name="full_name" value="<?= e($a->fullName) ?>" maxlength="120" autocapitalize="words" required data-validate="name"></label>
-            <label class="wide">Email<input type="email" name="email" value="<?= e($a->email) ?>" maxlength="190" placeholder="Opcional" data-validate="email"></label>
+            <label class="wide">Celular<input type="tel" name="phone" inputmode="tel" value="<?= e($a->phone !== '' ? fmt_phone($a->phone) : '') ?>" maxlength="30" placeholder="Opcional" data-validate="phone"></label>
             <label>Rol
               <select name="role" data-role-select required>
               <?php foreach (User::ROLES as $key => $label): ?>

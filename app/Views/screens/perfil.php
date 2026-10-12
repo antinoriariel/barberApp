@@ -10,7 +10,7 @@
     <div class="me-text">
       <h1><?= e($user->fullName) ?></h1>
       <p>DNI <?= e(fmt_dni($user->dni)) ?></p>
-      <p><?= e($user->email) ?></p>
+      <?php if ($user->phone !== ''): ?><p><?= e(fmt_phone($user->phone)) ?></p><?php endif; ?>
     </div>
     <dl class="me-stats">
       <div><dt>Visitas</dt><dd><?= $loyalty->visits ?></dd></div>

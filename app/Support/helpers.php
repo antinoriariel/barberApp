@@ -48,6 +48,12 @@ function fmt_dni(string $dni): string
     return Dni::format($dni);
 }
 
+/** Teléfono guardado (10 dígitos) para mostrar: "3781401440" → "+54 9 3781 40-1440" (ver Support\Phone). */
+function fmt_phone(string $phone): string
+{
+    return \App\Support\Phone::format($phone);
+}
+
 /** URL de un archivo en public/assets/: asset('css/base.css') → "/assets/css/base.css". */
 function asset(string $path): string
 {
