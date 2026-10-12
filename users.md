@@ -5,14 +5,19 @@ Usan la contraseña de demostración **`Navaja2026!`** (configurable con `DEMO_P
 
 > **Solo para desarrollo.** Borrar estas cuentas o cambiar la contraseña antes de producción (ver `docs/seguridad.md`).
 
-| Rol           | DNI        | Nombre          | Email               | Contraseña    |
-|---------------|------------|-----------------|---------------------|---------------|
-| Administrador | 33.202.388 | Andres Sena     | admin@navaja.test   | `admin123`    |
-| Barbero       | 32.333.444 | Nico Ledesma    | nico@navaja.test    | `Navaja2026!` |
-| Cliente       | 40.123.456 | Mateo Fernández | mateoFnz@gmail.com    | `Navaja2026!` |
-| Cliente       | 35.987.654 | Camila Rojas    | camila@correo.com   | `Navaja2026!` |
+| Rol           | DNI        | Nombre          | Celular               | Contraseña    |
+|---------------|------------|-----------------|-----------------------|---------------|
+| Administrador | 33.202.388 | Andres Sena     | +54 9 3781 55-0202    | `admin123`    |
+| Barbero       | 32.333.444 | Nico Ledesma    | +54 9 3781 55-0303    | `Navaja2026!` |
+| Cliente       | 40.123.456 | Mateo Fernández | +54 9 379 411-2233    | `Navaja2026!` |
+| Cliente       | 35.987.654 | Camila Rojas    | +54 9 11 5555-0101    | `Navaja2026!` |
 
-El DNI se acepta con o sin puntos (`33202388` o `33.202.388`).
+El DNI se acepta con o sin puntos (`33202388` o `33.202.388`). Los celulares son de ejemplo (no existen).
+
+**Registro** (`/registro`): pide nombre, DNI, celular argentino (único por cuenta) y contraseña. Se permite **una sola
+cuenta por navegador**: para probar otra alta desde el mismo navegador, liberarlo en `/su/registros` o borrar la cookie
+`navaja_dev`. **"Olvidé mi contraseña"** abre WhatsApp (`support.whatsapp` en `config/app.php`); la contraseña nueva la
+pone el administrador en `/admin/usuarios`.
 
 **Superusuario**: en el campo DNI se escribe `superuser`. No viene de la semilla: la contraseña se fija con
 `php bin/superuser.php` (sin argumento genera una aleatoria y la muestra una sola vez) o `php bin/superuser.php <contraseña>`.

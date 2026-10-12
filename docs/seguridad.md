@@ -12,8 +12,9 @@ Estado de la seguridad de la app, qué se implementó y qué falta antes de prod
 | XSS | Todo texto de datos se escapa con `e()`. Política CSP sin scripts inline (`script-src 'self'`). Los colores que van a `style=""` se validan con `css_color()`. | `helpers.php`, `Core\Security` |
 | Clickjacking | `frame-ancestors 'none'` + `X-Frame-Options: DENY` | `Core\Security::sendHeaders()` |
 | CSRF | Token por sesión (`csrf_field()`), verificado con `hash_equals`. Login y logout son **POST** y responden **419** sin token válido. | `Security`, `Controller::requireCsrf()` |
-| Contraseñas y sesiones | Argon2id, mínimo 8 y máximo 72 caracteres, mensaje de login único (con hash falso para igualar tiempos), sesiones en la tabla `sessions` revocables por usuario, recuperación con token de un solo uso guardado hasheado (vence en 1 h y cierra las sesiones abiertas). | `Support\Password`, `Services\Auth`, `Core\DbSessionHandler` |
-| Trazabilidad | Login, altas, recuperaciones, cierres de sesión y turnos en `audit_log` (sin contraseñas ni tokens). | `Services\Audit` |
+| Contraseñas y sesiones | Argon2id, mínimo 8 y máximo 72 caracteres, mensaje de login único (con hash falso para igualar tiempos), sesiones en la tabla `sessions` revocables por usuario. La contraseña olvidada no se recupera por la app (no hay enlaces ni tokens por email): "Olvidé mi contraseña" abre WhatsApp de soporte (`support.whatsapp`) y el administrador pone una nueva en `/admin/usuarios` (cierra las sesiones de esa cuenta). | `Support\Password`, `Services\Auth`, `Core\DbSessionHandler` |
+| Trazabilidad | Login, altas (y altas rechazadas), cierres de sesión y turnos en `audit_log` (sin contraseñas ni tokens). | `Services\Audit` |
+| Cuentas spam en el registro | Celular argentino obligatorio, normalizado a 10 dígitos (`Support\Phone`: acepta +54 9 / 0 / 15 y rechaza otros países) con índice único en `users.phone`: dos cuentas no pueden tener el mismo número aunque lo escriban distinto. **Una cuenta por navegador**: el alta exige la cookie `navaja_dev` ya presente y se anota en `device_registrations` en la misma transacción (índice único sobre el navegador sin liberar, así ni dos pedidos en paralelo crean dos cuentas); desde ese momento `/registro` y "Crear cuenta" desaparecen para ese navegador, aunque se borre la cuenta. Además, como mucho `security.register_max_ip_day` (3) altas por IP cada 24 h, por si borran la cookie o usan incógnito. Los rechazos se auditan (`register_blocked_device` / `register_blocked_ip`) y `/su/registros` lista cada alta (datos, IP, navegador, altas desde la misma IP) con Permaban, bloqueo de IP y "Liberar navegador". | `Services\Auth::register`, `Models\Registration`, `SuperController` |
 | Fuerza bruta de DNI | Máximo 5 fallos por DNI y 10 por IP cada 15 min → **429** con `Retry-After`. El intento se reserva de forma atómica *antes* de verificar la contraseña, así que mandar contraseñas en paralelo no esquiva el límite. IPv6 se cuenta por prefijo /64. Un login exitoso no gasta cupo de la IP, pero tampoco borra sus fallos previos. | `Services\Auth`, `Core\RateLimiter` |
 | Entradas malformadas | Los campos de los formularios de cuenta se leen con `Request::string()`: un arreglo (`password[]=a&password[]=b`) se toma como vacío y cuenta como un solo intento; todo se corta en 1024 bytes. Contraseñas vacías, de más de 72 caracteres o con bytes nulos nunca se verifican (cuentan como fallo, con el mismo tiempo de respuesta). | `Core\Request`, `Services\Auth`, `Support\Password` |
 | Fijación de sesión | `session_regenerate_id(true)` al entrar, modo estricto de sesiones y rotación del token CSRF | `Session`, `Auth::attempt()` |
@@ -59,17 +60,17 @@ object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
    y el controlador lo verifica igual que el campo `_csrf`.
 7. Toda ruta autenticada empieza con `$this->requireLogin()`; con varios roles, además se verifica que el recurso
    pertenezca al usuario (un cliente no puede cancelar el turno de otro).
-8. No loguear DNI, emails ni tokens completos.
+8. No loguear DNI, teléfonos ni tokens completos (el detalle de auditoría lleva solo lo justo para investigar).
 
 ## Pendiente antes de producción
 
 | Prioridad | Tema | Qué hacer |
 |-----------|------|-----------|
 | **Crítica** | Cuentas de demostración | `bin/seed.php` crea al administrador (Andres), al barbero (Nico) y a los clientes Mateo y Camila con la contraseña pública `Navaja2026!` (lista en `users.md`). Borrarlas o cambiarla (`DEMO_PASSWORD`) antes de producción. |
-| Alta | Email de recuperación | `MAIL_DRIVER=log` solo escribe en `storage/mail.log`. En producción usar `mail` (o un SMTP) y fijar `APP_URL`: el enlace se arma con esa URL, no con el encabezado Host. |
 | Alta | HTTPS | Servir solo por HTTPS; así se activan `Secure` en la cookie y HSTS. Redirigir HTTP → HTTPS en el servidor. |
 | Alta | DocumentRoot | Apuntar el servidor a `public/` (no a la raíz del proyecto). El `.htaccess` es una segunda barrera, no la primera. |
-| Media | Enumeración en el alta | `/registro` avisa si el DNI o email ya existen (inevitable con DNI como usuario); lo frena el límite por IP. Considerar verificar el email antes de activar la cuenta. |
+| Media | Enumeración en el alta | `/registro` avisa si el DNI o el teléfono ya existen (inevitable con DNI como usuario); lo frenan el límite por IP y el de una cuenta por navegador. El teléfono no se verifica (no hay SMS): para eso haría falta un código por SMS/WhatsApp. |
+| Media | Una cuenta por navegador | Se basa en una cookie: borrar los datos del sitio o usar otro navegador/incógnito da un navegador "nuevo". Lo acotan el tope de altas por IP y la revisión en `/su/registros`; las compañías de celular comparten IP entre muchos clientes, por eso el tope no es 1. |
 | Media | Fuentes de Google | Terceros en `style-src`/`font-src` y filtración de IP. Autoalojar las fuentes en `public/assets/fonts/` y cerrar la CSP. |
 | Media | Proxy / balanceador | `Request::ip()` usa `REMOTE_ADDR`. Detrás de un proxy propio hay que configurar la IP confiable o todos los usuarios compartirán el límite de intentos. |
 | Baja | Limitador | Ya usa la tabla `login_attempts`; si hace falta más escala, pasar a Redis. |

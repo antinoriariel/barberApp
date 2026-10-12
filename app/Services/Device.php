@@ -50,6 +50,22 @@ final class Device
         return self::$id;
     }
 
+    /**
+     * ¿El navegador ya traía su cookie en esta petición? (false si es la primera vez o la rechaza). El registro lo exige:
+     * sin cookie cada pedido sería un navegador "nuevo" y el límite de una cuenta por navegador no serviría.
+     */
+    public static function known(): bool
+    {
+        $raw = $_COOKIE[self::COOKIE] ?? '';
+        return is_string($raw) && preg_match('/^[a-f0-9]{64}$/D', $raw) === 1;
+    }
+
+    /** Olvida el id calculado en esta petición (para las pruebas, que simulan varios navegadores en un mismo proceso). */
+    public static function reset(): void
+    {
+        self::$id = null;
+    }
+
     /** sha256 del id del navegador: es lo único que se guarda en la base. */
     public static function hash(): string
     {

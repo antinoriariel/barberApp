@@ -43,9 +43,12 @@ En producción, ver [`docs/seguridad.md`](docs/seguridad.md).
 ## Cuentas y sesión
 
 Se entra con **DNI + contraseña** (el DNI se acepta con o sin puntos). Con base de datos cualquiera puede crear una
-cuenta en `/registro` y recuperar la contraseña en `/recuperar` (el enlace llega por email; con `MAIL_DRIVER=log`,
-el valor por defecto, el mensaje se escribe en `storage/mail.log` en vez de enviarse). Las sesiones viven en la tabla
-`sessions` y desde el perfil se puede cerrar la sesión en todos los dispositivos.
+cuenta en `/registro` con nombre, DNI, **celular argentino** (único: no puede haber dos cuentas con el mismo número) y
+contraseña; se permite **una sola cuenta por navegador** (y hasta 3 por IP cada 24 h), y el superusuario las audita en
+`/su/registros`. **"Olvidé mi contraseña"** abre WhatsApp al número de soporte (`support.whatsapp` en `config/app.php`,
+o `SUPPORT_WHATSAPP` en `.env`) con el mensaje ya escrito; la contraseña nueva la pone el administrador en
+`/admin/usuarios`. Las sesiones viven en la tabla `sessions` y desde el perfil se puede cerrar la sesión en todos los
+dispositivos.
 
 Cuentas de demostración que crea `bin/seed.php` (contraseña `Navaja2026!`, configurable con `DEMO_PASSWORD`; **borrarlas o
 cambiarlas antes de producción**):
@@ -101,8 +104,8 @@ app/
   Views/         Plantillas PHP: layouts/, pages/, screens/, components/
   Core/          Mini-framework: Router, Request, Response, View, Controller, Session, Config, Env, Data,
                  Database (PDO), DbSessionHandler, Security (cabeceras y CSRF), RateLimiter (límite de intentos)
-  Services/      Lógica transversal: Auth (login, alta, recuperación), Audit, Mailer, Booking (reservar/cancelar/reprogramar), IconGenerator (íconos PNG de la PWA)
-  Support/       helpers.php (e, money, icon, partial, csrf_field, css_color…) y Dni
+  Services/      Lógica transversal: Auth (login, alta), Audit, Device, Booking (reservar/cancelar/reprogramar), IconGenerator (íconos PNG de la PWA)
+  Support/       helpers.php (e, money, icon, partial, csrf_field, css_color, fmt_phone…), Dni y Phone
   bootstrap.php  Autoload, manejo de errores, helpers y sesión
 config/          app.php (configuración, seguridad y lista de CSS), database.php y routes.php (tabla de rutas)
 database/        migrations/NNN_*.sql (esquema)
@@ -133,9 +136,8 @@ docs/            Arquitectura, seguridad y plan de base de datos
 | GET    | `/`                     | `ShellController@index`      | Requiere sesión |
 | GET    | `/login`                | `AuthController@showLogin`   | |
 | POST   | `/login`                | `AuthController@login`       | Campos `dni`, `password` y `_csrf`; 419 sin token, 429 si hay demasiados intentos |
-| GET/POST | `/registro`           | `AuthController@showRegister` / `register` | Alta de cuenta (solo con base de datos) |
-| GET/POST | `/recuperar`          | `AuthController@showForgot` / `forgot` | Pide el enlace de recuperación; respuesta idéntica exista o no el email |
-| GET/POST | `/restablecer?token=` | `AuthController@showReset` / `reset`   | Contraseña nueva con el enlace (un solo uso, vence en 1 h) |
+| GET/POST | `/registro`           | `AuthController@showRegister` / `register` | Alta de cuenta (solo con base de datos; celular argentino único, una por navegador) |
+| GET    | `/recuperar`            | `AuthController@showForgot`  | Redirige al WhatsApp de soporte con el mensaje de "Olvidé mi contraseña" |
 | POST   | `/logout-todo`          | `AuthController@logoutAll`   | Cierra la sesión en todos los dispositivos |
 | POST   | `/logout`               | `AuthController@logout`      | Requiere token CSRF (`_csrf`) |
 | GET    | `/api/disponibilidad`   | `AppointmentController@availability` | JSON. Query `fecha`, `barbero` (slug o `any`), `servicio`. 401 sin sesión |
@@ -164,8 +166,7 @@ límite de intentos de login y errores genéricos hacia el usuario. Detalle, reg
 ## Limitaciones conocidas
 
 - Implementadas todas las fases del [plan de base de datos](docs/plan-base-de-datos.md). Los recordatorios ("Avisos de turno")
-  siguen siendo solo un aviso en pantalla (necesitan un trabajo en segundo plano). El email de recuperación requiere configurar
-  `MAIL_DRIVER=mail` y un servidor de correo; por defecto solo se registra en `storage/mail.log`.
+  siguen siendo solo un aviso en pantalla (necesitan un trabajo en segundo plano).
 - Las cuentas de demostración usan una contraseña conocida (ver arriba): quitarlas o cambiarla en producción.
 - Los skeletons de carga siguen simulando la espera de navegación (700 ms la primera vez, 350 ms al cambiar de pestaña);
   los horarios de Reservar sí se piden en vivo a `/api/disponibilidad`.

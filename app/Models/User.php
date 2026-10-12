@@ -8,6 +8,7 @@ use App\Core\Data;
 use App\Core\Database;
 use App\Support\Dni;
 use App\Support\Password;
+use App\Support\Phone;
 
 /** Cuenta de la barbería (cliente, barbero o administrador). Se identifica por DNI. */
 final class User
@@ -31,14 +32,14 @@ final class User
     public const ROLES = ['cliente' => 'Cliente', 'barbero' => 'Barbero', 'admin' => 'Administrador'];
 
     /** Columnas que leen find() y allForAdmin() (visits = turnos atendidos). */
-    private const COLUMNS = "u.id, u.dni, u.name, u.full_name, u.email, u.is_admin, u.barber_id, u.active, u.panel_access,
+    private const COLUMNS = "u.id, u.dni, u.name, u.full_name, u.phone, u.is_admin, u.barber_id, u.active, u.panel_access,
                         (SELECT COUNT(*) FROM appointments a WHERE a.user_id = u.id AND a.status = 'done') AS visits";
 
     public function __construct(
         public readonly string $dni,
         public readonly string $name,      // nombre de pila
         public readonly string $fullName,
-        public readonly string $email,
+        public readonly string $phone,     // celular argentino normalizado (10 dígitos, ver Support\Phone); '' si no tiene
         public readonly int $visits,       // con base de datos: turnos en estado 'done'
         public readonly int $id = 0,       // clave primaria en la base (0 con driver files)
         public readonly bool $isAdmin = false, // puede entrar al panel /admin (solo con base de datos)
@@ -111,7 +112,7 @@ final class User
     /** Arma un User desde una fila de `users` leída con COLUMNS. */
     private static function fromRow(array $r): self
     {
-        return new self($r['dni'], $r['name'], $r['full_name'], (string) $r['email'], (int) $r['visits'], (int) $r['id'],
+        return new self($r['dni'], $r['name'], $r['full_name'], (string) $r['phone'], (int) $r['visits'], (int) $r['id'],
             (bool) $r['is_admin'], $r['barber_id'] !== null ? (int) $r['barber_id'] : null,
             (bool) $r['active'], self::parseAccess($r['panel_access']));
     }
@@ -124,14 +125,7 @@ final class User
             return $r ? self::fromRow($r) : null;
         }
         $row = Data::get('users')[$dni] ?? null;
-        return $row ? new self($dni, $row['name'], $row['full'], $row['email'], $row['visits']) : null;
-    }
-
-    /** Busca por email (sin distinguir mayúsculas); null si no existe. Solo con base de datos. */
-    public static function findByEmail(string $email): ?self
-    {
-        $r = Database::selectOne('SELECT dni FROM users WHERE email = ?', [mb_strtolower($email)]);
-        return $r ? self::find($r['dni']) : null;
+        return $row ? new self($dni, $row['name'], $row['full'], $row['phone'] ?? '', $row['visits']) : null;
     }
 
     /** Busca por clave primaria; null si no existe. Solo con base de datos. */
@@ -155,14 +149,15 @@ final class User
     }
 
     /**
-     * Crea una cuenta nueva (el nombre de pila es la primera palabra del nombre completo).
-     * @throws \PDOException con código 23000 si el DNI o el email ya existen
+     * Crea una cuenta nueva (el nombre de pila es la primera palabra del nombre completo). $phone ya normalizado
+     * (Phone::normalize) o null.
+     * @throws \PDOException con código 23000 si el DNI o el teléfono ya existen
      */
-    public static function create(string $dni, string $fullName, string $email, string $passwordHash): self
+    public static function create(string $dni, string $fullName, ?string $phone, string $passwordHash): self
     {
         Database::execute(
-            'INSERT INTO users (dni, name, full_name, email, password_hash) VALUES (?, ?, ?, ?, ?)',
-            [$dni, explode(' ', $fullName)[0], $fullName, mb_strtolower($email), $passwordHash]
+            'INSERT INTO users (dni, name, full_name, phone, password_hash) VALUES (?, ?, ?, ?, ?)',
+            [$dni, explode(' ', $fullName)[0], $fullName, $phone, $passwordHash]
         );
         return self::find($dni);
     }
@@ -199,13 +194,13 @@ final class User
     }
 
     /**
-     * Valida el formulario de /admin/usuarios. Campos: dni y password (solo en el alta, $isNew), full_name, email
-     * (opcional, pero sin él la cuenta no puede recuperar su contraseña), role (clave de ROLES) y sections[]
+     * Valida el formulario de /admin/usuarios. Campos: dni y password (solo en el alta, $isNew), full_name, phone
+     * (opcional; celular argentino, ver Support\Phone), role (clave de ROLES) y sections[]
      * (secciones extra del panel que verá el barbero). La ficha del equipo no se elige: la crea saveFromAdmin.
      *
      * Devuelve [datos normalizados, null] o [null, mensaje]. Los datos traen name (nombre de pila), full_name,
-     * email (null si vacío), is_admin, is_barber, barber_id (null), panel_access ("a,b" o null) y, en el alta, dni y password.
-     * Los duplicados de DNI/email no se miran acá: los frenan los índices únicos al guardar.
+     * phone (10 dígitos o null si vacío), is_admin, is_barber, barber_id (null), panel_access ("a,b" o null) y, en el alta, dni y password.
+     * Los duplicados de DNI/teléfono no se miran acá: los frenan los índices únicos al guardar.
      *
      * @return array{0: ?array, 1: ?string}
      */
@@ -226,11 +221,11 @@ final class User
         }
         $data['name'] = mb_substr(explode(' ', $data['full_name'])[0], 0, 60);
 
-        $email = mb_strtolower(trim($text('email')));
-        if ($email !== '' && (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 190)) {
-            return [null, 'Ingresá un email válido (o dejalo vacío).'];
+        $rawPhone = trim($text('phone'));
+        $data['phone'] = $rawPhone !== '' ? Phone::normalize($rawPhone) : null;
+        if ($rawPhone !== '' && $data['phone'] === null) {
+            return [null, Phone::ERROR . ' O dejalo vacío.'];
         }
-        $data['email'] = $email !== '' ? $email : null;
 
         $role = $text('role');
         if (!isset(self::ROLES[$role])) {
@@ -258,21 +253,21 @@ final class User
 
     /**
      * Alta desde el panel con los datos de validate() (la contraseña llega ya hasheada aparte). Devuelve el id nuevo.
-     * @throws \PDOException con código 23000 si el DNI o el email ya existen
+     * @throws \PDOException con código 23000 si el DNI o el teléfono ya existen
      */
     public static function createFromAdmin(array $data, string $passwordHash): int
     {
         Database::execute(
-            'INSERT INTO users (dni, name, full_name, email, password_hash, is_admin, barber_id, panel_access) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [$data['dni'], $data['name'], $data['full_name'], $data['email'], $passwordHash, $data['is_admin'], $data['barber_id'], $data['panel_access']]
+            'INSERT INTO users (dni, name, full_name, phone, password_hash, is_admin, barber_id, panel_access) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [$data['dni'], $data['name'], $data['full_name'], $data['phone'], $passwordHash, $data['is_admin'], $data['barber_id'], $data['panel_access']]
         );
         return Database::lastId();
     }
 
     /**
-     * Edita nombre, email, rol y secciones del panel con los datos de validate() (el DNI no cambia: es con lo que se entra).
+     * Edita nombre, teléfono, rol y secciones del panel con los datos de validate() (el DNI no cambia: es con lo que se entra).
      * Devuelve false si la cuenta no existe.
-     * @throws \PDOException con código 23000 si el email ya es de otra cuenta
+     * @throws \PDOException con código 23000 si el teléfono ya es de otra cuenta
      */
     public static function updateFromAdmin(int $id, array $data): bool
     {
@@ -280,8 +275,8 @@ final class User
             return false;
         }
         Database::execute(
-            'UPDATE users SET name = ?, full_name = ?, email = ?, is_admin = ?, barber_id = ?, panel_access = ? WHERE id = ?',
-            [$data['name'], $data['full_name'], $data['email'], $data['is_admin'], $data['barber_id'], $data['panel_access'], $id]
+            'UPDATE users SET name = ?, full_name = ?, phone = ?, is_admin = ?, barber_id = ?, panel_access = ? WHERE id = ?',
+            [$data['name'], $data['full_name'], $data['phone'], $data['is_admin'], $data['barber_id'], $data['panel_access'], $id]
         );
         return true;
     }
@@ -294,7 +289,7 @@ final class User
      *  - ya era barbero → conserva su ficha y le actualiza el nombre;
      *  - deja de ser barbero → su ficha se oculta (no toma turnos nuevos; su historial de cortes queda).
      * $target es null en el alta (entonces $passwordHash es obligatorio). Devuelve el id de la cuenta.
-     * @throws \PDOException con código 23000 si el DNI o el email ya existen (no queda nada a medias: rollback)
+     * @throws \PDOException con código 23000 si el DNI o el teléfono ya existen (no queda nada a medias: rollback)
      */
     public static function saveFromAdmin(?self $target, array $data, ?string $passwordHash = null): int
     {

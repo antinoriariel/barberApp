@@ -1,4 +1,4 @@
-/* Páginas de cuenta: login, registro y recuperación de contraseña. */
+/* Páginas de cuenta: login y registro. */
 
 /* ========== 7. Login ========== */
 body.login-page { background: var(--dark); min-height: 100dvh; }
@@ -16,7 +16,7 @@ body.login-page { background: var(--dark); min-height: 100dvh; }
 }
 .login-card h1 { font-family: var(--display); font-weight: 900; font-size: 34px; line-height: 1; margin-bottom: 6px; }
 .field { display: block; margin: 26px 0 8px; font-weight: 600; font-size: 15px; }
-.login-card input[type="text"], .login-card input[type="password"], .login-card input[type="email"] {
+.login-card input[type="text"], .login-card input[type="password"], .login-card input[type="tel"] {
   width: 100%; padding: 15px 16px; border-radius: 12px;
   border: 1.5px solid var(--line); background: var(--paper);
   font: inherit; font-size: 18px; font-weight: 500;
@@ -24,7 +24,7 @@ body.login-page { background: var(--dark); min-height: 100dvh; }
 .login-card input#dni { font-size: 22px; font-weight: 600; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
 .login-card input[aria-invalid="true"] { border-color: var(--red); }
 .auth-links { margin-top: 20px; display: flex; justify-content: space-between; gap: 12px; }
-.auth-ok { margin: 14px 0 0; color: var(--ok); font-size: 14px; font-weight: 600; }
+.field-hint { display: block; margin-top: 6px; color: var(--ink-soft); font-size: 13px; }
 .login-card a.btn-primary { display: block; text-align: center; margin-top: 18px; }
 .field-error { margin: 8px 0 0; color: var(--red); font-size: 14px; font-weight: 600; }
 .login-card .btn-primary { margin-top: 18px; }

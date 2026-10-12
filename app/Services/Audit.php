@@ -12,7 +12,7 @@ use App\Core\Database;
 final class Audit
 {
     /**
-     * Anota un evento (login_ok, login_fail, logout, register, password_reset_request, password_reset,
+     * Anota un evento (login_ok, login_fail, logout, register, register_blocked_device, register_blocked_ip,
      * appointment_create, appointment_cancel, appointment_reschedule…).
      *
      * @param int|null $userId usuario que lo hizo (null si no se sabe, p. ej. un login fallido)

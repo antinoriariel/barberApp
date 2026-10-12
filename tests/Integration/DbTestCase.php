@@ -28,16 +28,17 @@ abstract class DbTestCase extends TestCase
                 Database::execute('DELETE FROM users WHERE id = ?', [$id]);
             }
         }
+        Database::execute("DELETE FROM device_registrations WHERE dni LIKE '99%'");
         Database::execute('DELETE FROM login_attempts');
         Database::execute('DELETE FROM audit_log WHERE user_id IS NULL');
         $this->dnis = [];
     }
 
-    /** Crea un usuario de prueba (contraseña "clave-de-prueba") y lo marca para limpieza. */
-    protected function makeUser(string $dni, string $email = ''): User
+    /** Crea un usuario de prueba (contraseña "clave-de-prueba", teléfono opcional ya normalizado) y lo marca para limpieza. */
+    protected function makeUser(string $dni, ?string $phone = null): User
     {
         $this->dnis[] = $dni;
-        return User::create($dni, 'Prueba ' . $dni, $email ?: "t{$dni}@test.local", \App\Support\Password::hash('clave-de-prueba'));
+        return User::create($dni, 'Prueba ' . $dni, $phone, \App\Support\Password::hash('clave-de-prueba'));
     }
 
     /** Un día abierto futuro que no sea hoy (para que ningún horario esté vencido). */

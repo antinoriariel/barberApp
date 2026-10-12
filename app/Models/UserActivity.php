@@ -15,6 +15,8 @@ final class UserActivity
     public const EVENTS = [
         'login_ok' => 'Inició sesión', 'login_fail' => 'Login fallido', 'login_throttled' => 'Login bloqueado por intentos',
         'logout' => 'Cerró sesión', 'logout_all' => 'Cerró sesión en todos lados', 'register' => 'Creó su cuenta',
+        'register_blocked_device' => 'Alta rechazada: el navegador ya creó una cuenta',
+        'register_blocked_ip' => 'Alta rechazada: tope de cuentas por IP',
         'password_reset_request' => 'Pidió recuperar la contraseña', 'password_reset' => 'Cambió la contraseña (recuperación)',
         'appointment_create' => 'Reservó un turno', 'appointment_cancel' => 'Canceló un turno',
         'appointment_reschedule' => 'Reprogramó un turno',
@@ -37,6 +39,7 @@ final class UserActivity
         'su_user_logout' => 'Superusuario: cerró las sesiones de una cuenta', 'su_user_delete' => 'Superusuario: eliminó una cuenta',
         'su_ip_ban' => 'Superusuario: bloqueó una IP', 'su_ip_unban' => 'Superusuario: desbloqueó una IP',
         'su_permaban' => 'Superusuario: aplicó Permaban', 'su_device_unban' => 'Superusuario: quitó un Permaban',
+        'su_registration_release' => 'Superusuario: liberó un navegador para registrarse',
         'su_audit_export' => 'Superusuario: exportó la auditoría', 'su_audit_purge' => 'Superusuario: borró auditoría vieja',
     ];
 
