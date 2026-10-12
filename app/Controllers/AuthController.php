@@ -21,6 +21,9 @@ final class AuthController extends Controller
         if ($user = Auth::user()) {
             $this->redirect($user->hasPanel() ? '/admin' : '/');
         }
+        if (Auth::isSuperuser()) {
+            $this->redirect('/su');
+        }
         $this->renderLogin();
     }
 
@@ -38,6 +41,9 @@ final class AuthController extends Controller
         $error = Auth::attempt($raw, $request->string('password'), $request->ip());
 
         if ($error === null) {
+            if (Auth::isSuperuser()) {
+                $this->redirect('/su');
+            }
             // Si venía de escanear el QR de la fila sin sesión, vuelve a esa pantalla (solo rutas /fila, nada externo).
             $after = Session::get('after_login');
             Session::remove('after_login');

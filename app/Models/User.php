@@ -357,6 +357,43 @@ final class User
         });
     }
 
+    /**
+     * Elimina una cuenta CON todo su historial (solo el superusuario): sus turnos (y sus servicios, por cascada),
+     * premios de juegos y números de la fila se borran; los egresos e ingresos que cargó quedan sin autor
+     * (created_by = NULL) para no alterar las finanzas. Sesiones, enlaces de recuperación y dispositivos se van con
+     * la cuenta; la auditoría y los bloqueos se conservan. Todo en una transacción. Devuelve false si no existía.
+     */
+    public static function purge(int $id): bool
+    {
+        return (bool) Database::transaction(function () use ($id) {
+            Database::execute('DELETE FROM appointments WHERE user_id = ?', [$id]);
+            Database::execute('DELETE FROM game_rewards WHERE user_id = ?', [$id]);
+            Database::execute('DELETE FROM queue_tickets WHERE user_id = ?', [$id]);
+            Database::execute('UPDATE expenses SET created_by = NULL WHERE created_by = ?', [$id]);
+            Database::execute('UPDATE incomes SET created_by = NULL WHERE created_by = ?', [$id]);
+            Database::execute('DELETE FROM sessions WHERE user_id = ?', [$id]);
+            Database::execute('DELETE FROM password_resets WHERE user_id = ?', [$id]);
+            return Database::execute('DELETE FROM users WHERE id = ?', [$id]) > 0;
+        });
+    }
+
+    /**
+     * Cuántos registros arrastraría purge() (turnos, premios y números de la fila), para avisar antes de borrar.
+     * @return array<int, int> id de cuenta => cantidad (solo las que tienen alguno)
+     */
+    public static function historyCounts(): array
+    {
+        $out = [];
+        foreach (Database::select(
+            'SELECT user_id, COUNT(*) AS n FROM (
+                SELECT user_id FROM appointments UNION ALL SELECT user_id FROM game_rewards UNION ALL SELECT user_id FROM queue_tickets
+             ) t GROUP BY user_id'
+        ) as $r) {
+            $out[(int) $r['user_id']] = (int) $r['n'];
+        }
+        return $out;
+    }
+
     /** Cantidad de administradores activos (el panel no deja quitarle el rol ni dar de baja al último). */
     public static function activeAdminCount(): int
     {

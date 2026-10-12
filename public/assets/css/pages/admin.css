@@ -185,15 +185,6 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .day-chip:has(input:checked) .day-chip-state::before { content: "Abierto"; }
 .day-chip:has(input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
 .day-chip:has(input:not(:checked)) .day-chip-hint { display: none; }
-/* Modo lectura (barbero): mismos chips y filas sin formulario; el estado viene escrito y se marca con .on / .ro. */
-ul.day-chips { list-style: none; margin: 0; padding: 0; }
-.day-chip.static { cursor: default; }
-.day-chip.static .day-chip-state::before { content: none; }
-.day-chip.static.on { border-color: var(--blue); background: color-mix(in srgb, var(--blue) 10%, var(--paper)); }
-.day-chip.static.on .day-chip-state { color: var(--blue); }
-.hours-row.ro { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "day note"; }
-.hours-row.ro .hours-day { cursor: default; }
-.hours-range { grid-area: note; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 .hours-save { width: 100%; padding: 12px 14px; text-align: center; } /* celular: botón cómodo para el dedo */
 
@@ -228,7 +219,7 @@ ul.day-chips { list-style: none; margin: 0; padding: 0; }
 
 @container (min-width: 400px) {
   .hours-row { grid-template-columns: minmax(0, 1fr) 7.5em auto 7.5em; grid-template-areas: "day from sep to"; }
-  .hours-row.off, .hours-row.ro { grid-template-columns: minmax(0, 1fr) auto; }
+  .hours-row.off { grid-template-columns: minmax(0, 1fr) auto; }
   .hours-time { min-height: 40px; }
 }
 
@@ -263,3 +254,9 @@ ul.day-chips { list-style: none; margin: 0; padding: 0; }
   .admin-table.stack .actions form { display: inline-flex; gap: 6px; width: auto; }
   .admin-table.stack .actions .btn-small { flex: none; padding: 9px 14px; }
 }
+
+/* Diálogo de confirmación de los botones [data-confirm] (admin-users.js; reemplaza a window.confirm). */
+.confirm-dialog { max-width: min(420px, calc(100vw - 32px)); padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); color: var(--ink); }
+.confirm-dialog::backdrop { background: rgb(0 0 0 / .55); }
+.confirm-dialog p { font-weight: 600; line-height: 1.45; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }

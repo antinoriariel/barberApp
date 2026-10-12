@@ -3,7 +3,8 @@
  * components/admin-header.php — Cabecera del panel: título, subtítulo, selector de tema claro/oscuro, cierre de sesión
  * y pestañas de las vistas. El botón de tema lo conecta js/admin.js (que AdminController carga en todas las vistas).
  * Variables: $heading (string), $sub (string),
- *            $active ('semana'|'resumen'|'turnos'|'fila'|'barberos'|'finanzas'|'ingresos'|'egresos'|'servicios'|'usuarios'),
+ *            $active ('semana'|'resumen'|'turnos'|'fila'|'barberos'|'finanzas'|'ingresos'|'egresos'|'servicios'|'usuarios',
+ *                     o en el panel del superusuario 'su'|'su-seguridad'|'su-auditoria'),
  *            $sections (string[]: secciones que la cuenta puede ver, User::panelSections(); solo esas pestañas se muestran)
  */
 $tabs = [
@@ -17,6 +18,10 @@ $tabs = [
     'egresos'   => ['/admin/egresos', 'Egresos'],
     'servicios' => ['/admin/servicios', 'Servicios'],
     'usuarios'  => ['/admin/usuarios', 'Usuarios'],
+    // Pestañas del superusuario (las vistas de /su pasan estas claves en $sections).
+    'su'           => ['/su', 'Cuentas'],
+    'su-seguridad' => ['/su/seguridad', 'Seguridad'],
+    'su-auditoria' => ['/su/auditoria', 'Auditoría'],
 ];
 $tabs = array_intersect_key($tabs, array_flip($sections ?? []));
 ?>
@@ -31,8 +36,6 @@ $tabs = array_intersect_key($tabs, array_flip($sections ?? []));
     </button>
     <form method="post" action="/logout" class="inline-form">
       <?= csrf_field() ?>
-      <?php // Un barbero (sin la pestaña Usuarios, exclusiva del admin) también usa la app de clientes: le dejamos volver. ?>
-      <?php if (!isset($tabs['usuarios'])): ?><a class="btn-small ghost" href="/">Ir a la app</a><?php endif; ?>
       <button class="btn-small ghost" type="submit">Cerrar sesión</button>
     </form>
   </div>

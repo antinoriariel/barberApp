@@ -14,6 +14,10 @@ Usan la contraseña de demostración **`Navaja2026!`** (configurable con `DEMO_P
 
 El DNI se acepta con o sin puntos (`33202388` o `33.202.388`).
 
+**Superusuario**: en el campo DNI se escribe `superuser`. No viene de la semilla: la contraseña se fija con
+`php bin/superuser.php` (sin argumento genera una aleatoria y la muestra una sola vez) o `php bin/superuser.php <contraseña>`.
+Entra a `/su`: todas las cuentas con sus IP, navegadores, última conexión y últimas 3 acciones, y los bloqueos de IP y Permaban.
+
 ## Qué puede hacer cada rol
 
 - **Administrador** (`users.is_admin = 1`): todo lo del cliente más el panel `GET /admin` (ingresos del día, cierre de
