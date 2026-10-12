@@ -11,6 +11,7 @@ use App\Controllers\GameController;
 use App\Controllers\PwaController;
 use App\Controllers\QueueController;
 use App\Controllers\ShellController;
+use App\Controllers\SuperController;
 use App\Core\Router;
 
 return static function (Router $router): void {
@@ -71,6 +72,22 @@ return static function (Router $router): void {
     $router->post('/admin/usuarios/clave', [AdminController::class, 'userPassword']);
     $router->post('/admin/usuarios/estado', [AdminController::class, 'toggleUser']);
     $router->post('/admin/usuarios/borrar', [AdminController::class, 'deleteUser']);
+
+    // Panel del superusuario (entra con "superuser" en el login): cuentas, IP, navegadores y bloqueos.
+    $router->get('/su', [SuperController::class, 'index']);
+    $router->get('/su/seguridad', [SuperController::class, 'security']);
+    $router->get('/su/auditoria', [SuperController::class, 'audit']);
+    $router->get('/su/auditoria/exportar', [SuperController::class, 'auditCsv']);
+    $router->post('/su/auditoria/limpiar', [SuperController::class, 'purgeAudit']);
+    $router->post('/su/usuarios/guardar', [SuperController::class, 'saveUser']);
+    $router->post('/su/usuarios/clave', [SuperController::class, 'setPassword']);
+    $router->post('/su/usuarios/estado', [SuperController::class, 'toggleUser']);
+    $router->post('/su/usuarios/sesiones', [SuperController::class, 'revokeSessions']);
+    $router->post('/su/usuarios/borrar', [SuperController::class, 'deleteUser']);
+    $router->post('/su/ip/bloquear', [SuperController::class, 'banIp']);
+    $router->post('/su/ip/desbloquear', [SuperController::class, 'unbanIp']);
+    $router->post('/su/permaban', [SuperController::class, 'permaban']);
+    $router->post('/su/permaban/quitar', [SuperController::class, 'unbanDevice']);
 
     // Minijuegos de la pantalla de inicio (JSON; sesión + CSRF).
     $router->post('/juegos/iniciar', [GameController::class, 'start']);

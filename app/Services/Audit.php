@@ -6,7 +6,7 @@ namespace App\Services;
 use App\Core\Database;
 
 /**
- * Registro de auditoría (tabla `audit_log`): quién hizo qué y desde qué IP.
+ * Registro de auditoría (tabla `audit_log`): quién hizo qué, desde qué IP y con qué navegador (user agent).
  * Sin base de datos no hace nada. Nunca guardar contraseñas ni tokens en $detail.
  */
 final class Audit
@@ -25,8 +25,9 @@ final class Audit
         }
         $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
         Database::execute(
-            'INSERT INTO audit_log (user_id, event, ip, detail, created_at) VALUES (?, ?, ?, ?, ?)',
-            [$userId, $event, filter_var($ip, FILTER_VALIDATE_IP) ? $ip : '0.0.0.0', mb_substr($detail, 0, 255), date('Y-m-d H:i:s')]
+            'INSERT INTO audit_log (user_id, event, ip, user_agent, detail, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+            [$userId, $event, filter_var($ip, FILTER_VALIDATE_IP) ? $ip : '0.0.0.0', Device::userAgent() ?: null,
+             mb_substr($detail, 0, 255), date('Y-m-d H:i:s')]
         );
     }
 }

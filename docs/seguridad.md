@@ -28,6 +28,9 @@ Estado de la seguridad de la app, qué se implementó y qué falta antes de prod
 | Métodos incorrectos | 405 con `Allow` en vez de 404 | `Core\Router` |
 | Datos de usuario en caché del navegador | `Cache-Control: no-store` en páginas dinámicas; el service worker borra las páginas cacheadas al llegar al login | `Controller::view()`, `sw.js`, `login.js` |
 | DoS por parámetros | El tamaño del ícono se limita a 48–1024 px | `IconGenerator` |
+| Superusuario | Cuenta única `superuser` fuera de `users` (contraseña en la tabla `superuser`, fijada con `php bin/superuser.php`). Mismo límite de intentos y mismo mensaje de error que el login común. Su sesión vence tras 2 h sin actividad (`security.superuser_idle`) y se invalida al cambiar la contraseña (`session_version`). `/su` responde 404 a cualquier cuenta común. | `Services\Auth`, `Models\Superuser`, `SuperController` |
+| Detección de ataques | `/su/seguridad` muestra en las últimas 24 h las IP con 3+ logins fallidos (con bloqueo de 1 h / 24 h en un click), los DNI atacados (incluido `superuser`), las cuentas usadas desde 3+ IP, los navegadores nuevos en cuentas que ya tenían otros y los accesos del superusuario. `/su/auditoria` filtra y exporta todo el registro (CSV con las celdas `= + - @` neutralizadas contra inyección de fórmulas). | `Models\AuditLog`, `SuperController` |
+| Abuso desde una IP o un navegador | El superusuario bloquea IP (`ip_bans`) o navegadores ("Permaban", `device_bans`): el front controller responde **403** antes de cualquier ruta. El navegador se identifica con la cookie `navaja_dev` (32 bytes aleatorios, HttpOnly, 10 años; en la base solo su sha256). No se puede bloquear la IP ni el navegador propios; `php bin/superuser.php --desbloquear-todo` es la salida de emergencia. Los archivos estáticos que sirve Apache no pasan por PHP, así que no quedan bloqueados (no tienen datos). | `public/index.php`, `Models\Ban`, `Services\Device` |
 
 ### Política CSP
 
@@ -72,6 +75,8 @@ object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
 | Baja | Limitador | Ya usa la tabla `login_attempts`; si hace falta más escala, pasar a Redis. |
 | Baja | Expiración por inactividad | La sesión dura 30 días fijos (decisión de producto por la PWA instalada). Evaluar un tope por inactividad o "recordarme". |
 | Baja | Retención de auditoría | `audit_log` crece sin límite: definir cuánto se conserva y purgar. |
+| Media | Retención de auditoría (superusuario) | `/su/seguridad` permite borrar lo de más de 90/180/365 días (queda registrado). No se hace solo: definir una política (p. ej. 180 días) y aplicarla periódicamente. |
+| Media | Alcance del Permaban | Borrar los datos del sitio o usar modo incógnito genera una cookie `navaja_dev` nueva. Por eso el Permaban total también da de baja la cuenta; combinarlo con el bloqueo de IP si hace falta. Bloquear una IP compartida (wifi del local, CGNAT del proveedor) deja afuera a todos los que la usan. |
 
 ## Verificación manual rápida
 

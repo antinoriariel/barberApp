@@ -4,7 +4,7 @@
  * - En cada formulario con [data-role-form], los campos [data-barber-only] (aviso de la ficha del equipo y secciones del
  *   panel) solo se muestran si el rol elegido es "barbero"; con otro rol el servidor los ignora de todas formas.
  * - El buscador [data-user-search] filtra las tarjetas por nombre, DNI (con o sin puntos) o email.
- * - Los botones con [data-confirm] (dar de baja) piden confirmación antes de enviar.
+ * - Los botones con [data-confirm] (dar de baja, Permaban, eliminar) piden confirmación en un diálogo propio antes de enviar.
  * - Los campos con [data-validate] se validan con las mismas reglas y mensajes que el servidor (User::validate,
  *   Password::validate) al salir del campo y al enviar; el error se muestra debajo del campo. El DNI se formatea
  *   con puntos mientras se escribe (30123456 → 30.123.456). El servidor vuelve a validar todo igual.
@@ -42,12 +42,63 @@ search?.addEventListener('input', () => {
   if (none) none.hidden = shown > 0;
 });
 
-/** Confirmación antes de una acción que deja a alguien sin acceso. */
+/**
+ * Pregunta con un <dialog> propio de la página y resuelve true si se confirmó. No usa window.confirm(): el navegador
+ * puede bloquear esos cuadros ("no permitir más diálogos") y entonces devuelve false en silencio, con lo que el botón
+ * parecía no hacer nada. Sin soporte de <dialog> (navegadores muy viejos) cae en window.confirm().
+ */
+function askConfirm(message, danger) {
+  if (typeof HTMLDialogElement !== 'function') return Promise.resolve(window.confirm(message));
+  const dialog = document.createElement('dialog');
+  dialog.className = 'confirm-dialog';
+  const text = document.createElement('p');
+  text.textContent = message;
+  const actions = document.createElement('div');
+  actions.className = 'confirm-actions';
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.className = 'btn-small ghost';
+  cancel.textContent = 'Cancelar';
+  const ok = document.createElement('button');
+  ok.type = 'button';
+  ok.className = danger ? 'btn-small danger' : 'btn-small';
+  ok.textContent = 'Confirmar';
+  actions.append(cancel, ok);
+  dialog.append(text, actions);
+  document.body.append(dialog);
+
+  return new Promise((resolve) => {
+    cancel.addEventListener('click', () => dialog.close('cancel'));
+    ok.addEventListener('click', () => dialog.close('ok'));
+    // Escape o click en el fondo = cancelar.
+    dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close('cancel'); });
+    dialog.addEventListener('close', () => {
+      resolve(dialog.returnValue === 'ok');
+      dialog.remove();
+    });
+    dialog.showModal();
+    cancel.focus(); // lo seguro queda a mano: Enter no dispara una acción irreversible
+  });
+}
+
+/**
+ * Confirmación antes de una acción que deja a alguien sin acceso o borra algo ([data-confirm]). Frena el envío, pregunta
+ * y, si se confirma, vuelve a hacer click en el mismo botón (así viaja su name/value, p. ej. active=0) dejándolo pasar.
+ */
+let confirmed = null;
 document.addEventListener('click', (event) => {
   const button = event.target.closest('[data-confirm]');
-  if (button && !window.confirm(button.dataset.confirm)) {
-    event.preventDefault();
+  if (!button) return;
+  if (confirmed === button) {
+    confirmed = null;
+    return;
   }
+  event.preventDefault();
+  askConfirm(button.dataset.confirm, button.classList.contains('danger')).then((yes) => {
+    if (!yes) return;
+    confirmed = button;
+    button.click();
+  });
 });
 
 /* ===== Validación de los formularios (mismas reglas que el servidor) ===== */
