@@ -205,6 +205,13 @@ final class Auth
         return self::$dummyHash ??= Password::hash('contraseña-de-relleno');
     }
 
+    /** Mensaje de DNI fuera de rango en el alta (el mismo que muestra register.php antes de enviar). */
+    public static function dniRangeError(): string
+    {
+        return 'Ingresá un DNI válido, entre ' . Dni::format((string) Dni::MIN_REGISTRO)
+            . ' y ' . Dni::format((string) Dni::MAX_REGISTRO) . '.';
+    }
+
     /**
      * Crea una cuenta nueva y deja la sesión iniciada.
      *
@@ -226,8 +233,8 @@ final class Auth
         $fullName = trim(preg_replace('/\s+/', ' ', $fullName));
         $email = mb_strtolower(trim($email));
 
-        if (!Dni::isValid($dni)) {
-            return 'Ingresá un DNI de 7 u 8 números.';
+        if (!Dni::isRegistrable($dni)) {
+            return self::dniRangeError();
         }
         if (!preg_match("/^[\p{L}\p{M}'.-]+( [\p{L}\p{M}'.-]+)+$/u", $fullName) || mb_strlen($fullName) > 120) {
             return 'Ingresá tu nombre y apellido.';
