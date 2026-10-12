@@ -26,11 +26,19 @@ final class DbSessionHandler implements \SessionHandlerInterface
         return Database::execute('DELETE FROM sessions WHERE user_id = ?', [$userId]);
     }
 
+    /**
+     * Abre el almacenamiento de sesiones. No hay nada que preparar: la conexión PDO la abre Database a demanda y
+     * $path/$name (pensados para sesiones en archivos) no se usan. Devuelve true para que PHP siga con read().
+     */
     public function open(string $path, string $name): bool
     {
         return true;
     }
 
+    /**
+     * Cierra el almacenamiento al terminar la petición. No libera nada: la conexión PDO es compartida con el resto
+     * de la petición y write() ya guardó los datos. Devuelve true para indicarle a PHP que salió bien.
+     */
     public function close(): bool
     {
         return true;
@@ -58,6 +66,10 @@ final class DbSessionHandler implements \SessionHandlerInterface
         return true;
     }
 
+    /**
+     * Borra la fila de la sesión $id (PHP lo invoca con session_destroy(), p. ej. al cerrar sesión o al regenerar el
+     * id con borrado del anterior). Siempre devuelve true: que la fila ya no exista no es un error.
+     */
     public function destroy(string $id): bool
     {
         Database::execute('DELETE FROM sessions WHERE id = ?', [$id]);
