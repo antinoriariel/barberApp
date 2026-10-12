@@ -12,6 +12,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class QrTest extends TestCase
 {
+    /** Qr::matrix elige la versión mínima según el largo del texto: 21×21 (v1), 29×29 (v3) y 41×41 (v6). */
     public function testVersionSegunElLargo(): void
     {
         $this->assertCount(21, Qr::matrix('hola'), 'versión 1: 21×21');
@@ -19,6 +20,10 @@ final class QrTest extends TestCase
         $this->assertCount(41, Qr::matrix(str_repeat('x', 120)), 'versión 6: 41×41');
     }
 
+    /**
+     * Los tres patrones buscadores (borde oscuro, anillo claro, centro oscuro), la fila de temporización alternada y
+     * el módulo oscuro fijo están donde pide la norma.
+     */
     public function testPatronesBuscadoresYTemporizacion(): void
     {
         $m = Qr::matrix('hola');
@@ -34,6 +39,10 @@ final class QrTest extends TestCase
         $this->assertTrue($m[$n - 8][8], 'módulo oscuro fijo');
     }
 
+    /**
+     * El SVG arranca con <svg y su viewBox incluye el margen de 4 módulos; un texto que no entra en la versión 6
+     * lanza InvalidArgumentException.
+     */
     public function testSvgYLimite(): void
     {
         $svg = Qr::svg('hola', 200);

@@ -11,6 +11,10 @@ use App\Core\Database;
  */
 final class ConcurrentBookingTest extends DbTestCase
 {
+    /**
+     * En tres rondas lanza dos procesos (tests/worker_book.php) que esperan a la misma marca de tiempo y reservan el
+     * mismo barbero y horario: exactamente uno gana, el otro recibe 409 y en la base queda un solo turno.
+     */
     public function testDosProcesosSimultaneosSoloUnoReserva(): void
     {
         $this->makeUser('99000011');

@@ -13,12 +13,17 @@ final class IncomeTest extends DbTestCase
     /** Mes lejano para no mezclarse con datos de la semilla. */
     private const MONTH = '2031-03';
 
+    /** Borra los ingresos del mes de prueba (2031-03) y luego limpia usuarios de prueba. */
     protected function tearDown(): void
     {
         Database::execute('DELETE FROM incomes WHERE received_on >= ? AND received_on < ?', [self::MONTH . '-01', '2031-04-01']);
         parent::tearDown();
     }
 
+    /**
+     * Income::validate acepta montos con punto de miles y recorta la observación; rechaza fecha inexistente,
+     * categoría fuera de la lista, monto cero, negativo o arreglo, y observación de más de 255 caracteres.
+     */
     public function testValidaFechaCategoriaMontoYObservacion(): void
     {
         $ok = ['received_on' => self::MONTH . '-05', 'category' => 'Corte extra', 'amount' => '15.000', 'notes' => ' sin turno '];
@@ -34,6 +39,10 @@ final class IncomeTest extends DbTestCase
         $this->assertNotNull(Income::validate(['notes' => str_repeat('a', 256)] + $ok)[1]);
     }
 
+    /**
+     * Los ingresos se suman por día, se listan del más nuevo al más viejo y Dashboard::finance los agrega como
+     * "extra" al resultado del mes; borrar uno lo descuenta y borrarlo dos veces devuelve false.
+     */
     public function testTotalesYResultadoDelMes(): void
     {
         $before = Dashboard::finance(self::MONTH . '-01', 1)[0];

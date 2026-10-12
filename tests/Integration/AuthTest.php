@@ -11,6 +11,10 @@ use App\Services\Auth;
 /** Login, límite de intentos, alta y recuperación de contraseña contra la base de pruebas. */
 final class AuthTest extends DbTestCase
 {
+    /**
+     * Arranca cada prueba con una sesión PHP vacía y activa (Auth guarda el DNI y la marca de superusuario en
+     * $_SESSION).
+     */
     protected function setUp(): void
     {
         $_SESSION = [];
@@ -19,12 +23,21 @@ final class AuthTest extends DbTestCase
         }
     }
 
+    /**
+     * Vacía la sesión para que el login de una prueba no se filtre a la siguiente y luego limpia usuarios, intentos y
+     * auditoría (DbTestCase).
+     */
     protected function tearDown(): void
     {
         $_SESSION = [];
         parent::tearDown();
     }
 
+    /**
+     * Contraseña mala, DNI inexistente y DNI con formato inválido devuelven el mismo mensaje (no se puede averiguar
+     * qué cuentas existen); el formato inválido solo descuenta del cupo de la IP. El login correcto acepta el DNI con
+     * puntos y deja la sesión iniciada.
+     */
     public function testLoginCorrectoEIncorrectoConElMismoMensaje(): void
     {
         $this->makeUser('99000021');
@@ -40,6 +53,11 @@ final class AuthTest extends DbTestCase
         $this->assertSame('99000021', Auth::user()?->dni);
     }
 
+    /**
+     * Cuenta regresiva de intentos por DNI (4, 3, 2, 1), bloqueo al quinto fallo con el tiempo de espera, y que
+     * bloqueado no entre ni con la contraseña correcta desde otra IP (Auth::retryAfter() > 0 para el encabezado
+     * Retry-After).
+     */
     public function testBloqueoPorIntentosFallidos(): void
     {
         $this->makeUser('99000022');
@@ -55,6 +73,10 @@ final class AuthTest extends DbTestCase
         $this->assertGreaterThan(0, Auth::retryAfter());
     }
 
+    /**
+     * Contraseña vacía, con byte nulo o de 5000 caracteres nunca se verifican pero suman intento; un DNI de 40
+     * dígitos se recorta sin romper. Al final la contraseña correcta sigue entrando.
+     */
     public function testContraseniasRarasCuentanComoFalloSinRomper(): void
     {
         $this->makeUser('99000025');
@@ -68,6 +90,10 @@ final class AuthTest extends DbTestCase
         $this->assertNull(Auth::attempt('99000025', 'clave-de-prueba', $ip));
     }
 
+    /**
+     * 15 logins correctos seguidos desde la misma IP (límite: 10 fallos) no la bloquean: un acierto devuelve la
+     * reserva del intento.
+     */
     public function testLoginCorrectoNoGastaElCupoDeLaIp(): void
     {
         $this->makeUser('99000026');
@@ -77,6 +103,10 @@ final class AuthTest extends DbTestCase
         }
     }
 
+    /**
+     * Rotar direcciones IPv6 dentro del mismo /64 no esquiva el límite por IP: al décimo fallo el bloqueo alcanza a
+     * toda la red.
+     */
     public function testIpv6SeAgrupaPorPrefijo64(): void
     {
         // Rotando direcciones dentro del mismo /64 no se esquiva el límite por IP (10 fallos).
@@ -86,6 +116,11 @@ final class AuthTest extends DbTestCase
         $this->assertStringStartsWith(Auth::THROTTLED_PREFIX, Auth::attempt('abc', 'x', '2001:db8:1:2::ffff'));
     }
 
+    /**
+     * Auth::register rechaza nombre sin apellido, email inválido, contraseña corta y confirmación distinta; con
+     * datos buenos crea la cuenta e inicia sesión. Un segundo alta con el mismo DNI se rechaza, y la contraseña queda
+     * guardada como hash.
+     */
     public function testRegistroValidaYRechazaDuplicados(): void
     {
         $this->track('99000023');
@@ -103,6 +138,11 @@ final class AuthTest extends DbTestCase
         $this->assertNotSame('clave-larga-1', User::passwordHash('99000023'), 'la contraseña se guarda hasheada');
     }
 
+    /**
+     * Flujo completo de /recuperar con MAIL_DRIVER=log: misma respuesta exista o no el email, el token viaja en el
+     * enlace pero se guarda hasheado, la contraseña nueva se valida, el token es de un solo uso y después solo entra
+     * la contraseña nueva.
+     */
     public function testRecuperacionDeContrasena(): void
     {
         $user = $this->makeUser('99000024', 'r24@test.local');
@@ -125,6 +165,10 @@ final class AuthTest extends DbTestCase
         @unlink(BASE_PATH . '/storage/mail.log');
     }
 
+    /**
+     * Un token vencido (expires_at en el pasado), uno con formato inválido y uno bien formado pero inexistente no son
+     * válidos.
+     */
     public function testTokenVencidoONoValido(): void
     {
         $user = $this->makeUser('99000025', 'r25@test.local');
