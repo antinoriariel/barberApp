@@ -36,6 +36,8 @@ $tabs = array_intersect_key($tabs, array_flip($sections ?? []));
     </button>
     <form method="post" action="/logout" class="inline-form">
       <?= csrf_field() ?>
+      <?php // Un barbero (sin la pestaña Usuarios, exclusiva del admin) también usa la app de clientes: le dejamos volver. El superusuario no tiene cuenta de cliente, así que en /su no se muestra. ?>
+      <?php if (!isset($tabs['usuarios']) && !isset($tabs['su'])): ?><a class="btn-small ghost" href="/">Ir a la app</a><?php endif; ?>
       <button class="btn-small ghost" type="submit">Cerrar sesión</button>
     </form>
   </div>

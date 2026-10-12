@@ -185,6 +185,15 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .day-chip:has(input:checked) .day-chip-state::before { content: "Abierto"; }
 .day-chip:has(input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
 .day-chip:has(input:not(:checked)) .day-chip-hint { display: none; }
+/* Modo lectura (barbero): mismos chips y filas sin formulario; el estado viene escrito y se marca con .on / .ro. */
+ul.day-chips { list-style: none; margin: 0; padding: 0; }
+.day-chip.static { cursor: default; }
+.day-chip.static .day-chip-state::before { content: none; }
+.day-chip.static.on { border-color: var(--blue); background: color-mix(in srgb, var(--blue) 10%, var(--paper)); }
+.day-chip.static.on .day-chip-state { color: var(--blue); }
+.hours-row.ro { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "day note"; }
+.hours-row.ro .hours-day { cursor: default; }
+.hours-range { grid-area: note; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 .hours-save { width: 100%; padding: 12px 14px; text-align: center; } /* celular: botón cómodo para el dedo */
 
@@ -219,7 +228,7 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 
 @container (min-width: 400px) {
   .hours-row { grid-template-columns: minmax(0, 1fr) 7.5em auto 7.5em; grid-template-areas: "day from sep to"; }
-  .hours-row.off { grid-template-columns: minmax(0, 1fr) auto; }
+  .hours-row.off, .hours-row.ro { grid-template-columns: minmax(0, 1fr) auto; }
   .hours-time { min-height: 40px; }
 }
 
