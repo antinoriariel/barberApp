@@ -20,6 +20,10 @@ final class Qr
     private array $fixed = [];
     private int $size;
 
+    /**
+     * Privado: solo lo usa encode(), que ya eligió la versión mínima donde entra el texto. Calcula el lado de la
+     * matriz (17 + 4 × versión módulos: 21 en la v1, 41 en la v6); las matrices $dark y $fixed se llenan después.
+     */
     private function __construct(private readonly int $version)
     {
         $this->size = 17 + 4 * $version;

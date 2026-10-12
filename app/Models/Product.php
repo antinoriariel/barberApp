@@ -15,6 +15,10 @@ use App\Core\Database;
  */
 final class Product
 {
+    /**
+     * Objeto de valor inmutable con lo que ve el cliente (slug, nombre, descripción y precio en pesos). Lo arman las
+     * consultas de este modelo o data/products.php; la validación de lo que carga el admin está en validate().
+     */
     public function __construct(
         public readonly string $id,          // slug único
         public readonly string $name,

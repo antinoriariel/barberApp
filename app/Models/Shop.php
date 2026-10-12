@@ -9,6 +9,10 @@ use App\Core\Database;
 /** Datos del local: nombre, dirección, horarios y teléfono. */
 final class Shop
 {
+    /**
+     * Objeto de valor inmutable con los datos de contacto del local tal como se muestran en la app; $hours es el
+     * texto libre de horarios (las franjas que usa la lógica están en OPENING, más abajo).
+     */
     public function __construct(
         public readonly string $name,
         public readonly string $address,

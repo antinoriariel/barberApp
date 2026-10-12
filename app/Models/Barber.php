@@ -9,6 +9,10 @@ use App\Core\Database;
 /** Barbero del equipo. */
 final class Barber
 {
+    /**
+     * Objeto de valor inmutable (todas las propiedades son readonly): lo arman fromRow() con una fila de `barbers`
+     * o el modo files con data/barbers.php. No valida nada; los datos ya vienen validados del panel o de la semilla.
+     */
     public function __construct(
         public readonly string $id,          // slug: lo que usan las vistas (data-book-barber)
         public readonly string $name,

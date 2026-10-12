@@ -35,6 +35,11 @@ final class User
     private const COLUMNS = "u.id, u.dni, u.name, u.full_name, u.phone, u.is_admin, u.barber_id, u.active, u.panel_access,
                         (SELECT COUNT(*) FROM appointments a WHERE a.user_id = u.id AND a.status = 'done') AS visits";
 
+    /**
+     * Objeto de valor inmutable de una cuenta (nunca lleva el hash de la contraseña: ese se lee aparte con
+     * passwordHash() solo al verificar). Lo arman find()/allForAdmin() con COLUMNS o el modo files con data/users.php.
+     * El rol se deduce de $isAdmin y $barberId; $panelAccess solo tiene sentido para barberos (ver canSee()).
+     */
     public function __construct(
         public readonly string $dni,
         public readonly string $name,      // nombre de pila
