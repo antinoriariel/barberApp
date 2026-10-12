@@ -65,4 +65,98 @@ final class Barber
     {
         return explode(' ', $this->name)[0];
     }
+
+    /**
+     * ¿Es una ficha recién creada desde /admin/usuarios (sin valoración todavía)? Las vistas muestran "Nuevo" en lugar
+     * de estrellas y años inventados.
+     */
+    public function isNew(): bool
+    {
+        return (float) str_replace(',', '.', $this->rating) <= 0.0;
+    }
+
+    /** Colores de avatar para las fichas nuevas (se elige el primero que no use otro barbero activo). */
+    private const TONES = ['#1E5AA8', '#2E7D32', '#6A1B9A', '#E07A10', '#00838F', '#AD1457', '#5D4037', '#455A64'];
+
+    /**
+     * Ficha del equipo para una cuenta que pasa a ser barbero (alta desde /admin/usuarios), con su nombre completo.
+     * Si existe una ficha inactiva con ese mismo nombre que ninguna cuenta usa (la de alguien que dejó de ser barbero
+     * y vuelve), se reactiva para conservar su historial de cortes y horario; si no, se crea una nueva: especialidad
+     * "Barbero", 0 años y sin valoración (se muestra como "Nuevo"), color libre y slug único sacado del nombre.
+     * Devuelve barbers.id. Solo con base de datos; pensado para usarse dentro de la transacción del alta.
+     */
+    public static function provision(string $fullName): int
+    {
+        $old = Database::selectOne(
+            'SELECT b.id FROM barbers b
+              WHERE b.active = 0 AND b.name = ? AND NOT EXISTS (SELECT 1 FROM users u WHERE u.barber_id = b.id)
+              ORDER BY b.id DESC LIMIT 1', [$fullName]
+        );
+        if ($old !== null) {
+            Database::execute('UPDATE barbers SET active = 1 WHERE id = ?', [$old['id']]);
+            return (int) $old['id'];
+        }
+
+        $used = array_map('strtoupper', array_column(Database::select('SELECT tone FROM barbers WHERE active = 1'), 'tone'));
+        $free = array_values(array_diff(self::TONES, $used));
+        $count = (int) Database::selectOne('SELECT COUNT(*) AS n FROM barbers')['n'];
+        $tone = $free[0] ?? self::TONES[$count % count(self::TONES)];
+
+        Database::execute(
+            'INSERT INTO barbers (slug, name, role, years, rating, tone) VALUES (?, ?, ?, 0, 0, ?)',
+            [self::uniqueSlug($fullName), mb_substr($fullName, 0, 80), 'Barbero', $tone]
+        );
+        return Database::lastId();
+    }
+
+    /**
+     * Slug único (máx. 30) a partir del nombre: minúsculas, sin tildes, palabras unidas con guion ("José Pérez" →
+     * "jose-perez"); si ya existe se agrega -2, -3…
+     */
+    private static function uniqueSlug(string $name): string
+    {
+        $ascii = strtr(mb_strtolower($name), ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n']);
+        $base = trim((string) preg_replace('/[^a-z0-9]+/', '-', $ascii), '-');
+        $base = substr($base !== '' ? $base : 'barbero', 0, 24);
+        $slug = $base;
+        for ($n = 2; Database::selectOne('SELECT id FROM barbers WHERE slug = ?', [$slug]) !== null; $n++) {
+            $slug = $base . '-' . $n;
+        }
+        return $slug;
+    }
+
+    /** Cambia el nombre de la ficha (cuando se edita el nombre de la cuenta del barbero). */
+    public static function rename(int $key, string $fullName): void
+    {
+        Database::execute('UPDATE barbers SET name = ? WHERE id = ?', [mb_substr($fullName, 0, 80), $key]);
+    }
+
+    /**
+     * Muestra (true) u oculta (false) la ficha en la app: oculta, no aparece en el equipo ni toma turnos nuevos.
+     * Los turnos ya reservados con ella no se cancelan.
+     */
+    public static function setActive(int $key, bool $active): void
+    {
+        Database::execute('UPDATE barbers SET active = ? WHERE id = ?', [$active ? 1 : 0, $key]);
+    }
+
+    /** Borra la ficha si nunca tuvo turnos (su horario se borra en cascada); si los tuvo, solo la oculta. */
+    public static function retire(int $key): void
+    {
+        $used = Database::selectOne('SELECT 1 AS x FROM appointments WHERE barber_id = ? LIMIT 1', [$key]) !== null;
+        if ($used) {
+            self::setActive($key, false);
+        } else {
+            Database::execute('DELETE FROM barbers WHERE id = ?', [$key]);
+        }
+    }
+
+    /** Turnos reservados a futuro con esa ficha (para avisar antes de ocultarla). */
+    public static function upcomingCount(int $key): int
+    {
+        return (int) Database::selectOne(
+            "SELECT COUNT(*) AS n FROM appointments WHERE barber_id = ? AND status = 'booked' AND starts_at >= ?",
+            [$key, date('Y-m-d H:i:s')]
+        )['n'];
+    }
 }

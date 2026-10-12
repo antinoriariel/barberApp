@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use App\Core\RateLimiter;
+use App\Core\Request;
 use App\Models\LoyaltyCard;
 use App\Models\Schedule;
 use App\Models\User;
@@ -14,6 +16,30 @@ use PHPUnit\Framework\TestCase;
 /** Pruebas sin base de datos de las utilidades puras: Dni, Password, LoyaltyCard y Schedule::isDate. */
 final class SupportTest extends TestCase
 {
+    public function testRequestStringIgnoraArreglosYCortaElLargo(): void
+    {
+        $_POST = ['password' => ['a', 'b', 'c'], 'dni' => str_repeat('1', 5000), 'n' => 5];
+        $r = new Request();
+        $this->assertSame('', $r->string('password'), 'password[]=… no se convierte en "Array"');
+        $this->assertSame(1024, strlen($r->string('dni')));
+        $this->assertSame('', $r->string('n'));
+        $this->assertSame('x', $r->string('falta', 'x'));
+        $_POST = [];
+    }
+
+    public function testIpBucketAgrupaIpv6(): void
+    {
+        $this->assertSame('1.2.3.4', RateLimiter::ipBucket('1.2.3.4'));
+        $this->assertSame('2001:db8:1:2::/64', RateLimiter::ipBucket('2001:db8:1:2:aaaa:bbbb:cccc:dddd'));
+        $this->assertSame(RateLimiter::ipBucket('2001:db8:1:2::1'), RateLimiter::ipBucket('2001:db8:1:2::ffff'));
+    }
+
+    public function testPasswordRechazaBytesNulos(): void
+    {
+        $this->assertNotNull(Password::validate("clave-larga\0-123"));
+        $this->assertNull(Password::validate('clave-larga-123'));
+    }
+
     public function testDniNormalizaYFormatea(): void
     {
         $this->assertSame('40123456', Dni::normalize('40.123.456'));

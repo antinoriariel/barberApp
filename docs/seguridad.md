@@ -14,7 +14,8 @@ Estado de la seguridad de la app, qué se implementó y qué falta antes de prod
 | CSRF | Token por sesión (`csrf_field()`), verificado con `hash_equals`. Login y logout son **POST** y responden **419** sin token válido. | `Security`, `Controller::requireCsrf()` |
 | Contraseñas y sesiones | Argon2id, mínimo 8 y máximo 72 caracteres, mensaje de login único (con hash falso para igualar tiempos), sesiones en la tabla `sessions` revocables por usuario, recuperación con token de un solo uso guardado hasheado (vence en 1 h y cierra las sesiones abiertas). | `Support\Password`, `Services\Auth`, `Core\DbSessionHandler` |
 | Trazabilidad | Login, altas, recuperaciones, cierres de sesión y turnos en `audit_log` (sin contraseñas ni tokens). | `Services\Audit` |
-| Fuerza bruta de DNI | Máximo 5 fallos por DNI y 10 por IP cada 15 min → **429** con `Retry-After`. El contador de la IP no se reinicia con un login exitoso. | `Services\Auth`, `Core\RateLimiter` |
+| Fuerza bruta de DNI | Máximo 5 fallos por DNI y 10 por IP cada 15 min → **429** con `Retry-After`. El intento se reserva de forma atómica *antes* de verificar la contraseña, así que mandar contraseñas en paralelo no esquiva el límite. IPv6 se cuenta por prefijo /64. Un login exitoso no gasta cupo de la IP, pero tampoco borra sus fallos previos. | `Services\Auth`, `Core\RateLimiter` |
+| Entradas malformadas | Los campos de los formularios de cuenta se leen con `Request::string()`: un arreglo (`password[]=a&password[]=b`) se toma como vacío y cuenta como un solo intento; todo se corta en 1024 bytes. Contraseñas vacías, de más de 72 caracteres o con bytes nulos nunca se verifican (cuentan como fallo, con el mismo tiempo de respuesta). | `Core\Request`, `Services\Auth`, `Support\Password` |
 | Fijación de sesión | `session_regenerate_id(true)` al entrar, modo estricto de sesiones y rotación del token CSRF | `Session`, `Auth::attempt()` |
 | Robo de cookie de sesión | `HttpOnly`, `SameSite=Lax`, `Secure` bajo HTTPS, solo por cookie (no en URL), nombre propio `navaja_sid` | `Session::start()` |
 | Cierre de sesión incompleto | `logout` vacía la sesión, la destruye y expira la cookie | `Session::destroy()` |
@@ -27,6 +28,9 @@ Estado de la seguridad de la app, qué se implementó y qué falta antes de prod
 | Métodos incorrectos | 405 con `Allow` en vez de 404 | `Core\Router` |
 | Datos de usuario en caché del navegador | `Cache-Control: no-store` en páginas dinámicas; el service worker borra las páginas cacheadas al llegar al login | `Controller::view()`, `sw.js`, `login.js` |
 | DoS por parámetros | El tamaño del ícono se limita a 48–1024 px | `IconGenerator` |
+| Superusuario | Cuenta única `superuser` fuera de `users` (contraseña en la tabla `superuser`, fijada con `php bin/superuser.php`). Mismo límite de intentos y mismo mensaje de error que el login común. Su sesión vence tras 2 h sin actividad (`security.superuser_idle`) y se invalida al cambiar la contraseña (`session_version`). `/su` responde 404 a cualquier cuenta común. | `Services\Auth`, `Models\Superuser`, `SuperController` |
+| Detección de ataques | `/su/seguridad` muestra en las últimas 24 h las IP con 3+ logins fallidos (con bloqueo de 1 h / 24 h en un click), los DNI atacados (incluido `superuser`), las cuentas usadas desde 3+ IP, los navegadores nuevos en cuentas que ya tenían otros y los accesos del superusuario. `/su/auditoria` filtra y exporta todo el registro (CSV con las celdas `= + - @` neutralizadas contra inyección de fórmulas). | `Models\AuditLog`, `SuperController` |
+| Abuso desde una IP o un navegador | El superusuario bloquea IP (`ip_bans`) o navegadores ("Permaban", `device_bans`): el front controller responde **403** antes de cualquier ruta. El navegador se identifica con la cookie `navaja_dev` (32 bytes aleatorios, HttpOnly, 10 años; en la base solo su sha256). No se puede bloquear la IP ni el navegador propios; `php bin/superuser.php --desbloquear-todo` es la salida de emergencia. Los archivos estáticos que sirve Apache no pasan por PHP, así que no quedan bloqueados (no tienen datos). | `public/index.php`, `Models\Ban`, `Services\Device` |
 
 ### Política CSP
 
@@ -71,6 +75,8 @@ object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
 | Baja | Limitador | Ya usa la tabla `login_attempts`; si hace falta más escala, pasar a Redis. |
 | Baja | Expiración por inactividad | La sesión dura 30 días fijos (decisión de producto por la PWA instalada). Evaluar un tope por inactividad o "recordarme". |
 | Baja | Retención de auditoría | `audit_log` crece sin límite: definir cuánto se conserva y purgar. |
+| Media | Retención de auditoría (superusuario) | `/su/seguridad` permite borrar lo de más de 90/180/365 días (queda registrado). No se hace solo: definir una política (p. ej. 180 días) y aplicarla periódicamente. |
+| Media | Alcance del Permaban | Borrar los datos del sitio o usar modo incógnito genera una cookie `navaja_dev` nueva. Por eso el Permaban total también da de baja la cuenta; combinarlo con el bloqueo de IP si hace falta. Bloquear una IP compartida (wifi del local, CGNAT del proveedor) deja afuera a todos los que la usan. |
 
 ## Verificación manual rápida
 
@@ -82,10 +88,14 @@ curl -s -o /dev/null -w "%{http_code}\n" -d "dni=40123456" http://127.0.0.1:8000
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/logout                  # 405: logout ya no es GET
 ```
 
-Para ver el bloqueo por intentos: repetir 6 veces un `POST /login` con un DNI inexistente y un token válido → el sexto responde **429**.
+Para ver el bloqueo por intentos: repetir 5 veces un `POST /login` con un DNI inexistente y un token válido → cada fallo avisa cuántos intentos quedan y el quinto ya responde **429** con "Podés volver a intentar en N minutos" (y `Retry-After` en segundos). El conteo es el mismo exista o no el DNI, así que no revela cuentas.
 Los contadores viven en la tabla `login_attempts` (con `DB_DRIVER=files`, en `storage/ratelimit/`); para desbloquear en desarrollo se pueden borrar sin riesgo.
 
-Editor de servicios (`/admin/servicios`): solo administradores, POST con CSRF, validación en `Service::validate` y auditoría (`admin_service_update/create/hide/show`). Los turnos ya reservados conservan el precio con el que se tomaron.
+Usuarios (`/admin/usuarios`): exclusivo del administrador (nunca se le habilita a un barbero). Alta, edición de rol, cambio de contraseña y baja son POST con CSRF y quedan en la auditoría (`admin_user_create/update/password/enable/disable/delete`); la contraseña nunca se registra. El cambio de contraseña borra los enlaces de recuperación y cierra las sesiones de esa cuenta. La baja es lógica (`users.active = 0`): el login falla con el mismo mensaje que una contraseña mala, se borran sus sesiones y `Auth::user()` ignora cualquier sesión que quede. La baja definitiva (`/admin/usuarios/borrar`) solo borra cuentas sin turnos, premios, fila ni movimientos. No se puede suspender, eliminar ni quitar el rol a uno mismo ni al último administrador activo.
+
+Permisos del panel: cada acción de `AdminController` exige su sección (`requireSection`, ver `User::canSee`); el admin ve todas y el barbero solo las de `users.panel_access`, comprobadas en cada petición (también en los POST), no solo ocultando pestañas.
+
+Editor de servicios (`/admin/servicios`): solo administradores (un barbero con la sección Servicios la ve en modo lectura y sus POST reciben 403, ver `requireCatalogEditor`), POST con CSRF, validación en `Service::validate` y auditoría (`admin_service_update/create/hide/show`). Los turnos ya reservados conservan el precio con el que se tomaron.
 
 API de turnos: sin sesión responde 401 JSON; las POST exigen CSRF (campo `_csrf` o cabecera `X-CSRF-Token`) y las escrituras filtran siempre por el usuario de la sesión. El servidor revalida servicio, barbero, fecha y hora, y recalcula precio y duración; un cliente no puede tener más de `booking.max_active` turnos futuros.
 

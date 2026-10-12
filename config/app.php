@@ -72,6 +72,8 @@ return [
         'reset_max_attempts_ip'    => 5,
         // HSTS (solo se envía bajo HTTPS): segundos que el navegador recordará usar solo HTTPS.
         'hsts_max_age'           => 60 * 60 * 24 * 180,
+        // Segundos sin actividad tras los que la sesión del superusuario se cierra sola (2 horas).
+        'superuser_idle'         => 2 * 60 * 60,
     ],
 
     'assets' => [
@@ -100,6 +102,7 @@ return [
             'css/components/queue.css',
             'css/pages/login.css',
             'css/pages/admin.css',
+            'css/pages/su.css',
             'css/a11y.css',
         ],
     ],

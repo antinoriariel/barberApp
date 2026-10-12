@@ -20,10 +20,10 @@ final class DbSessionHandler implements \SessionHandlerInterface
         self::$userId = $userId;
     }
 
-    /** Borra todas las sesiones de un usuario (cierre de sesión en todos los dispositivos). */
-    public static function revokeUser(int $userId): void
+    /** Borra todas las sesiones de un usuario (cierre de sesión en todos los dispositivos). Devuelve cuántas borró. */
+    public static function revokeUser(int $userId): int
     {
-        Database::execute('DELETE FROM sessions WHERE user_id = ?', [$userId]);
+        return Database::execute('DELETE FROM sessions WHERE user_id = ?', [$userId]);
     }
 
     public function open(string $path, string $name): bool

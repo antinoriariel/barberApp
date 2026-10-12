@@ -45,6 +45,13 @@ final class RateLimiter
         return $d['reset'] > time() && $d['count'] >= $max;
     }
 
+    /** Intentos que le quedan a la clave antes de llegar a $max dentro de su ventana (con la ventana vencida, $max). */
+    public static function remaining(string $key, int $max): int
+    {
+        $d = self::read($key);
+        return $d['reset'] > time() ? max(0, $max - $d['count']) : $max;
+    }
+
     /** Segundos que faltan para que la clave deje de estar bloqueada (0 si no lo está). */
     public static function retryAfter(string $key): int
     {
@@ -52,11 +59,13 @@ final class RateLimiter
     }
 
     /**
-     * Suma un intento a la clave. Si la ventana anterior venció, arranca una nueva de $window segundos.
-     * Usa flock para que dos peticiones simultáneas no se pisen el contador.
-     * Si no se puede escribir en storage/ se registra el error y se sigue (fail-open).
+     * Suma un intento a la clave y devuelve el contador ya sumado. Si la ventana anterior venció, arranca una
+     * nueva de $window segundos. El incremento es atómico (UPSERT en la base, flock en archivos), así que con
+     * N peticiones simultáneas cada una ve un número distinto y como mucho $max pasan el control: sirve para
+     * "reservar" el intento antes de verificar, sin la carrera de consultar primero y sumar después.
+     * Si no se puede escribir en storage/ se registra el error y se sigue (fail-open, devuelve 0).
      */
-    public static function hit(string $key, int $window): void
+    public static function hit(string $key, int $window): int
     {
         if (Database::enabled()) {
             // Una sola sentencia atómica: si la ventana venció arranca otra (attempts = 1), si no suma uno.
@@ -70,16 +79,16 @@ final class RateLimiter
             if (random_int(1, 100) === 1) {
                 Database::execute('DELETE FROM login_attempts WHERE expires_at < ?', [date('Y-m-d H:i:s', time() - 86400)]);
             }
-            return;
+            return self::read($key)['count'];
         }
         if (!is_dir(self::dir()) && !@mkdir(self::dir(), 0775, true) && !is_dir(self::dir())) {
             error_log('RateLimiter: no se pudo crear ' . self::dir());
-            return;
+            return 0;
         }
         $fh = @fopen(self::file($key), 'c+');
         if ($fh === false) {
             error_log('RateLimiter: no se pudo abrir el contador de ' . $key);
-            return;
+            return 0;
         }
         flock($fh, LOCK_EX);
         $d = json_decode((string) stream_get_contents($fh), true);
@@ -96,6 +105,45 @@ final class RateLimiter
         if (random_int(1, 100) === 1) {
             self::purge();
         }
+        return $next['count'];
+    }
+
+    /**
+     * Devuelve un intento reservado con hit() (resta uno, sin bajar de cero ni tocar el vencimiento).
+     * Se usa cuando el intento no debe contar: un login correcto, o una petición rechazada por bloqueo.
+     */
+    public static function release(string $key): void
+    {
+        if (Database::enabled()) {
+            Database::execute('UPDATE login_attempts SET attempts = GREATEST(attempts - 1, 0) WHERE key_hash = ?', [hash('sha256', $key)]);
+            return;
+        }
+        $fh = @fopen(self::file($key), 'r+');
+        if ($fh === false) {
+            return;
+        }
+        flock($fh, LOCK_EX);
+        $d = json_decode((string) stream_get_contents($fh), true);
+        if (is_array($d) && isset($d['count'], $d['reset'])) {
+            ftruncate($fh, 0);
+            rewind($fh);
+            fwrite($fh, (string) json_encode(['count' => max(0, (int) $d['count'] - 1), 'reset' => (int) $d['reset']]));
+        }
+        flock($fh, LOCK_UN);
+        fclose($fh);
+    }
+
+    /**
+     * Agrupa la IP para las claves de límite: una IPv4 se usa entera, una IPv6 por su prefijo /64 (lo que
+     * suele recibir un solo cliente; si no, rotando direcciones dentro de su bloque tendría intentos infinitos).
+     */
+    public static function ipBucket(string $ip): string
+    {
+        $bin = @inet_pton($ip);
+        if ($bin === false || strlen($bin) !== 16) {
+            return $ip;
+        }
+        return inet_ntop(substr($bin, 0, 8) . str_repeat("\0", 8)) . '/64';
     }
 
     /** Borra el contador de una clave (p. ej. tras un login exitoso). */
