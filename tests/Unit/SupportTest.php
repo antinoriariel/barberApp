@@ -57,6 +57,19 @@ final class SupportTest extends TestCase
         return [['40123456', true], ['1234567', true], ['123456', false], ['123456789', false], ['4012345a', false], ['', false]];
     }
 
+    #[DataProvider('dnisRegistro')]
+    public function testDniRegistrableSoloEnRango(string $dni, bool $esperado): void
+    {
+        $this->assertSame($esperado, Dni::isRegistrable($dni));
+    }
+
+    /** Bordes del rango del alta (16.500.000 a 70.000.000, ambos incluidos). */
+    public static function dnisRegistro(): array
+    {
+        return [['16500000', true], ['40123456', true], ['70000000', true], ['16499999', false],
+            ['70000001', false], ['1234567', false], ['99000023', false], ['', false]];
+    }
+
     public function testPasswordHashVerificaYValida(): void
     {
         $hash = Password::hash('Clave-Larga-1');

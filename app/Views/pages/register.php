@@ -2,6 +2,8 @@
 /**
  * pages/register.php — Alta de cuenta (nombre y apellido, DNI, email y contraseña).
  * Variables: $error (string), $values (array dni, full_name, email: lo ya escrito).
+ * El DNI lleva el rango aceptado (Dni::MIN_REGISTRO..MAX_REGISTRO) en data-min/data-max para que login.js
+ * avise antes de enviar; el servidor lo vuelve a validar en Auth::register.
  */
 ?>
 <div class="login">
@@ -24,7 +26,10 @@
 
       <label class="field" for="dni">DNI</label>
       <input id="dni" name="dni" type="text" inputmode="numeric" autocomplete="off" placeholder="40.123.456"
-        maxlength="10" required value="<?= $values['dni'] !== '' ? e(fmt_dni($values['dni'])) : '' ?>">
+        maxlength="10" required value="<?= $values['dni'] !== '' ? e(fmt_dni($values['dni'])) : '' ?>"
+        data-min="<?= \App\Support\Dni::MIN_REGISTRO ?>" data-max="<?= \App\Support\Dni::MAX_REGISTRO ?>"
+        data-error="<?= e(\App\Services\Auth::dniRangeError()) ?>" aria-describedby="dni-error">
+      <p class="field-error" id="dni-error" role="alert" hidden></p>
 
       <label class="field" for="email">Email</label>
       <input id="email" name="email" type="email" autocomplete="email" maxlength="190" required

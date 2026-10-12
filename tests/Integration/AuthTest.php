@@ -88,19 +88,23 @@ final class AuthTest extends DbTestCase
 
     public function testRegistroValidaYRechazaDuplicados(): void
     {
-        $this->track('99000023');
+        $this->track('69990023');
         $ip = '10.0.0.4';
-        $this->assertNotNull(Auth::register('99000023', 'Ana', 'ana23@test.local', 'clave-larga-1', 'clave-larga-1', $ip), 'falta apellido');
-        $this->assertNotNull(Auth::register('99000023', 'Ana Pérez', 'no-es-email', 'clave-larga-1', 'clave-larga-1', $ip));
-        $this->assertNotNull(Auth::register('99000023', 'Ana Pérez', 'ana23@test.local', 'corta', 'corta', $ip));
-        $this->assertNotNull(Auth::register('99000023', 'Ana Pérez', 'ana23@test.local', 'clave-larga-1', 'distinta-1234', $ip));
-        $this->assertNull(Auth::register('99000023', 'Ana Pérez', 'ana23@test.local', 'clave-larga-1', 'clave-larga-1', $ip));
-        $this->assertSame('99000023', Session::get('dni'));
+        // Fuera del rango 16.500.000–70.000.000 no se puede crear cuenta (otra IP: el alta admite 5 intentos por IP).
+        foreach (['16499999', '70000001', '99000023', '1234567'] as $fuera) {
+            $this->assertSame(Auth::dniRangeError(), Auth::register($fuera, 'Ana Pérez', 'ana23@test.local', 'clave-larga-1', 'clave-larga-1', '10.0.0.6'));
+        }
+        $this->assertNotNull(Auth::register('69990023', 'Ana', 'ana23@test.local', 'clave-larga-1', 'clave-larga-1', $ip), 'falta apellido');
+        $this->assertNotNull(Auth::register('69990023', 'Ana Pérez', 'no-es-email', 'clave-larga-1', 'clave-larga-1', $ip));
+        $this->assertNotNull(Auth::register('69990023', 'Ana Pérez', 'ana23@test.local', 'corta', 'corta', $ip));
+        $this->assertNotNull(Auth::register('69990023', 'Ana Pérez', 'ana23@test.local', 'clave-larga-1', 'distinta-1234', $ip));
+        $this->assertNull(Auth::register('69990023', 'Ana Pérez', 'ana23@test.local', 'clave-larga-1', 'clave-larga-1', $ip));
+        $this->assertSame('69990023', Session::get('dni'));
 
-        $this->assertStringContainsString('Ya existe', (string) Auth::register('99000023', 'Otra Persona', 'otra23@test.local', 'clave-larga-1', 'clave-larga-1', '10.0.0.5'));
-        $user = User::find('99000023');
+        $this->assertStringContainsString('Ya existe', (string) Auth::register('69990023', 'Otra Persona', 'otra23@test.local', 'clave-larga-1', 'clave-larga-1', '10.0.0.5'));
+        $user = User::find('69990023');
         $this->assertSame('Ana', $user->name);
-        $this->assertNotSame('clave-larga-1', User::passwordHash('99000023'), 'la contraseña se guarda hasheada');
+        $this->assertNotSame('clave-larga-1', User::passwordHash('69990023'), 'la contraseña se guarda hasheada');
     }
 
     public function testRecuperacionDeContrasena(): void
