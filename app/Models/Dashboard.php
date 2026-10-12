@@ -74,16 +74,19 @@ final class Dashboard
 
     /**
      * Ingresos y egresos de los últimos `$count` meses (terminando en el de `$day`), el más viejo primero.
-     * Ingresos = turnos atendidos (months()); egresos = tabla `expenses`; net = ingresos − egresos.
-     * @return array<int, array{month: string, revenue: int, served: int, expenses: int, net: int}>
+     * Ingresos = turnos atendidos (months()); extra = ingresos extra (tabla `incomes`); egresos = tabla `expenses`;
+     * net = ingresos + extra − egresos.
+     * @return array<int, array{month: string, revenue: int, served: int, extra: int, expenses: int, net: int}>
      */
     public static function finance(string $day, int $count = 6): array
     {
         $months = self::months($day, $count);
         $spent = Expense::totalsByMonth($months[0]['month'] . '-01', $months[$count - 1]['month']);
-        return array_map(static function (array $m) use ($spent) {
+        $extra = Income::totalsByMonth($months[0]['month'] . '-01', $months[$count - 1]['month']);
+        return array_map(static function (array $m) use ($spent, $extra) {
+            $m['extra'] = $extra[$m['month']] ?? 0;
             $m['expenses'] = $spent[$m['month']] ?? 0;
-            $m['net'] = $m['revenue'] - $m['expenses'];
+            $m['net'] = $m['revenue'] + $m['extra'] - $m['expenses'];
             return $m;
         }, $months);
     }
