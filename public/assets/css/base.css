@@ -43,6 +43,8 @@
 }
 
 * { box-sizing: border-box; margin: 0; }
+/* El reset de arriba anula el margin:auto con el que el navegador centra los <dialog> modales: se lo devolvemos. */
+dialog { margin: auto; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   font-family: var(--body);
