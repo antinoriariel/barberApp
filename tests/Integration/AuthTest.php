@@ -15,6 +15,10 @@ use App\Support\Phone;
 /** Login, límite de intentos, alta (celular argentino, una por navegador) y "Olvidé mi contraseña" contra la base de pruebas. */
 final class AuthTest extends DbTestCase
 {
+    /**
+     * Arranca cada prueba con una sesión PHP vacía y activa (Auth guarda el DNI y la marca de superusuario en
+     * $_SESSION).
+     */
     protected function setUp(): void
     {
         $_SESSION = [];
@@ -23,6 +27,10 @@ final class AuthTest extends DbTestCase
         }
     }
 
+    /**
+     * Vacía la sesión para que el login de una prueba no se filtre a la siguiente y luego limpia usuarios, intentos y
+     * auditoría (DbTestCase).
+     */
     protected function tearDown(): void
     {
         $_SESSION = [];
@@ -31,6 +39,11 @@ final class AuthTest extends DbTestCase
         parent::tearDown();
     }
 
+    /**
+     * Contraseña mala, DNI inexistente y DNI con formato inválido devuelven el mismo mensaje (no se puede averiguar
+     * qué cuentas existen); el formato inválido solo descuenta del cupo de la IP. El login correcto acepta el DNI con
+     * puntos y deja la sesión iniciada.
+     */
     public function testLoginCorrectoEIncorrectoConElMismoMensaje(): void
     {
         $this->makeUser('69990021');
@@ -46,6 +59,11 @@ final class AuthTest extends DbTestCase
         $this->assertSame('69990021', Auth::user()?->dni);
     }
 
+    /**
+     * Cuenta regresiva de intentos por DNI (4, 3, 2, 1), bloqueo al quinto fallo con el tiempo de espera, y que
+     * bloqueado no entre ni con la contraseña correcta desde otra IP (Auth::retryAfter() > 0 para el encabezado
+     * Retry-After).
+     */
     public function testBloqueoPorIntentosFallidos(): void
     {
         $this->makeUser('69990022');
@@ -61,6 +79,10 @@ final class AuthTest extends DbTestCase
         $this->assertGreaterThan(0, Auth::retryAfter());
     }
 
+    /**
+     * Contraseña vacía, con byte nulo o de 5000 caracteres nunca se verifican pero suman intento; un DNI de 40
+     * dígitos se recorta sin romper. Al final la contraseña correcta sigue entrando.
+     */
     public function testContraseniasRarasCuentanComoFalloSinRomper(): void
     {
         $this->makeUser('69990025');
@@ -74,6 +96,10 @@ final class AuthTest extends DbTestCase
         $this->assertNull(Auth::attempt('69990025', 'clave-de-prueba', $ip));
     }
 
+    /**
+     * 15 logins correctos seguidos desde la misma IP (límite: 10 fallos) no la bloquean: un acierto devuelve la
+     * reserva del intento.
+     */
     public function testLoginCorrectoNoGastaElCupoDeLaIp(): void
     {
         $this->makeUser('69990026');
@@ -83,6 +109,10 @@ final class AuthTest extends DbTestCase
         }
     }
 
+    /**
+     * Rotar direcciones IPv6 dentro del mismo /64 no esquiva el límite por IP: al décimo fallo el bloqueo alcanza a
+     * toda la red.
+     */
     public function testIpv6SeAgrupaPorPrefijo64(): void
     {
         // Rotando direcciones dentro del mismo /64 no se esquiva el límite por IP (10 fallos).
@@ -100,6 +130,11 @@ final class AuthTest extends DbTestCase
         return Device::hash();
     }
 
+    /**
+     * Auth::register rechaza un DNI fuera del rango del alta, nombre sin apellido, celular que no es argentino y
+     * contraseña corta; con datos buenos crea la cuenta (celular normalizado, contraseña hasheada) e inicia sesión.
+     * Desde otro navegador, el mismo DNI o el mismo celular escrito distinto se rechazan sin dejar nada a medias.
+     */
     public function testRegistroValidaYRechazaDuplicados(): void
     {
         $this->track('69990023');
@@ -128,6 +163,10 @@ final class AuthTest extends DbTestCase
         $this->assertNull(User::find('69990027'), 'no quedó nada a medias');
     }
 
+    /**
+     * Un navegador crea una sola cuenta aunque cambie de IP (el intento queda auditado y el alta en
+     * device_registrations); si el superusuario lo libera (Registration::release) puede crear otra.
+     */
     public function testUnaSolaCuentaPorNavegador(): void
     {
         $this->track('69990031');
@@ -158,6 +197,7 @@ final class AuthTest extends DbTestCase
         $this->assertSame(2, (int) Database::selectOne('SELECT COUNT(*) AS n FROM device_registrations WHERE device_hash = ?', [$device])['n']);
     }
 
+    /** Borrar la cuenta (User::purge) deja el alta sin user_id pero el navegador sigue sin poder registrar otra. */
     public function testBorrarLaCuentaNoLiberaElNavegador(): void
     {
         $this->track('69990033');
@@ -168,6 +208,7 @@ final class AuthTest extends DbTestCase
         $this->assertNull(Database::selectOne('SELECT user_id FROM device_registrations WHERE dni = ?', ['69990033'])['user_id']);
     }
 
+    /** Sin la cookie navaja_dev (cookies bloqueadas o incógnito) no se crea la cuenta y el error lo explica. */
     public function testSinCookieNoSeRegistra(): void
     {
         $this->track('69990034');
@@ -177,6 +218,10 @@ final class AuthTest extends DbTestCase
         $this->assertNull(User::find('69990034'));
     }
 
+    /**
+     * Desde una misma IP se crean hasta security.register_max_ip_day cuentas por día (aun con navegadores distintos);
+     * la siguiente se rechaza y queda auditada.
+     */
     public function testTopeDeAltasPorIp(): void
     {
         $max = (int) Config::get('security.register_max_ip_day');
@@ -194,6 +239,7 @@ final class AuthTest extends DbTestCase
         $this->assertNotNull(Database::selectOne("SELECT id FROM audit_log WHERE event = 'register_blocked_ip' AND detail = ?", ['DNI 69990049']));
     }
 
+    /** "Olvidé mi contraseña" arma el enlace wa.me al soporte con el mensaje ya escrito. */
     public function testOlvideMiContrasenaAbreWhatsapp(): void
     {
         $url = Auth::supportWhatsappUrl();

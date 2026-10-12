@@ -46,7 +46,9 @@ final class AuditLog
      */
     public static function filters(array $in): array
     {
+        /** Valor de texto del parámetro $k recortado y limitado a $max caracteres ("" si falta o llega como arreglo). */
         $text = static fn (string $k, int $max): string => is_string($in[$k] ?? null) ? mb_substr(trim($in[$k]), 0, $max) : '';
+        /** Devuelve $raw solo si es una fecha real Y-m-d (2026-02-30 no pasa: el formateo de vuelta no coincide); si no, "". */
         $date = static function (string $raw): string {
             $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $raw);
             return $d && $d->format('Y-m-d') === $raw ? $raw : '';

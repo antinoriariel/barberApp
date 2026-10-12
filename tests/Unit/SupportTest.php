@@ -17,6 +17,10 @@ use PHPUnit\Framework\TestCase;
 /** Pruebas sin base de datos de las utilidades puras: Dni, Phone, Password, LoyaltyCard y Schedule::isDate. */
 final class SupportTest extends TestCase
 {
+    /**
+     * Request::string devuelve "" ante un arreglo o un número (evita "Array"), corta a 1024 caracteres y usa el valor
+     * por defecto si falta el campo.
+     */
     public function testRequestStringIgnoraArreglosYCortaElLargo(): void
     {
         $_POST = ['password' => ['a', 'b', 'c'], 'dni' => str_repeat('1', 5000), 'n' => 5];
@@ -28,6 +32,7 @@ final class SupportTest extends TestCase
         $_POST = [];
     }
 
+    /** RateLimiter::ipBucket deja una IPv4 tal cual y agrupa las IPv6 por su prefijo /64. */
     public function testIpBucketAgrupaIpv6(): void
     {
         $this->assertSame('1.2.3.4', RateLimiter::ipBucket('1.2.3.4'));
@@ -35,29 +40,36 @@ final class SupportTest extends TestCase
         $this->assertSame(RateLimiter::ipBucket('2001:db8:1:2::1'), RateLimiter::ipBucket('2001:db8:1:2::ffff'));
     }
 
+    /** Password::validate rechaza una contraseña con byte nulo y acepta una normal. */
     public function testPasswordRechazaBytesNulos(): void
     {
         $this->assertNotNull(Password::validate("clave-larga\0-123"));
         $this->assertNull(Password::validate('clave-larga-123'));
     }
 
+    /** Dni::normalize saca los puntos y Dni::format los agrega. */
     public function testDniNormalizaYFormatea(): void
     {
         $this->assertSame('40123456', Dni::normalize('40.123.456'));
         $this->assertSame('40.123.456', Dni::format('40123456'));
     }
 
+    /**
+     * Dni::isValid acepta 7 u 8 dígitos y rechaza más cortos, más largos, con letras o vacíos (casos en dnis()).
+     */
     #[DataProvider('dnis')]
     public function testDniValido(string $dni, bool $esperado): void
     {
         $this->assertSame($esperado, Dni::isValid($dni));
     }
 
+    /** Casos para testDniValido: [DNI, ¿es válido?]. */
     public static function dnis(): array
     {
         return [['40123456', true], ['1234567', true], ['123456', false], ['123456789', false], ['4012345a', false], ['', false]];
     }
 
+    /** Dni::isRegistrable solo acepta DNI dentro del rango del alta (casos en dnisRegistro()). */
     #[DataProvider('dnisRegistro')]
     public function testDniRegistrableSoloEnRango(string $dni, bool $esperado): void
     {
@@ -96,12 +108,14 @@ final class SupportTest extends TestCase
         ];
     }
 
+    /** Phone::normalize lleva cada forma de escribir un celular argentino a 10 dígitos o lo rechaza (casos en telefonos()). */
     #[DataProvider('telefonos')]
     public function testTelefonoArgentino(string $raw, ?string $esperado): void
     {
         $this->assertSame($esperado, Phone::normalize($raw));
     }
 
+    /** Phone::format muestra el número con +54 9 y Phone::whatsapp lo deja listo para wa.me; lo mostrado se vuelve a aceptar. */
     public function testTelefonoFormatoYWhatsapp(): void
     {
         $this->assertSame('+54 9 3781 40-1440', Phone::format('3781401440'));
@@ -111,6 +125,10 @@ final class SupportTest extends TestCase
         $this->assertSame(Phone::normalize(Phone::format('3781401440')), '3781401440', 'lo que se muestra se vuelve a aceptar igual');
     }
 
+    /**
+     * Password::hash/verify funcionan ida y vuelta, un hash vacío nunca verifica y validate exige el largo mínimo y
+     * máximo.
+     */
     public function testPasswordHashVerificaYValida(): void
     {
         $hash = Password::hash('Clave-Larga-1');
@@ -122,6 +140,10 @@ final class SupportTest extends TestCase
         $this->assertNotNull(Password::validate(str_repeat('a', Password::MAX + 1)));
     }
 
+    /**
+     * LoyaltyCard: visitas restantes, porcentaje, estado y meta cumplida a los 6 cortes pagos; cobrado el corte gratis
+     * la tarjeta vuelve a cero y empieza otro ciclo.
+     */
     public function testTarjetaDeFidelidad(): void
     {
         $user = new User('1', 'A', 'A B', 'a@b.c', 3);
@@ -146,6 +168,7 @@ final class SupportTest extends TestCase
         $this->assertSame(1, (new LoyaltyCard(8, 7))->stamps());
     }
 
+    /** Schedule::isDate acepta solo fechas reales en formato YYYY-MM-DD, sin año corto ni salto de línea al final. */
     public function testScheduleIsDate(): void
     {
         $this->assertTrue(Schedule::isDate('2026-02-28'));

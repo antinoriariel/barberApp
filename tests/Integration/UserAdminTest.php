@@ -21,6 +21,11 @@ final class UserAdminTest extends DbTestCase
         ];
     }
 
+    /**
+     * User::validate normaliza DNI con puntos, espacios del nombre y mayúsculas del email; deriva el nombre de pila;
+     * el email es opcional. Rechaza DNI corto, nombre sin apellido, email inválido, rol desconocido, contraseña corta
+     * y arreglos; al editar no pide DNI ni contraseña.
+     */
     public function testValidaAltaYNormalizaDatos(): void
     {
         [$data, $error] = User::validate($this->form(), true);
@@ -47,6 +52,10 @@ final class UserAdminTest extends DbTestCase
     /** @var int[] fichas de barbero creadas por el test (se borran después de las cuentas) */
     private array $barbers = [];
 
+    /**
+     * Junta las fichas de barbero creadas (las anotadas y las de las cuentas conocidas), borra primero las cuentas
+     * (users.barber_id apunta a la ficha) y después las fichas.
+     */
     protected function tearDown(): void
     {
         $ids = array_filter(array_map(static fn (string $dni) => User::find($dni)?->barberId, ['99700002', '99700005', '99700009']));
@@ -77,6 +86,10 @@ final class UserAdminTest extends DbTestCase
         return User::findById(User::saveFromAdmin($u, $data));
     }
 
+    /**
+     * Un barbero no elige ficha (la que venga en el formulario se ignora) y solo se guardan secciones válidas y
+     * concedibles, en el orden de las pestañas; con otro rol las secciones se descartan.
+     */
     public function testBarberoNoEligeFichaYSoloGuardaSeccionesValidas(): void
     {
         [$data, $error] = User::validate($this->form([
@@ -91,6 +104,11 @@ final class UserAdminTest extends DbTestCase
         $this->assertNull(User::validate($this->form(['role' => 'admin', 'sections' => ['fila']]), true)[0]['panel_access']);
     }
 
+    /**
+     * Dar de alta un barbero crea su ficha con su nombre, slug sin acentos, rol "Barbero", activa, como "Nuevo" y con
+     * un color libre; un homónimo recibe otro slug; renombrar la cuenta renombra la ficha; cambiar de rol la oculta y
+     * volver a barbero la reactiva.
+     */
     public function testAltaDeBarberoCreaSuFichaConElNombre(): void
     {
         $before = count(Barber::all());
@@ -123,6 +141,10 @@ final class UserAdminTest extends DbTestCase
         $this->assertSame(1, (int) \App\Core\Database::selectOne('SELECT active FROM barbers WHERE id = ?', [$profileId])['active']);
     }
 
+    /**
+     * Si el alta de un barbero choca con un DNI existente, la transacción se revierte y no queda una ficha creada sin
+     * cuenta.
+     */
     public function testAltaConDniRepetidoNoDejaFichaHuerfana(): void
     {
         $this->makeUser('99700003');
@@ -137,6 +159,7 @@ final class UserAdminTest extends DbTestCase
         $this->assertSame($before, (int) \App\Core\Database::selectOne('SELECT COUNT(*) AS n FROM barbers')['n'], 'rollback: no queda la ficha creada');
     }
 
+    /** Barber::retire borra físicamente la ficha de una cuenta eliminada si no tiene turnos. */
     public function testRetirarFichaSinTurnosLaBorra(): void
     {
         $u = $this->createBarber('99700009', 'Ficha Descartable');
@@ -146,6 +169,10 @@ final class UserAdminTest extends DbTestCase
         $this->assertNull(\App\Core\Database::selectOne('SELECT id FROM barbers WHERE id = ?', [$profileId]));
     }
 
+    /**
+     * Un barbero ve "Mi semana" más las secciones concedidas (nunca Usuarios); sin secciones ve solo su semana. Un
+     * admin ve todo menos "Mi semana" y un cliente no tiene panel.
+     */
     public function testPermisosDelPanelSegunRol(): void
     {
         $u = $this->createBarber('99700002', 'Juana Pérez', ['turnos', 'fila']);
@@ -170,12 +197,17 @@ final class UserAdminTest extends DbTestCase
         $this->assertFalse($client->canSee('semana'));
     }
 
+    /**
+     * Dashboard::week cuenta por día solo los turnos atendidos (done) del barbero; ausentes y reservados no suman, ni
+     * al total ni a la recaudación.
+     */
     public function testMiSemanaCuentaSoloLosCortesAtendidosDelBarbero(): void
     {
         $barber = Barber::all()[0];
         $client = $this->makeUser('99700008');
         $service = \App\Core\Database::selectOne('SELECT id, price FROM services WHERE active = 1 ORDER BY id LIMIT 1');
         $monday = '2031-06-02'; // lunes lejano, sin datos de la semilla
+        /** Inserta directo en la base un turno de 30 minutos de $client con $barber en $start y estado $status. */
         $insert = static function (string $start, string $status) use ($client, $barber, $service): void {
             \App\Core\Database::execute(
                 'INSERT INTO appointments (user_id, barber_id, service_id, starts_at, ends_at, price, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -196,6 +228,10 @@ final class UserAdminTest extends DbTestCase
         $this->assertSame(3 * (int) $service['price'], $mine['revenue']);
     }
 
+    /**
+     * Un celular repetido (escrito de otra forma pero igual al normalizarlo) choca con el índice único de la base
+     * (SQLSTATE 23000) aunque la validación lo haya dejado pasar.
+     */
     public function testDniOTelefonoRepetidosChocanConLosIndicesUnicos(): void
     {
         $this->makeUser('99700003', '3794119977');
@@ -210,6 +246,10 @@ final class UserAdminTest extends DbTestCase
         }
     }
 
+    /**
+     * Solo las cuentas sin historial figuran como eliminables y se borran; una cuenta de la semilla con turnos no se
+     * puede borrar.
+     */
     public function testSoloSeEliminanCuentasSinHistorial(): void
     {
         $fresh = $this->makeUser('99700007');
@@ -225,11 +265,16 @@ final class UserAdminTest extends DbTestCase
         $this->assertNotNull(User::find('40123456'));
     }
 
+    /** La semilla deja al menos un administrador activo (el panel nunca queda sin nadie que lo gestione). */
     public function testLaSemillaTraeUnAdministradorActivo(): void
     {
         $this->assertGreaterThanOrEqual(1, User::activeAdminCount());
     }
 
+    /**
+     * Suspender una cuenta invalida su sesión abierta y su login falla con el mismo error que una contraseña mala; al
+     * reactivarla vuelve a entrar.
+     */
     public function testCuentaDadaDeBajaNoEntraYPierdeLaSesion(): void
     {
         // Sesión real como en AuthTest (sin cookies: lo configura tests/bootstrap.php).

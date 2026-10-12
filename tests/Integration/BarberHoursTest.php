@@ -13,6 +13,10 @@ use App\Services\BookingException;
 /** Horario semanal de los barberos: la agenda y las reservas solo usan su franja de cada día. */
 final class BarberHoursTest extends DbTestCase
 {
+    /**
+     * Borra todos los horarios cargados (sin filas = cada barbero atiende el día completo) y luego limpia usuarios y
+     * turnos de prueba.
+     */
     protected function tearDown(): void
     {
         Database::execute('DELETE FROM barber_hours');
@@ -36,6 +40,7 @@ final class BarberHoursTest extends DbTestCase
         }
     }
 
+    /** Sin filas en barber_hours el barbero tiene ventana todo el día y se le puede reservar a primera hora. */
     public function testSinHorarioCargadoAtiendeTodoElDia(): void
     {
         $day = $this->futureOpenDay();
@@ -43,6 +48,10 @@ final class BarberHoursTest extends DbTestCase
         $this->assertSame(0, $this->statusOf(fn () => Booking::create($this->makeUser('99000001'), 'corte', 'nico', $day, '10:00')));
     }
 
+    /**
+     * Un día marcado como libre no ofrece horarios para ese barbero y Booking::create responde 422; "Cualquiera" lo
+     * saltea y asigna a otro.
+     */
     public function testDiaLibreNoOfreceNiAceptaTurnos(): void
     {
         $day = $this->futureOpenDay();
@@ -55,6 +64,10 @@ final class BarberHoursTest extends DbTestCase
         $this->assertNotSame('nico', $a['barber_id']);
     }
 
+    /**
+     * Con franja 14:00–17:00 solo se ofrecen y aceptan turnos dentro de ella: 10:00 da 422, 14:00 se reserva y 17:00
+     * (su hora de salida) no se ofrece.
+     */
     public function testSoloDentroDeSuFranja(): void
     {
         $day = $this->futureOpenDay();
@@ -69,6 +82,11 @@ final class BarberHoursTest extends DbTestCase
         $this->assertSame(0, $this->statusOf(fn () => Booking::create($u, 'corte', 'nico', $day, '14:00')));
     }
 
+    /**
+     * Schedule::saveOpenWeekdays abre el lunes (que la semilla deja cerrado) sin cambiar el miércoles por orden de
+     * llegada; al volver a cerrarlo, el turno ya reservado se conserva y countUpcomingOnWeekdays lo cuenta para el
+     * aviso. Restaura los días de data/schedule.php al final.
+     */
     public function testElAdminEligeLosDiasQueAbreElLocal(): void
     {
         $monday = date('Y-m-d', strtotime('next monday'));
@@ -89,6 +107,10 @@ final class BarberHoursTest extends DbTestCase
         }
     }
 
+    /**
+     * BarberHours::validate rechaza franja invertida, hora con texto y día fuera de 0–6; normaliza "9:30" a "09:30"
+     * y un día sin tilde queda con works = false.
+     */
     public function testValidacion(): void
     {
         [, $error] = BarberHours::validate([4 => ['works' => '1', 'from' => '18:00', 'to' => '10:00']]);

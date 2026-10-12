@@ -19,6 +19,10 @@ use App\Support\Password;
 /** Superusuario: login con "superuser", vigencia de su sesión, rastreo de navegadores, bloqueos y borrado completo. */
 final class SuperuserTest extends DbTestCase
 {
+    /**
+     * Sesión vacía y un superusuario recién configurado con una contraseña conocida (se reemplaza el que hubiera en
+     * la base de pruebas).
+     */
     protected function setUp(): void
     {
         $_SESSION = [];
@@ -29,6 +33,10 @@ final class SuperuserTest extends DbTestCase
         Superuser::setPassword(Password::hash('clave-super-de-prueba'));
     }
 
+    /**
+     * Vacía la sesión, borra el superusuario y los bloqueos de IP (rango de documentación 203.0.113.0/24) y de
+     * navegador creados por las pruebas.
+     */
     protected function tearDown(): void
     {
         $_SESSION = [];
@@ -38,6 +46,10 @@ final class SuperuserTest extends DbTestCase
         parent::tearDown();
     }
 
+    /**
+     * Escribir "superuser" (sin importar mayúsculas ni espacios) en el campo DNI verifica contra la clave del
+     * superusuario con el mismo límite de intentos; al entrar no hay cuenta de usuario asociada a la sesión.
+     */
     public function testEntraConSuperuserYNoEsUnaCuenta(): void
     {
         $this->assertSame(Auth::ERROR_CREDENTIALS . ' Te quedan 4 intentos.', Auth::attempt('superuser', 'mala', '10.0.1.1'));
@@ -49,6 +61,7 @@ final class SuperuserTest extends DbTestCase
         $this->assertNull(Session::get('dni'));
     }
 
+    /** Si nunca se configuró la contraseña (tabla superuser vacía) el login con "superuser" falla siempre. */
     public function testSinConfigurarNoSePuedeEntrar(): void
     {
         Database::execute('DELETE FROM superuser');
@@ -56,6 +69,10 @@ final class SuperuserTest extends DbTestCase
         $this->assertFalse(Auth::isSuperuser());
     }
 
+    /**
+     * Rotar la contraseña invalida las sesiones de superusuario abiertas (session_version) y pasar más de
+     * security.superuser_idle sin actividad también.
+     */
     public function testCambiarLaContrasenaCierraLaSesionYLaInactividadTambien(): void
     {
         $this->assertNull(Auth::attempt('superuser', 'clave-super-de-prueba', '10.0.1.3'));
@@ -67,6 +84,10 @@ final class SuperuserTest extends DbTestCase
         $this->assertFalse(Auth::isSuperuser(), 'venció por inactividad');
     }
 
+    /**
+     * Un bloqueo de IP rechaza cualquier navegador desde esa IP; un Permaban rechaza ese navegador desde cualquier IP.
+     * Desbloquear dos veces devuelve false y normalizeIp compacta IPv6 y descarta texto que no es IP.
+     */
     public function testBloqueosPorIpYPorNavegador(): void
     {
         $device = str_repeat('ab', 32);
@@ -87,6 +108,10 @@ final class SuperuserTest extends DbTestCase
         $this->assertNull(Ban::normalizeIp('no-es-ip'));
     }
 
+    /**
+     * Device::touch registra IP y navegador de la cuenta, UserActivity::browser lo resume ("Chrome · Android") y
+     * recentActions devuelve las tres últimas acciones con su user agent, de la más nueva a la más vieja.
+     */
     public function testRegistraNavegadorYUltimasTresAcciones(): void
     {
         $u = $this->makeUser('99800001');
@@ -108,6 +133,10 @@ final class SuperuserTest extends DbTestCase
         unset($_SERVER['HTTP_USER_AGENT']);
     }
 
+    /**
+     * Un bloqueo temporal cuenta cada rechazo (hits), deja de bloquear y de listarse al vencer, y volver a bloquear sin
+     * duración lo hace permanente y reinicia el contador.
+     */
     public function testBloqueoTemporalVenceYCuentaLosRechazos(): void
     {
         $device = str_repeat('cd', 32);
@@ -128,6 +157,11 @@ final class SuperuserTest extends DbTestCase
         $this->assertNull($row['expires_at'], 'sin duración es permanente');
     }
 
+    /**
+     * AuditLog::filters descarta fechas y usuarios inválidos; search filtra por grupo, IP, usuario y texto (con % y _
+     * literales) y actor() nombra al autor. suspiciousIps detecta la IP con muchos fallos sobre varios DNI y
+     * targetedAccounts el DNI atacado, pero no un fallo suelto.
+     */
     public function testRegistroFiltraYDetectaFuerzaBruta(): void
     {
         $u = $this->makeUser('99800003');
@@ -160,6 +194,10 @@ final class SuperuserTest extends DbTestCase
         $this->assertNotContains('11222333', array_column(AuditLog::targetedAccounts(), 'dni'), 'un solo fallo no es alerta');
     }
 
+    /**
+     * User::delete no puede con una cuenta que tiene turnos, historyCounts los cuenta y User::purge borra la cuenta
+     * junto con sus turnos.
+     */
     public function testPurgeBorraLaCuentaConSuHistorial(): void
     {
         $u = $this->makeUser('99800002');
