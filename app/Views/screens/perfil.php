@@ -56,6 +56,13 @@
       </button>
     </li>
     <li>
+      <?php // Vuelve a abrir el modo guía (assets/js/tour.js). ?>
+      <button class="prof-row" type="button" data-tour-start>
+        <span class="prof-ic"><?= icon('help') ?></span>
+        <span class="prof-text"><strong>Guía de la app</strong><small>Te mostramos para qué sirve cada cosa</small></span>
+      </button>
+    </li>
+    <li>
       <form class="inline-form" method="post" action="/logout">
         <?= csrf_field() ?>
         <button class="prof-row" type="submit">

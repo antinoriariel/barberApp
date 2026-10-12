@@ -1,4 +1,4 @@
-<?php /** components/topbar.php — Cabecera con el logo, el estado del local y el selector de tema claro/oscuro. Variables: $shopStatus (Shop::status()) */ ?>
+<?php /** components/topbar.php — Cabecera con el logo, el estado del local, el botón de la guía (tour.js) y el selector de tema claro/oscuro. Variables: $shopStatus (Shop::status()) */ ?>
 <header class="topbar">
   <?= partial('components/brand', ['href' => '#inicio']) ?>
   <div class="topbar-end">
@@ -10,6 +10,10 @@
         <?php if ($shopStatus['until'] !== ''): ?><small>hasta las <?= e($shopStatus['until']) ?></small><?php endif; ?>
       </span>
     </span>
+    <?php // Modo guía: recorrido por las funciones de la app (assets/js/tour.js, con driver.js). ?>
+    <button type="button" class="theme-toggle tour-open" id="tour-open" data-tour-start aria-label="Ver la guía de la app" title="Guía de la app">
+      <?= icon('help') ?>
+    </button>
     <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Cambiar a modo claro" title="Cambiar tema">
       <?= icon('sun', 'theme-ic-sun') ?><?= icon('moon', 'theme-ic-moon') ?>
     </button>

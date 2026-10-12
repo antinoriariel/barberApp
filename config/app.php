@@ -101,6 +101,8 @@ return [
             'css/components/skeleton.css',
             'css/components/arcade.css',
             'css/components/queue.css',
+            'vendor/driver/driver.css', // driver.js (modo guía), servido localmente por la CSP
+            'css/components/tour.css',
             'css/pages/login.css',
             'css/pages/admin.css',
             'css/pages/su.css',

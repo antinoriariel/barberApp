@@ -1,7 +1,7 @@
 .env
 storage/ratelimit/*
 .phpunit.cache/
-vendor/
+/vendor/
 storage/backups/
 storage/mail.log
 public/img/barberos/subidas/

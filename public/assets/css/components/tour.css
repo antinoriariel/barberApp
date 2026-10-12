@@ -1,0 +1,72 @@
+/* Modo guía (assets/js/tour.js): globos de driver.js con los colores y tipografías de la app.
+   La base es assets/vendor/driver/driver.css (se carga antes); acá solo se pisa la apariencia. */
+
+.driver-popover.tour-popover {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 18px 18px 14px;
+  max-width: min(340px, calc(100vw - 32px));
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .45);
+  font-family: var(--body);
+}
+
+.tour-popover .driver-popover-title {
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: .01em;
+  padding-right: 24px; /* lugar para la cruz */
+}
+
+.tour-popover .driver-popover-description {
+  margin-top: 6px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+.tour-popover .driver-popover-description b { color: var(--ink); font-weight: 600; }
+
+.tour-popover .driver-popover-close-btn {
+  color: var(--ink-soft);
+  width: 36px;
+  height: 36px;
+  font-size: 22px;
+}
+.tour-popover .driver-popover-close-btn:hover,
+.tour-popover .driver-popover-close-btn:focus { color: var(--ink); }
+
+.tour-popover .driver-popover-footer { margin-top: 14px; gap: 8px; }
+.tour-popover .driver-popover-progress-text { color: var(--ink-soft); font-size: 13px; }
+
+/* Botones: pastillas como el resto de la app; "Siguiente" en el rojo de marca. */
+.tour-popover .driver-popover-footer button {
+  font: 600 14px/1 var(--body);
+  text-shadow: none;
+  border-radius: 999px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+}
+.tour-popover .driver-popover-footer .driver-popover-next-btn {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.tour-popover .driver-popover-footer .driver-popover-next-btn:hover { background: var(--red-dark); }
+.tour-popover .driver-popover-footer button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+/* Flecha del globo con el color de la tarjeta. */
+.tour-popover .driver-popover-arrow-side-left { border-left-color: var(--paper); }
+.tour-popover .driver-popover-arrow-side-right { border-right-color: var(--paper); }
+.tour-popover .driver-popover-arrow-side-top { border-top-color: var(--paper); }
+.tour-popover .driver-popover-arrow-side-bottom { border-bottom-color: var(--paper); }
+
+/* Quien prefiere menos movimiento: sin la animación de entrada. */
+@media (prefers-reduced-motion: reduce) {
+  .driver-fade .driver-overlay, .driver-fade .driver-popover { animation: none; }
+}

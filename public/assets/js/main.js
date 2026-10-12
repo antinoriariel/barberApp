@@ -11,6 +11,7 @@ import { initTheme } from './theme.js';
 import { initCatalog } from './catalog.js';
 import { initScanner } from './scanner.js';
 import { initQueue } from './queue.js';
+import { initTour } from './tour.js';
 
 initTheme();
 initCatalog();
@@ -20,4 +21,5 @@ initNavigation();
 initToast();
 initBooking();
 initArcade();
+initTour(); // al final: la guía puede abrirse sola y necesita la navegación ya iniciada
 registerServiceWorker();
