@@ -1,7 +1,8 @@
 <?php
 /**
  * components/arcade.php — Área de minijuegos de la pantalla de inicio ("matá el rato mientras esperás").
- * Cada tarjeta abre el juego en un diálogo (arcade.js). Los premios ganados se listan abajo.
+ * Cada tarjeta abre el juego en un diálogo (arcade.js). Los premios ganados se listan abajo. Al terminar una
+ * partida el cartel de fin muestra el top del juego (los 6 mejores, ver Models\GameScore).
  * Variables: $games (array slug => [name, goal, promo, …] de config/games.php),
  *            $rewards (array de [code, label, expires] vigentes del cliente)
  */
@@ -51,6 +52,11 @@ $icons = ['flappy' => 'scissors', 'runner' => 'chair', 'pacman' => 'star'];
       <div class="arcade-over" id="arcade-over" hidden>
         <h4 id="arcade-over-title"></h4>
         <p id="arcade-over-msg"></p>
+        <?php // Top del juego (arcade.js lo llena con textContent a partir de /juegos/fin; nunca HTML del servidor) ?>
+        <div class="arcade-top" id="arcade-top" hidden>
+          <h5>Mejores puntajes</h5>
+          <ol id="arcade-top-list"></ol>
+        </div>
         <button type="button" class="btn-primary" id="arcade-again">Jugar de nuevo</button>
       </div>
     </div>

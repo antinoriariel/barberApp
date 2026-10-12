@@ -46,18 +46,25 @@ final class GameReward
 
     /**
      * Guarda un premio nuevo con un código aleatorio ("NAV-K7M2QX") que vence en $validDays días.
+     * El código es UNIQUE: si por azar ya existe, se genera otro (hasta 5 intentos) en vez de cortar con un error.
      * @return array{code: string, label: string, expires: string}
      */
     public static function create(User $user, string $game, string $label, int $score, int $validDays): array
     {
         $expires = strtotime("+{$validDays} days");
-        $code = 'NAV-';
-        for ($i = 0; $i < 6; $i++) {
-            $code .= self::ALPHABET[random_int(0, strlen(self::ALPHABET) - 1)];
+        for ($try = 1; ; $try++) {
+            $code = 'NAV-';
+            for ($i = 0; $i < 6; $i++) {
+                $code .= self::ALPHABET[random_int(0, strlen(self::ALPHABET) - 1)];
+            }
+            $taken = Database::selectOne('SELECT id FROM game_rewards WHERE code = ?', [$code]) !== null;
+            if (!$taken || $try >= 5) {
+                break;
+            }
         }
         Database::execute(
             'INSERT INTO game_rewards (user_id, game, code, label, score, expires_at) VALUES (?, ?, ?, ?, ?, ?)',
-            [$user->id, $game, $code, $label, $score, date('Y-m-d H:i:s', $expires)]
+            [$user->id, $game, $code, $label, min($score, 65535), date('Y-m-d H:i:s', $expires)]
         );
         return ['code' => $code, 'label' => $label, 'expires' => date('d/m', $expires)];
     }

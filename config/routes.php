@@ -91,9 +91,11 @@ return static function (Router $router): void {
     $router->post('/su/permaban', [SuperController::class, 'permaban']);
     $router->post('/su/permaban/quitar', [SuperController::class, 'unbanDevice']);
 
-    // Minijuegos de la pantalla de inicio (JSON; sesión + CSRF).
+    // Minijuegos de la pantalla de inicio (JSON; sesión + CSRF). Tiempo y puntaje los valida el servidor.
     $router->post('/juegos/iniciar', [GameController::class, 'start']);
+    $router->post('/juegos/fin', [GameController::class, 'finish']);
     $router->post('/juegos/premio', [GameController::class, 'claim']);
+    $router->get('/api/juegos/ranking', [GameController::class, 'leaderboard']);
 
     // Recursos de la PWA generados dinámicamente.
     $router->get('/manifest.webmanifest', [PwaController::class, 'manifest']);
