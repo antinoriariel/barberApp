@@ -11,6 +11,8 @@ use App\Core\Response;
 use App\Models\AuditLog;
 use App\Models\Ban;
 use App\Models\Barber;
+use App\Models\GameStats;
+use App\Models\UiUsage;
 use App\Models\User;
 use App\Models\UserActivity;
 use App\Services\Audit;
@@ -59,10 +61,14 @@ final class SuperController extends Controller
         'permaban'     => 'Permaban aplicado: ese navegador ya no puede usar la app.',
         'permaban-sin' => 'Cuenta suspendida. No tenía navegadores registrados para bloquear (todavía no había entrado con el rastreo activo).',
         'limpiado'     => 'Registros viejos de auditoría borrados.',
+        'uso-limpiado' => 'Datos viejos de uso de la app borrados.',
     ];
 
     /** Pantallas a las que puede volver una acción (campo POST "volver"); cualquier otra cosa vuelve a /su. */
-    private const BACK = ['seguridad' => '/su/seguridad', 'auditoria' => '/su/auditoria'];
+    private const BACK = ['seguridad' => '/su/seguridad', 'auditoria' => '/su/auditoria', 'uso' => '/su/uso'];
+
+    /** Pestañas del panel del superusuario (claves de components/admin-header.php), en orden. */
+    public const TABS = ['su', 'su-seguridad', 'su-auditoria', 'su-uso', 'su-juegos'];
 
     /** Dirección a la que vuelve la acción actual según el campo "volver" (solo valores de BACK: nada externo). */
     private function back(): string
@@ -212,6 +218,62 @@ final class SuperController extends Controller
             'size'       => AuditLog::size(),
             'myIp'       => $request->ip(),
             'myDevice'   => Device::hash(),
+        ]));
+    }
+
+    /**
+     * GET /su/uso — mapa de calor del uso de la app (Models\UiUsage). Filtros por query (UiUsage::filters): período,
+     * pantalla, capa (contenido / barras y diálogos), dispositivo, modo (clicks o presencia del mouse en PC) y peso
+     * (promedio por usuario o suma). Debajo del mapa: el plano de componentes, el ranking de componentes de esa
+     * pantalla, el resumen por pantalla y la retención. js/su-heatmap.js dibuja el mapa con los datos del JSON
+     * embebido en la página (sin pedidos extra).
+     */
+    public function usage(Request $request): void
+    {
+        $this->requireSuper();
+        $f = UiUsage::filters($_GET);
+        $data = $this->page($request, 'Uso de la app', [
+            'f'          => $f,
+            'heat'       => UiUsage::heat($f),
+            'boxes'      => UiUsage::boxes($f), // el plano sale de los clicks también en el modo mouse
+            'components' => UiUsage::components($f),
+            'screens'    => UiUsage::screens($f['from']),
+            'totals'     => UiUsage::totals($f['from']),
+            'size'       => UiUsage::size(),
+        ]);
+        $data['scripts'][] = 'js/su-heatmap.js';
+        $this->view('pages/su-uso', $data);
+    }
+
+    /**
+     * POST /su/uso/limpiar — campo days (uno de config/tracking.php → retention): borra los datos de uso más viejos
+     * que eso. Queda auditado con la cantidad de filas.
+     */
+    public function purgeUsage(Request $request): void
+    {
+        $this->requireSuper();
+        $this->requireCsrf($request);
+        $days = (int) $request->input('days', 0);
+        if (!in_array($days, UiUsage::config()['retention'], true)) {
+            $this->fail('Elegí una antigüedad válida.');
+        }
+        $deleted = UiUsage::purgeOlderThan($days);
+        Audit::log('su_usage_purge', null, "más de {$days} días · {$deleted} filas");
+        $this->done('uso-limpiado');
+    }
+
+    /**
+     * GET /su/juegos?dias=N — tiempo en los minijuegos (Models\GameStats sobre game_sessions, tiempo medido por el
+     * servidor): totales, por juego, por día, por hora, cuánto se jugó esperando (fila o turno) y quiénes más juegan.
+     */
+    public function games(Request $request): void
+    {
+        $this->requireSuper();
+        $days = GameStats::period($request->query('dias', 30));
+        $this->view('pages/su-juegos', $this->page($request, 'Minijuegos', [
+            'days'  => $days,
+            'stats' => GameStats::build($days),
+            'games' => (require BASE_PATH . '/config/games.php')['games'],
         ]));
     }
 

@@ -32,7 +32,7 @@ $hits = static fn (array $ban): string => (int) $ban['hits'] > 0
     : 'sin intentos desde que se bloqueó';
 ?>
 <main class="admin su">
-  <?= partial('components/admin-header', ['heading' => 'Superusuario', 'sub' => 'Todas las cuentas, conexiones y bloqueos', 'sections' => ['su', 'su-seguridad', 'su-auditoria'], 'active' => 'su']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Superusuario', 'sub' => 'Todas las cuentas, conexiones y bloqueos', 'sections' => \App\Controllers\SuperController::TABS, 'active' => 'su']) ?>
 
   <?php if ($notice !== '' || $error !== ''): ?>
   <div class="admin-flashes" id="aviso">

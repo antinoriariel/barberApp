@@ -4,7 +4,7 @@
  * y pestañas de las vistas. El botón de tema lo conecta js/admin.js (que AdminController carga en todas las vistas).
  * Variables: $heading (string), $sub (string),
  *            $active ('semana'|'resumen'|'turnos'|'fila'|'barberos'|'finanzas'|'ingresos'|'egresos'|'servicios'|'usuarios',
- *                     o en el panel del superusuario 'su'|'su-seguridad'|'su-auditoria'),
+ *                     o en el panel del superusuario 'su'|'su-seguridad'|'su-auditoria'|'su-uso'|'su-juegos'),
  *            $sections (string[]: secciones que la cuenta puede ver, User::panelSections(); solo esas pestañas se muestran)
  */
 $tabs = [
@@ -22,6 +22,8 @@ $tabs = [
     'su'           => ['/su', 'Cuentas'],
     'su-seguridad' => ['/su/seguridad', 'Seguridad'],
     'su-auditoria' => ['/su/auditoria', 'Auditoría'],
+    'su-uso'       => ['/su/uso', 'Uso de la app'],
+    'su-juegos'    => ['/su/juegos', 'Minijuegos'],
 ];
 $tabs = array_intersect_key($tabs, array_flip($sections ?? []));
 ?>

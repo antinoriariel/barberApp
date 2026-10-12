@@ -11,6 +11,7 @@ import { initTheme } from './theme.js';
 import { initCatalog } from './catalog.js';
 import { initScanner } from './scanner.js';
 import { initQueue } from './queue.js';
+import { initTracking } from './track.js';
 
 initTheme();
 initCatalog();
@@ -20,4 +21,5 @@ initNavigation();
 initToast();
 initBooking();
 initArcade();
+initTracking(); // al final: mide lo que ya está armado y no demora a los demás
 registerServiceWorker();

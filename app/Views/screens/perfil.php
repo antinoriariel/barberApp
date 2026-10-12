@@ -5,7 +5,7 @@
  */
 ?>
 <section class="view" id="view-perfil" data-title="Perfil" data-skel="perfil" hidden>
-  <header class="me-card">
+  <header class="me-card" data-track="perfil.datos">
     <?= partial('components/face-avatar', ['initials' => initials($user->fullName), 'class' => 'big']) ?>
     <div class="me-text">
       <h1><?= e($user->fullName) ?></h1>
@@ -25,7 +25,7 @@
   <?php if (!$history): ?>
     <p class="prof-empty">Todavía no tenés visitas. Cuando te atendamos, van a aparecer acá.</p>
   <?php else: ?>
-    <ul class="visits">
+    <ul class="visits" data-track="perfil.historial">
       <?php foreach ($history as $h): ?>
         <li class="visit">
           <span class="visit-ic"><?= icon('scissors') ?></span>
@@ -43,14 +43,14 @@
   <ul class="prof-list">
     <?php if ($user->hasPanel()): ?>
       <li>
-        <a class="prof-row" href="/admin">
+        <a class="prof-row" href="/admin" data-track="perfil.panel">
           <span class="prof-ic"><?= icon('home') ?></span>
           <span class="prof-text"><strong><?= $user->isAdmin ? 'Panel de administración' : 'Mi semana' ?></strong><small><?= $user->isAdmin ? 'Turnos, ingresos y servicios' : 'Tus cortes de la semana' ?></small></span>
         </a>
       </li>
     <?php endif; ?>
     <li>
-      <button class="prof-row" type="button" data-toast="Avisos activados: te recordamos 2 horas antes">
+      <button class="prof-row" type="button" data-track="perfil.avisos" data-toast="Avisos activados: te recordamos 2 horas antes">
         <span class="prof-ic"><?= icon('bell') ?></span>
         <span class="prof-text"><strong>Avisos de turno</strong><small>Te recordamos 2 horas antes</small></span>
       </button>
@@ -58,7 +58,7 @@
     <li>
       <form class="inline-form" method="post" action="/logout">
         <?= csrf_field() ?>
-        <button class="prof-row" type="submit">
+        <button class="prof-row" type="submit" data-track="perfil.cerrar-sesion">
           <span class="prof-ic"><?= icon('logout') ?></span>
           <span class="prof-text"><strong>Cerrar sesión</strong></span>
         </button>
@@ -67,7 +67,7 @@
     <li>
       <form class="inline-form" method="post" action="/logout-todo">
         <?= csrf_field() ?>
-        <button class="prof-row danger" type="submit">
+        <button class="prof-row danger" type="submit" data-track="perfil.cerrar-todo">
           <span class="prof-ic"><?= icon('logout') ?></span>
           <span class="prof-text"><strong>Cerrar sesión en todos los dispositivos</strong><small>Útil si perdiste un teléfono o usaste una PC ajena</small></span>
         </button>

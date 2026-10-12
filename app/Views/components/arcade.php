@@ -9,7 +9,7 @@
 $icons = ['flappy' => 'scissors', 'runner' => 'chair', 'pacman' => 'star'];
 ?>
 <details class="arcade home-wide" id="arcade" <?= $rewards ? 'open' : '' ?>>
-  <summary class="arcade-summary">
+  <summary class="arcade-summary" data-track="juegos.desplegar">
     <span>¿Esperando tu turno? <small>Jugá un rato</small></span>
     <span class="arcade-chevron" aria-hidden="true">▾</span>
   </summary>
@@ -17,7 +17,7 @@ $icons = ['flappy' => 'scissors', 'runner' => 'chair', 'pacman' => 'star'];
 
   <div class="arcade-grid">
     <?php foreach ($games as $slug => $game): ?>
-      <button type="button" class="arcade-card" data-game="<?= e($slug) ?>"
+      <button type="button" class="arcade-card" data-game="<?= e($slug) ?>" data-track="juegos.jugar" data-track-item="<?= e($slug) ?>"
               data-name="<?= e($game['name']) ?>" data-goal="<?= e($game['goal']) ?>"
               data-target="<?= (int) ($game['target'] ?? 0) ?>">
         <span class="arcade-ic"><?= icon($icons[$slug] ?? 'star') ?></span>
@@ -30,7 +30,7 @@ $icons = ['flappy' => 'scissors', 'runner' => 'chair', 'pacman' => 'star'];
     <?php endforeach; ?>
   </div>
 
-  <div class="arcade-rewards" id="arcade-rewards" <?= $rewards ? '' : 'hidden' ?>>
+  <div class="arcade-rewards" id="arcade-rewards" data-track="juegos.premios" <?= $rewards ? '' : 'hidden' ?>>
     <h3>Tus premios</h3>
     <ul id="arcade-rewards-list">
       <?php foreach ($rewards as $r): ?>
@@ -44,20 +44,21 @@ $icons = ['flappy' => 'scissors', 'runner' => 'chair', 'pacman' => 'star'];
     <div class="arcade-bar">
       <h3 id="arcade-title"></h3>
       <span class="arcade-score" id="arcade-score" aria-live="off">0</span>
-      <button type="button" class="arcade-close" id="arcade-close">Salir</button>
+      <button type="button" class="arcade-close" id="arcade-close" data-track="juegos.salir">Salir</button>
     </div>
     <p class="arcade-hint" id="arcade-hint"></p>
     <div class="arcade-stage">
-      <canvas id="arcade-canvas" width="320" height="480"></canvas>
+      <?php // Las taps del juego no son navegación: el mapa de calor las ignora (el tiempo jugado se mide en /su/juegos). ?>
+      <canvas id="arcade-canvas" width="320" height="480" data-track-ignore></canvas>
       <div class="arcade-over" id="arcade-over" hidden>
         <h4 id="arcade-over-title"></h4>
         <p id="arcade-over-msg"></p>
         <?php // Top del juego (arcade.js lo llena con textContent a partir de /juegos/fin; nunca HTML del servidor) ?>
-        <div class="arcade-top" id="arcade-top" hidden>
+        <div class="arcade-top" id="arcade-top" data-track="juegos.ranking" hidden>
           <h5>Mejores puntajes</h5>
           <ol id="arcade-top-list"></ol>
         </div>
-        <button type="button" class="btn-primary" id="arcade-again">Jugar de nuevo</button>
+        <button type="button" class="btn-primary" id="arcade-again" data-track="juegos.reintentar">Jugar de nuevo</button>
       </div>
     </div>
   </dialog>

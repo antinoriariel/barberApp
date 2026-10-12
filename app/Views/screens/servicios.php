@@ -9,8 +9,8 @@
   <h1 class="page-title">Servicios</h1>
 
   <div class="catalog-tabs" role="tablist" aria-label="Categorías">
-    <button type="button" class="catalog-tab" role="tab" id="tab-servicios" aria-controls="panel-servicios" aria-selected="true">Servicios</button>
-    <button type="button" class="catalog-tab" role="tab" id="tab-productos" aria-controls="panel-productos" aria-selected="false" tabindex="-1">Productos</button>
+    <button type="button" class="catalog-tab" role="tab" id="tab-servicios" aria-controls="panel-servicios" aria-selected="true" data-track="servicios.tab-servicios">Servicios</button>
+    <button type="button" class="catalog-tab" role="tab" id="tab-productos" aria-controls="panel-productos" aria-selected="false" tabindex="-1" data-track="servicios.tab-productos">Productos</button>
   </div>
 
   <div class="catalog-panel" id="panel-servicios" role="tabpanel" aria-labelledby="tab-servicios">
@@ -18,7 +18,7 @@
     <ul class="svc-grid">
       <?php foreach ($services as $s): ?>
         <li>
-          <button class="svc-card" data-book-service="<?= e($s->id) ?>">
+          <button class="svc-card" data-book-service="<?= e($s->id) ?>" data-track="servicios.reservar" data-track-item="<?= e($s->id) ?>" data-track-to="#reservar">
             <span class="svc-icon"><?= icon('scissors') ?></span>
             <span class="svc-text">
               <strong><?= e($s->name) ?></strong>
@@ -39,7 +39,7 @@
     <ul class="svc-grid">
       <?php foreach ($products as $p): ?>
         <li>
-          <article class="svc-card product-card">
+          <article class="svc-card product-card" data-track="servicios.producto" data-track-item="<?= e($p->id) ?>">
             <span class="svc-icon"><?= icon('jar') ?></span>
             <span class="svc-text">
               <strong><?= e($p->name) ?></strong>

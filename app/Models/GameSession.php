@@ -157,6 +157,20 @@ final class GameSession
     }
 
     /**
+     * Partidas cerradas que empezaron desde `$from` (Y-m-d H:i:s), con firma válida, para las estadísticas del
+     * superusuario (Models\GameStats, /su/juegos). Solo los campos que hacen falta para sumar tiempos.
+     * @return array<int, array{user_id: int, game: string, status: string, started_at: string, seconds: int, score: int, rewarded: int}>
+     */
+    public static function closedSince(string $from): array
+    {
+        return array_map(static fn (array $r) => [
+            'user_id' => (int) $r['user_id'], 'game' => (string) $r['game'], 'status' => (string) $r['status'],
+            'started_at' => (string) $r['started_at'], 'seconds' => (int) $r['seconds'], 'score' => (int) $r['score'],
+            'rewarded' => (int) $r['rewarded'],
+        ], self::closedRows('started_at >= ?', [$from]));
+    }
+
+    /**
      * Partidas cerradas que cumplen `$where` y cuya firma es válida. Las alteradas se descartan y se dejan en el log
      * de errores para revisarlas. `$where` es siempre una condición fija escrita en esta clase (nunca del cliente).
      * @return array<int, array<string, mixed>>

@@ -5,7 +5,7 @@
  * Variables: $card (Models\LoyaltyCard)
  */
 ?>
-<div class="loyalty">
+<div class="loyalty" data-track="inicio.fidelidad">
   <div class="loyalty-head">
     <h2><?= e($card->title()) ?></h2>
     <p><?= e($card->status()) ?></p>

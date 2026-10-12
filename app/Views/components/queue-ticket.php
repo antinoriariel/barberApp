@@ -7,7 +7,7 @@
  */
 $called = $ticket['status'] === 'called';
 ?>
-<article class="queue-card<?= $called ? ' is-called' : '' ?>" id="queue-card" aria-live="polite">
+<article class="queue-card<?= $called ? ' is-called' : '' ?>" id="queue-card" data-track="fila.tarjeta" aria-live="polite">
   <div class="queue-main">
     <p class="queue-label">Tu número en la fila</p>
     <p class="queue-number" data-q-number><?= $ticket['number'] ?></p>
@@ -25,7 +25,7 @@ $called = $ticket['status'] === 'called';
     </p>
     <form method="post" action="/fila/salir" class="queue-leave">
       <?= csrf_field() ?>
-      <button class="link" type="submit">Dejar la fila</button>
+      <button class="link" type="submit" data-track="fila.salir">Dejar la fila</button>
     </form>
   </div>
 </article>

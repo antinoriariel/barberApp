@@ -7,7 +7,7 @@
  */
 $first = explode(' ', $barber->name)[0];
 ?>
-<li class="barber<?= $barber->photo ? ' has-photo' : '' ?><?= $barber->isTopRated() ? ' is-top' : '' ?>" style="--tone: <?= e(css_color($barber->tone)) ?>">
+<li data-track="barberos.tarjeta" data-track-item="<?= e($barber->id) ?>" class="barber<?= $barber->photo ? ' has-photo' : '' ?><?= $barber->isTopRated() ? ' is-top' : '' ?>" style="--tone: <?= e(css_color($barber->tone)) ?>">
   <div class="barber-top">
     <?php // Ficha recién creada desde /admin/usuarios: sin valoración ni años cargados, se presenta como "Nuevo". ?>
     <span class="rating"><?php if ($barber->isNew()): ?>Nuevo<?php else: ?><?= icon('star') ?><?= e($barber->rating) ?><?php endif; ?></span>
@@ -26,6 +26,6 @@ $first = explode(' ', $barber->name)[0];
         <img class="barber-photo" src="<?= e($barber->photo) ?>" alt="Ilustración de <?= e($barber->name) ?>" width="128" height="128" loading="lazy" decoding="async">
       <?php endif; ?>
     </div>
-    <button class="btn-primary block" data-book-barber="<?= e($barber->id) ?>">Reservar con <?= e($first) ?></button>
+    <button class="btn-primary block" data-book-barber="<?= e($barber->id) ?>" data-track="barberos.reservar" data-track-item="<?= e($barber->id) ?>" data-track-to="#reservar">Reservar con <?= e($first) ?></button>
   </div>
 </li>

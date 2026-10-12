@@ -8,11 +8,11 @@
 ?>
 <section class="view" id="view-inicio" data-title="Inicio" data-skel="inicio" hidden>
   <header class="home-title">
-    <div>
+    <div data-track="inicio.saludo">
       <h1 class="hero-title">Hola, <?= e($user->name) ?></h1>
       <p class="home-sub">Qué bueno verte por acá.</p>
     </div>
-    <?= partial('components/face-avatar', ['initials' => initials($user->fullName), 'href' => '#perfil', 'label' => 'Mi perfil', 'class' => 'home-avatar']) ?>
+    <?= partial('components/face-avatar', ['initials' => initials($user->fullName), 'href' => '#perfil', 'label' => 'Mi perfil', 'class' => 'home-avatar', 'track' => 'inicio.avatar']) ?>
   </header>
 
   <?php if ($queue): // número de la fila de hoy (QR del mostrador): va primero porque es lo más urgente ?>
@@ -25,7 +25,7 @@
 
   <div class="section-head">
     <h2>Lo más pedido</h2>
-    <a href="#servicios" class="link">Ver todos</a>
+    <a href="#servicios" class="link" data-track="inicio.ver-todos">Ver todos</a>
   </div>
   <div class="rail">
     <?php foreach ($popular as $service): ?>
@@ -35,7 +35,7 @@
 
   <?= partial('components/arcade', compact('games', 'rewards')) ?>
 
-  <div class="info-list">
+  <div class="info-list" data-track="inicio.local">
     <p><span class="info-ic"><?= icon('pin') ?></span><?= e($shop->address) ?></p>
     <p><span class="info-ic"><?= icon('clock') ?></span><span><?= nl2br(e($shop->hours)) ?></span></p>
   </div>
