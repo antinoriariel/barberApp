@@ -115,6 +115,7 @@ final class BarberHoursTest extends DbTestCase
     {
         $day = $this->futureOpenDay();
         $nico = Barber::find('nico');
+        $before = Barber::upcomingCount($nico->key); // la semilla puede haberle dejado turnos de ejemplo a futuro
         Booking::create($this->makeUser('99000001'), 'corte', 'nico', $day, '10:00');
         Barber::setEnabled($nico->key, false);
         try {
@@ -125,7 +126,7 @@ final class BarberHoursTest extends DbTestCase
             $this->assertSame([], array_filter(array_column(Schedule::slots($day, 'nico', 30), 'free')));
             $this->assertSame(422, $this->statusOf(fn () => Booking::create($this->makeUser('99000002'), 'corte', 'nico', $day, '10:00')));
             $this->assertNotSame('nico', Booking::create($this->makeUser('99000003'), 'corte', 'any', $day, '10:00')['barber_id']);
-            $this->assertSame(1, Barber::upcomingCount($nico->key), 'el turno ya reservado se conserva');
+            $this->assertSame($before + 1, Barber::upcomingCount($nico->key), 'el turno ya reservado se conserva');
         } finally {
             Barber::setEnabled($nico->key, true);
         }

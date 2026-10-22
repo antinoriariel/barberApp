@@ -54,7 +54,7 @@ final class AuthTest extends DbTestCase
         $this->assertSame(Auth::ERROR_CREDENTIALS . ' Te quedan 7 intentos.', Auth::attempt('abc', 'clave-de-prueba', '10.0.0.1'), 'formato inválido: solo cuenta la IP');
         $this->assertNull(Session::get('dni'));
 
-        $this->assertNull(Auth::attempt('99.000.021', 'clave-de-prueba', '10.0.0.1'));
+        $this->assertNull(Auth::attempt('69.990.021', 'clave-de-prueba', '10.0.0.1'));
         $this->assertSame('69990021', Session::get('dni'));
         $this->assertSame('69990021', Auth::user()?->dni);
     }
