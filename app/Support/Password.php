@@ -36,11 +36,15 @@ final class Password
     }
 
     /**
-     * Valida una contraseña nueva: largo mínimo configurable (auth.min_password) y máximo MAX.
+     * Valida una contraseña nueva: sin bytes nulos (el login nunca las acepta y bcrypt corta en ellos),
+     * largo mínimo configurable (auth.min_password) y máximo MAX.
      * @return string|null mensaje de error, o null si es válida
      */
     public static function validate(string $plain): ?string
     {
+        if (str_contains($plain, "\0")) {
+            return 'La contraseña tiene caracteres no válidos.';
+        }
         $min = (int) Config::get('auth.min_password');
         $len = mb_strlen($plain);
         if ($len < $min) {

@@ -4,14 +4,14 @@
  * Lo cargado acá se resta de los ingresos en el resumen (día y mes) y en finanzas.
  *
  * Variables: $month ('YYYY-MM'), $prev/$next ('YYYY-MM'), $isCurrent, $totals (Dashboard::finance del mes:
- *            revenue/expenses/net), $expenses (Expense::forMonth), $flash ('1'|''), $error (string)
+ *            revenue/extra/expenses/net), $expenses (Expense::forMonth), $flash ('1'|''), $error (string)
  */
 $net = $totals['net'];
 $today = date('Y-m-d');
 $defaultDate = substr($today, 0, 7) === $month ? $today : $month . '-01';
 ?>
 <main class="admin">
-  <?= partial('components/admin-header', ['heading' => 'Egresos', 'sub' => ucfirst(month_es((int) substr($month, 5))) . ' ' . substr($month, 0, 4) . ($isCurrent ? ' · mes en curso' : ''), 'active' => 'egresos']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Egresos', 'sub' => ucfirst(month_es((int) substr($month, 5))) . ' ' . substr($month, 0, 4) . ($isCurrent ? ' · mes en curso' : ''), 'sections' => $user->panelSections(), 'active' => 'egresos']) ?>
 
   <nav class="admin-nav" aria-label="Cambiar de mes">
     <a class="btn-small" href="/admin/egresos?mes=<?= e($prev) ?>">← Mes anterior</a>
@@ -31,7 +31,7 @@ $defaultDate = substr($today, 0, 7) === $month ? $today : $month . '-01';
     <article class="kpi">
       <h2>Resultado</h2>
       <p class="kpi-value <?= $net < 0 ? 'neg' : '' ?>"><?= $net < 0 ? '−' . money(-$net) : money($net) ?></p>
-      <p class="kpi-prev">Ingresos (<?= money($totals['revenue']) ?>) menos egresos</p>
+      <p class="kpi-prev">Ingresos (<?= money($totals['revenue'] + $totals['extra']) ?>, con extra) menos egresos</p>
     </article>
   </section>
 
@@ -62,8 +62,8 @@ $defaultDate = substr($today, 0, 7) === $month ? $today : $month . '-01';
     <p class="admin-empty">No hay egresos cargados en este mes.</p>
 <?php else: ?>
     <div class="table-wrap">
-      <?php // .stack: en celular cada egreso es una tarjeta (data-label = título de la columna); desde 720px, tabla. ?>
-      <table class="admin-table stack">
+      <?php // .oneline: cada egreso ocupa un solo renglón también en celular; se desliza de costado con la fecha fija (ver admin.css). ?>
+      <table class="admin-table oneline">
         <thead><tr><th>Fecha</th><th>Gasto</th><th>Categoría</th><th>Observación</th><th class="num">Monto</th><th></th></tr></thead>
         <tbody>
 <?php foreach ($expenses as $x): ?>

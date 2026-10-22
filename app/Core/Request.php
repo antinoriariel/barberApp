@@ -31,6 +31,17 @@ final class Request
         return $_POST[$key] ?? $default;
     }
 
+    /**
+     * Campo POST como texto plano. Si llega otra cosa (p. ej. un arreglo con `password[]=a&password[]=b`)
+     * devuelve $default en vez de convertirlo a "Array" con un warning, y corta en $max bytes para que nadie
+     * mande megas en un campo que se va a procesar.
+     */
+    public function string(string $key, string $default = '', int $max = 1024): string
+    {
+        $v = $_POST[$key] ?? $default;
+        return is_string($v) ? substr($v, 0, $max) : $default;
+    }
+
     /** Cabecera de la petición por nombre ('X-CSRF-Token'), o null. */
     public function header(string $name): ?string
     {

@@ -64,14 +64,17 @@ return [
     // Seguridad (ver docs/seguridad.md).
     'security' => [
         // Intentos de login fallidos permitidos por ventana, por IP y por DNI.
-        'login_max_attempts_ip'  => 10,
-        'login_max_attempts_dni' => 5,
+        // LOGIN_RATELIMIT=0 en .env lo apaga (solo para desarrollo local).
+        'login_max_attempts_ip'  => getenv('LOGIN_RATELIMIT') === '0' ? PHP_INT_MAX : 10,
+        'login_max_attempts_dni' => getenv('LOGIN_RATELIMIT') === '0' ? PHP_INT_MAX : 5,
         'login_window'           => 15 * 60, // segundos que dura el bloqueo
         // Altas de cuenta y pedidos de recuperación por IP, por ventana.
         'register_max_attempts_ip' => 5,
         'reset_max_attempts_ip'    => 5,
         // HSTS (solo se envía bajo HTTPS): segundos que el navegador recordará usar solo HTTPS.
         'hsts_max_age'           => 60 * 60 * 24 * 180,
+        // Segundos sin actividad tras los que la sesión del superusuario se cierra sola (2 horas).
+        'superuser_idle'         => 2 * 60 * 60,
     ],
 
     'assets' => [
@@ -100,6 +103,7 @@ return [
             'css/components/queue.css',
             'css/pages/login.css',
             'css/pages/admin.css',
+            'css/pages/su.css',
             'css/a11y.css',
         ],
     ],
