@@ -70,6 +70,7 @@ const SHELL = [
   '/assets/js/login.js',
   '/assets/js/money-input.js',
   '/assets/js/admin.js',
+  '/assets/js/collapse.js',
   '/assets/js/admin-users.js',
   '/manifest.webmanifest',
   '/icon.png?s=192',

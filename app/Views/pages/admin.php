@@ -75,10 +75,7 @@ $before = array_column($yesterday['barbers'], null, 'id');
     </article>
   </section>
 
-  <section class="admin-card" aria-labelledby="by-month">
-    <h2 id="by-month">Ingresos y egresos · últimos 6 meses</h2>
-    <?= partial('components/admin-chart', ['finance' => $finance]) ?>
-  </section>
+  <?= partial('components/admin-chart', ['finance' => $finance, 'id' => 'by-month', 'title' => 'Ingresos y egresos · últimos 6 meses']) ?>
 
   <section class="admin-card" aria-labelledby="by-barber">
     <h2 id="by-barber">Por barbero · <?= e(date_es($day)) ?></h2>

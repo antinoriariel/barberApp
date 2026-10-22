@@ -106,6 +106,14 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .exp-submit { width: 100%; padding: 12px 14px; text-align: center; }
 
 /* Barras agrupadas: ingresos (rojo) y egresos (gris) por mes. */
+/* Tarjeta minimizable (components/admin-chart.php + js/collapse.js): botón arriba a la derecha. */
+.admin-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.card-toggle { flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; margin: -6px -6px -6px 0; border: 1.5px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink-soft); cursor: pointer; }
+.card-toggle:hover { border-color: var(--ink-soft); color: var(--ink); }
+.card-toggle svg { transition: transform .2s ease; }
+.collapsible.is-collapsed .card-toggle svg { transform: rotate(180deg); }
+.collapsible.is-collapsed .admin-card-body { display: none; }
+
 .chart { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin: 14px 0 10px; padding: 0; list-style: none; }
 .chart li { display: grid; grid-template-rows: auto 110px auto; gap: 4px; justify-items: center; min-width: 0; }
 .chart-val { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink-soft); }

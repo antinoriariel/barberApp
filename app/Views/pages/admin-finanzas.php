@@ -41,10 +41,7 @@ $net = $cur['net'];
     </article>
   </section>
 
-  <section class="admin-card" aria-labelledby="fin-chart">
-    <h2 id="fin-chart">Últimos 6 meses</h2>
-    <?= partial('components/admin-chart', ['finance' => $finance]) ?>
-  </section>
+  <?= partial('components/admin-chart', ['finance' => $finance, 'id' => 'fin-chart', 'title' => 'Últimos 6 meses']) ?>
 
   <p class="admin-empty"><a class="link" href="/admin/egresos?mes=<?= e($month) ?>">Agregar o ver los gastos del mes en Egresos</a></p>
 </main>
