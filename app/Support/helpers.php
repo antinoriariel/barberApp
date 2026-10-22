@@ -161,3 +161,15 @@ function slugify(string $text, string $fallback = 'item'): string
     $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', $ascii), '-');
     return substr($slug !== '' ? $slug : $fallback, 0, 24);
 }
+
+/**
+ * Segundos que faltan en una cuenta regresiva como "m:ss" o, desde una hora, "h:mm:ss" (95 → "1:35", 3700 →
+ * "1:01:40"). Es el texto inicial que después actualiza js/countdown.js con el mismo formato.
+ */
+function countdown_text(int $seconds): string
+{
+    $s = max(0, $seconds);
+    $h = intdiv($s, 3600);
+    $m = intdiv($s % 3600, 60);
+    return $h > 0 ? sprintf('%d:%02d:%02d', $h, $m, $s % 60) : sprintf('%d:%02d', $m, $s % 60);
+}

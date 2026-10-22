@@ -13,11 +13,11 @@
   <main>
     <?= partial('components/skeletons') ?>
 
-    <?= partial('screens/inicio', compact('user', 'shop', 'loyalty', 'next', 'popular', 'games', 'rewards', 'queue')) ?>
+    <?= partial('screens/inicio', compact('user', 'shop', 'loyalty', 'next', 'popular', 'games', 'rewards', 'queue', 'deadHour')) ?>
     <?= partial('screens/servicios', compact('services', 'products')) ?>
     <?= partial('screens/reservar', compact('services', 'barbers', 'days', 'slots')) ?>
     <?= partial('screens/barberos', compact('barbers')) ?>
-    <?= partial('screens/perfil', compact('user', 'loyalty', 'history')) ?>
+    <?= partial('screens/perfil', compact('user', 'loyalty', 'history', 'deadHour')) ?>
   </main>
 
   <?= partial('components/tabbar', compact('user')) ?>

@@ -18,14 +18,15 @@ final class User
      * las pestañas. "usuarios" no está a propósito: dar de alta cuentas y cambiar contraseñas es solo del administrador.
      */
     public const SECTIONS = [
-        'resumen'   => 'Resumen',
-        'turnos'    => 'Turnos',
-        'fila'      => 'Fila',
-        'barberos'  => 'Barberos',
-        'finanzas'  => 'Finanzas',
-        'ingresos'  => 'Ingreso extra',
-        'egresos'   => 'Egresos',
-        'servicios' => 'Servicios',
+        'resumen'     => 'Resumen',
+        'turnos'      => 'Turnos',
+        'hora-muerta' => 'Hora muerta',
+        'fila'        => 'Fila',
+        'barberos'    => 'Barberos',
+        'finanzas'    => 'Finanzas',
+        'ingresos'    => 'Ingreso extra',
+        'egresos'     => 'Egresos',
+        'servicios'   => 'Servicios',
     ];
 
     /** Roles que se eligen en /admin/usuarios (clave => etiqueta). Son excluyentes. */
@@ -291,7 +292,8 @@ final class User
      * equipo si el rol es barbero:
      *  - pasa a barbero (alta o cliente/admin que cambia de rol) → Barber::provision crea su ficha con el nombre completo
      *    (o reactiva la que tenía si vuelve);
-     *  - ya era barbero → conserva su ficha y le actualiza el nombre;
+     *  - ya era barbero → conserva su ficha y, si cambió el nombre de la cuenta, se lo copia (si no, respeta el que se
+     *    le haya puesto en /admin/barberos);
      *  - deja de ser barbero → su ficha se oculta (no toma turnos nuevos; su historial de cortes queda).
      * $target es null en el alta (entonces $passwordHash es obligatorio). Devuelve el id de la cuenta.
      * @throws \PDOException con código 23000 si el DNI o el teléfono ya existen (no queda nada a medias: rollback)
@@ -301,7 +303,7 @@ final class User
         return (int) Database::transaction(function () use ($target, $data, $passwordHash) {
             if ($data['is_barber']) {
                 $data['barber_id'] = $target?->barberId ?? Barber::provision($data['full_name']);
-                if ($target?->barberId !== null) {
+                if ($target?->barberId !== null && $target->fullName !== $data['full_name']) {
                     Barber::rename($target->barberId, $data['full_name']);
                 } elseif ($target !== null && !$target->active) {
                     Barber::setActive($data['barber_id'], false); // cuenta suspendida: su ficha aparece recién con el alta

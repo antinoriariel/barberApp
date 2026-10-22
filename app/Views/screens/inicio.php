@@ -3,7 +3,7 @@
  * screens/inicio.php — Pantalla de inicio (mobile first): saludo, turno, fidelidad,
  * servicios más pedidos, minijuegos plegados y datos del local.
  * Variables: $user, $shop (Shop), $loyalty (LoyaltyCard), $next (array|null), $queue (QueueTicket::currentFor|null), $popular (Service[]),
- *            $games (config/games.php), $rewards (premios vigentes del cliente)
+ *            $games (config/games.php), $rewards (premios vigentes del cliente), $deadHour (DeadHour::current() o null)
  */
 ?>
 <section class="view" id="view-inicio" data-title="Inicio" data-skel="inicio" hidden>
@@ -14,6 +14,10 @@
     </div>
     <?= partial('components/face-avatar', ['initials' => initials($user->fullName), 'href' => '#perfil', 'label' => 'Mi perfil', 'class' => 'home-avatar']) ?>
   </header>
+
+  <?php if ($deadHour): // "Hora muerta": descuento por tiempo limitado ?>
+    <?= partial('components/dead-hour', ['promo' => $deadHour]) ?>
+  <?php endif; ?>
 
   <?php if ($queue): // número de la fila de hoy (QR del mostrador): va primero porque es lo más urgente ?>
     <?= partial('components/queue-ticket', ['ticket' => $queue]) ?>

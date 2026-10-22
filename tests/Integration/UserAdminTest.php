@@ -190,7 +190,7 @@ final class UserAdminTest extends DbTestCase
         $admin = $this->edit($u, ['role' => 'admin']);
         $this->assertTrue($admin->canSee('usuarios'));
         $this->assertFalse($admin->canSee('semana'), 'el admin no es barbero: no tiene "Mi semana"');
-        $this->assertSame('usuarios', $admin->panelSections()[8]);
+        $this->assertSame('usuarios', array_slice($admin->panelSections(), -1)[0], '"usuarios" va siempre al final');
 
         $client = $this->edit($admin, ['role' => 'cliente']);
         $this->assertFalse($client->hasPanel());

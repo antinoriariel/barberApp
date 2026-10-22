@@ -7,6 +7,7 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Models\Appointment;
 use App\Models\Barber;
+use App\Models\DeadHour;
 use App\Models\GameReward;
 use App\Models\LoyaltyCard;
 use App\Models\Product;
@@ -54,6 +55,7 @@ final class ShellController extends Controller
             'queue'       => QueueTicket::currentFor($user), // número de la fila de hoy (QR del mostrador) o null
             'games'       => (require BASE_PATH . '/config/games.php')['games'],
             'rewards'     => GameReward::active($user),
+            'deadHour'    => DeadHour::current(), // "Hora muerta" vigente (aviso en Inicio y Perfil) o null
             'barbers'     => Barber::all(),
             'days'        => $days,
             // Horarios del primer día con el primer servicio y "cualquier barbero" (la selección inicial);

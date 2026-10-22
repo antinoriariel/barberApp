@@ -13,6 +13,7 @@ use App\Models\Appointment;
 use App\Models\Barber;
 use App\Models\BarberHours;
 use App\Models\Dashboard;
+use App\Models\DeadHour;
 use App\Models\Expense;
 use App\Models\Income;
 use App\Models\Product;
@@ -66,7 +67,7 @@ final class AdminController extends Controller
 
     /** Dirección de cada sección del panel (para mandar a un barbero a la primera que tiene habilitada). */
     private const SECTION_URLS = [
-        'semana' => '/admin/mi-semana', 'resumen' => '/admin', 'turnos' => '/admin/turnos', 'fila' => '/admin/fila', 'barberos' => '/admin/barberos',
+        'semana' => '/admin/mi-semana', 'resumen' => '/admin', 'turnos' => '/admin/turnos', 'hora-muerta' => '/admin/hora-muerta', 'fila' => '/admin/fila', 'barberos' => '/admin/barberos',
         'finanzas' => '/admin/finanzas', 'ingresos' => '/admin/ingresos', 'egresos' => '/admin/egresos',
         'servicios' => '/admin/servicios', 'usuarios' => '/admin/usuarios',
     ];
@@ -229,6 +230,29 @@ final class AdminController extends Controller
         Barber::setEnabled($barber->key, $enabled);
         Audit::log($enabled ? 'admin_barber_enable' : 'admin_barber_disable', $user->id, 'barbero ' . $barber->key);
         $this->redirect('/admin/barberos#horario-' . rawurlencode($barber->id));
+    }
+
+    /**
+     * POST /admin/barberos/nombre — campos: barber (slug), name. Cambia el nombre con el que el barbero figura en la
+     * app, el panel y los tickets (2 a 80 caracteres). El slug no cambia (lo usan los enlaces y el horario) y la cuenta
+     * vinculada, si tiene, conserva su propio nombre.
+     */
+    public function renameBarber(Request $request): void
+    {
+        $user = $this->requireStaffEditor();
+        $this->requireCsrf($request);
+
+        $barber = Barber::find((string) $request->input('barber', ''), true);
+        if ($barber === null) {
+            $this->redirect('/admin/barberos?error=' . rawurlencode('Ese barbero no existe.'));
+        }
+        $name = trim((string) preg_replace('/\s+/u', ' ', (string) $request->input('name', '')));
+        if (mb_strlen($name) < 2 || mb_strlen($name) > 80) {
+            $this->redirect('/admin/barberos?error=' . rawurlencode('El nombre tiene que tener entre 2 y 80 caracteres.') . '#horario-' . rawurlencode($barber->id));
+        }
+        Barber::rename($barber->key, $name);
+        Audit::log('admin_barber_rename', $user->id, 'barbero ' . $barber->key);
+        $this->redirect('/admin/barberos?ok=nombre#horario-' . rawurlencode($barber->id));
     }
 
     /**
@@ -492,6 +516,55 @@ final class AdminController extends Controller
             Audit::log('admin_appointment_' . $status, $user->id, 'turno ' . $id);
         }
         $this->redirect('/admin/turnos?fecha=' . $day . '&ok=' . ($ok ? '1' : '0'));
+    }
+
+    /**
+     * GET /admin/hora-muerta — "Hora muerta": si hay una vigente muestra el descuento con la cuenta regresiva y el botón
+     * para cortarla; si no, el formulario para activarla (porcentaje y duración). Abajo, las últimas que hubo y cuántos
+     * turnos se reservaron con cada una.
+     */
+    public function deadHour(Request $request): void
+    {
+        $user = $this->requireSection('hora-muerta');
+        $this->view('pages/admin-hora-muerta', [
+            'title'     => 'Hora muerta · Barbería',
+            'bodyClass' => 'admin-page',
+            'user'      => $user,
+            'current'   => DeadHour::current(),
+            'recent'    => DeadHour::recent(),
+            'flash'     => (string) $request->query('ok', ''),
+            'error'     => (string) $request->query('error', ''),
+        ]);
+    }
+
+    /**
+     * POST /admin/hora-muerta — campos: percent, minutes. Activa la hora muerta desde ahora (si había otra vigente, la
+     * reemplaza). Desde ese momento los clientes ven el descuento y los turnos de hoy que reserven salen con él.
+     */
+    public function startDeadHour(Request $request): void
+    {
+        $user = $this->requireSection('hora-muerta');
+        $this->requireCsrf($request);
+
+        [$data, $error] = DeadHour::validate(['percent' => $request->input('percent'), 'minutes' => $request->input('minutes')]);
+        if ($error !== null) {
+            $this->redirect('/admin/hora-muerta?error=' . rawurlencode($error));
+        }
+        $id = DeadHour::start($data['percent'], $data['minutes'], $user->id);
+        Audit::log('admin_dead_hour_start', $user->id, 'hora muerta ' . $id . ' · ' . $data['percent'] . '% · ' . $data['minutes'] . ' min');
+        $this->redirect('/admin/hora-muerta?ok=inicio');
+    }
+
+    /** POST /admin/hora-muerta/terminar — corta la hora muerta vigente antes de tiempo ("Terminar ahora"). */
+    public function stopDeadHour(Request $request): void
+    {
+        $user = $this->requireSection('hora-muerta');
+        $this->requireCsrf($request);
+
+        if (DeadHour::stop()) {
+            Audit::log('admin_dead_hour_stop', $user->id, 'cortada a mano');
+        }
+        $this->redirect('/admin/hora-muerta?ok=fin');
     }
 
     /**

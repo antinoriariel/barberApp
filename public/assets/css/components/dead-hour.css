@@ -1,0 +1,47 @@
+/* Componente: "Hora muerta" (aviso del cliente en Inicio y Perfil, y página /admin/hora-muerta). */
+
+/* --- Aviso del cliente (components/dead-hour.php): rojo de marca, porcentaje grande y cuenta regresiva --- */
+.dead-hour {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 16px 18px; border-radius: 16px; background: var(--red); color: #fff;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--red) 40%, transparent); animation: dead-hour-pulse 2.4s ease-in-out infinite;
+}
+.dead-hour[hidden] { display: none; }
+.dead-hour-text { min-width: 0; }
+.dead-hour-tag { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .9; }
+.dead-hour-pct { font-family: var(--display); font-weight: 900; font-size: 40px; line-height: 1; margin-top: 2px; }
+.dead-hour-sub { font-size: 13px; opacity: .9; margin-top: 4px; }
+.dead-hour-end { flex: none; display: grid; justify-items: end; gap: 2px; text-align: right; }
+.dead-hour-end small { font-size: 12px; opacity: .85; }
+.dead-hour-clock { font-family: var(--display); font-weight: 800; font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
+.dead-hour-cta {
+  margin-top: 6px; padding: 6px 14px; border-radius: 999px; background: #fff; color: var(--red);
+  font-weight: 800; font-size: 14px; text-decoration: none;
+}
+@keyframes dead-hour-pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--red) 22%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .dead-hour { animation: none; } }
+
+/* --- Panel: hora muerta en curso --- */
+.dh-live { display: grid; justify-items: center; gap: 6px; text-align: center; border: 1.5px solid var(--red); }
+.dh-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--red); }
+.dh-pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: dh-blink 1.2s ease-in-out infinite; }
+.admin-card h2.dh-percent { font-family: var(--display); font-weight: 900; font-size: 44px; line-height: 1; color: var(--ink); text-transform: none; letter-spacing: 0; }
+.dh-clock { font-family: var(--display); font-weight: 800; font-size: 64px; line-height: 1; font-variant-numeric: tabular-nums; color: var(--red); }
+.dh-live .inline-form { margin-top: 6px; }
+@keyframes dh-blink { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .dh-pulse { animation: none; } }
+
+/* --- Panel: formulario (chips de porcentaje y duración; la card es .invert, ver pages/admin.css) --- */
+.dh-group { border: 0; padding: 0; display: grid; gap: 8px; }
+.dh-group legend { padding: 0; margin-bottom: 8px; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+.dh-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.dh-chip { position: relative; cursor: pointer; }
+.dh-chip input { position: absolute; opacity: 0; pointer-events: none; }
+.dh-chip span {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 64px; height: 42px; padding: 0 14px;
+  border: 1.5px solid #A9A9A4; border-radius: 999px; background: #F1F1EE; color: #141414; font-weight: 700; font-size: 15px;
+}
+.dh-chip input:checked + span { background: var(--red); border-color: var(--red); color: #fff; }
+.dh-chip input:focus-visible + span { outline: 3px solid color-mix(in srgb, var(--red) 45%, transparent); outline-offset: 2px; }
+:root[data-theme="light"] .admin-card.invert .dh-chip span { background: #262626; border-color: #5A5A5A; color: #fff; }
+:root[data-theme="light"] .admin-card.invert .dh-chip input:checked + span { background: var(--red); border-color: var(--red); }

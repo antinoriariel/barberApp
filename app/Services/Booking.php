@@ -8,6 +8,7 @@ use App\Core\Database;
 use App\Models\Appointment;
 use App\Models\Barber;
 use App\Models\BarberHours;
+use App\Models\DeadHour;
 use App\Models\Schedule;
 use App\Models\Service;
 use App\Models\User;
@@ -151,7 +152,8 @@ final class Booking
         }
 
         try {
-            $id = Appointment::insert($user, $barber, $services, $start);
+            // "Hora muerta" vigente: los turnos de hoy reservados mientras dura salen con su descuento.
+            $id = Appointment::insert($user, $barber, $services, $start, DeadHour::percentFor($date));
         } catch (\PDOException $e) {
             if ($e->getCode() === '23000') { // uq_barber_slot: otro cliente reservó el mismo horario en el mismo instante
                 throw new BookingException('Ese horario se acaba de ocupar. Elegí otro.', 409);

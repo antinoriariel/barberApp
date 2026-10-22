@@ -1,7 +1,8 @@
 <?php
 /**
  * screens/perfil.php — Perfil: datos de la cuenta, resumen de visitas, historial y ajustes.
- * Variables: $user (User), $loyalty (LoyaltyCard), $history (array de ['service','barber','date','price'])
+ * Variables: $user (User), $loyalty (LoyaltyCard), $history (array de ['service','barber','date','price']),
+ *            $deadHour (DeadHour::current() o null: aviso de descuento con cuenta regresiva)
  */
 ?>
 <section class="view" id="view-perfil" data-title="Perfil" data-skel="perfil" hidden>
@@ -20,6 +21,10 @@
       </div>
     </dl>
   </header>
+
+  <?php if ($deadHour): ?>
+    <?= partial('components/dead-hour', ['promo' => $deadHour]) ?>
+  <?php endif; ?>
 
   <div class="section-head"><h2>Últimas visitas</h2></div>
   <?php if (!$history): ?>

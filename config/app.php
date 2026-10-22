@@ -103,6 +103,7 @@ return [
             'css/components/skeleton.css',
             'css/components/arcade.css',
             'css/components/queue.css',
+            'css/components/dead-hour.css',
             'vendor/driver/driver.css', // driver.js (modo guía), servido localmente por la CSP
             'css/components/tour.css',
             'css/pages/login.css',

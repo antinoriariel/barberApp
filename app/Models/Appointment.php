@@ -176,16 +176,19 @@ final class Appointment
      * Inserta un turno reservado con uno o más servicios seguidos y devuelve su id. El primero queda como servicio
      * principal; la duración y el precio son la suma (precios congelados al reservar) y cada servicio se guarda
      * en appointment_services. Debe correr dentro de una transacción.
+     * $discount (0–100, "Hora muerta") se descuenta del total redondeado al peso y queda en discount_pct; los precios
+     * por servicio de appointment_services siguen siendo los de lista.
      * @param Service[] $services
      */
-    public static function insert(User $user, Barber $barber, array $services, int $start): int
+    public static function insert(User $user, Barber $barber, array $services, int $start, int $discount = 0): int
     {
         $minutes = array_sum(array_map(static fn (Service $s) => $s->minutes, $services));
-        $price = array_sum(array_map(static fn (Service $s) => $s->price, $services));
+        $discount = max(0, min(100, $discount));
+        $price = (int) round(array_sum(array_map(static fn (Service $s) => $s->price, $services)) * (100 - $discount) / 100);
         Database::execute(
-            "INSERT INTO appointments (user_id, barber_id, service_id, starts_at, ends_at, price, status)
-             VALUES (?, ?, ?, ?, ?, ?, 'booked')",
-            [$user->id, $barber->key, $services[0]->key, self::sql($start), self::sql($start + $minutes * 60), $price]
+            "INSERT INTO appointments (user_id, barber_id, service_id, starts_at, ends_at, price, discount_pct, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'booked')",
+            [$user->id, $barber->key, $services[0]->key, self::sql($start), self::sql($start + $minutes * 60), $price, $discount]
         );
         $id = Database::lastId();
         foreach ($services as $position => $service) {

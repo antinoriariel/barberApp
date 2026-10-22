@@ -4,7 +4,8 @@
  *
  * Debajo, los días que abre el local (opening_hours, se eligen con un tilde por día) y el horario semanal de cada barbero: qué días atiende y de qué hora a qué hora. La agenda solo le ofrece
  * turnos dentro de esa franja; los días que el local cierra o atiende por orden de llegada no se configuran.
- * Cada ficha permite cambiar o quitar la foto del barbero, y al final se da de alta un barbero nuevo (con foto opcional).
+ * Cada ficha permite cambiar el nombre y cambiar o quitar la foto del barbero. El alta de un barbero nuevo (con foto opcional)
+ * va dentro de Horarios de atención, entre los días del local y las fichas, en una tarjeta resaltada (.invert).
  * Cada tarjeta tiene un interruptor Habilitado/Deshabilitado: deshabilitado, el barbero no figura para los clientes
  * (equipo ni reserva) pero su horario se sigue pudiendo editar.
  * Solo el administrador los edita: un barbero con la sección habilitada ($canEdit = false) ve lo mismo en modo
@@ -13,7 +14,7 @@
  * Variables: $canEdit (bool: es admin), $week (Dashboard::week), $prev/$next (YYYY-MM-DD: semana anterior/siguiente), $isCurrent (bool),
  *            $team (lista de ['barber' => Barber, 'hours' => BarberHours::week, 'pending' => turnos a futuro si está
  *            deshabilitado]), $weekdays (Schedule::weekdayStatus),
- *            $flash ('1' horario guardado | 'dias' días del local guardados | 'nuevo' barbero creado | 'foto' foto cambiada | ''),
+ *            $flash ('1' horario guardado | 'dias' días del local guardados | 'nuevo' barbero creado | 'foto' foto cambiada | 'nombre' nombre cambiado | ''),
  *            $error (string),
  *            $stranded (turnos reservados que quedaron en días ahora cerrados)
  */
@@ -27,6 +28,7 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
   <?php if ($flash === 'dias'): ?><p class="admin-flash ok" role="status">Días del local guardados.</p><?php endif; ?>
   <?php if ($flash === 'nuevo'): ?><p class="admin-flash ok" role="status">Barbero agregado. Ya aparece en la app; por defecto atiende la jornada completa, ajustá su horario abajo.</p><?php endif; ?>
   <?php if ($flash === 'foto'): ?><p class="admin-flash ok" role="status">Foto actualizada.</p><?php endif; ?>
+  <?php if ($flash === 'nombre'): ?><p class="admin-flash ok" role="status">Nombre actualizado.</p><?php endif; ?>
   <?php if ($stranded > 0): ?><p class="admin-flash bad" role="alert">Ojo: hay <?= $stranded ?> turno<?= $stranded === 1 ? '' : 's' ?> reservado<?= $stranded === 1 ? '' : 's' ?> en días que ahora están cerrados. No se cancelan solos: revisalos en Turnos.</p><?php endif; ?>
   <?php if ($error !== ''): ?><p class="admin-flash bad" role="alert"><?= e($error) ?></p><?php endif; ?>
 
@@ -94,6 +96,27 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
       </ul>
 <?php endif; ?>
     </section>
+<?php if ($canEdit): ?>
+    <?php // Alta de un barbero (solo el administrador): aparece en la app al instante; la foto se recorta al cuadrado y se guarda como WebP. ?>
+    <section class="admin-card svc-edit invert" id="nuevo-barbero" aria-labelledby="barber-new">
+      <h2 id="barber-new">Nuevo barbero</h2>
+      <form method="post" action="/admin/barberos/nuevo" enctype="multipart/form-data" class="svc-edit">
+        <?= csrf_field() ?>
+        <div class="svc-fields">
+          <label class="wide">Nombre y apellido<input type="text" name="name" maxlength="80" required placeholder="Ej: Tomi Sosa"></label>
+          <label class="wide">Especialidad<input type="text" name="role" maxlength="80" required placeholder="Ej: Diseños y freestyle"></label>
+          <label>Años de oficio<input type="number" name="years" value="1" min="0" max="60" step="1" inputmode="numeric" required></label>
+          <label>Valoración<input type="number" name="rating" value="4.8" min="1" max="5" step="0.1" inputmode="decimal" required></label>
+          <label>Color del avatar<input class="bp-color" type="color" name="tone" value="#EB1716" required></label>
+          <label class="wide">Foto (opcional)<input class="bp-file" type="file" name="photo" accept="image/jpeg,image/png,image/webp"></label>
+        </div>
+        <p class="admin-sub">JPG, PNG o WebP de hasta 5 MB. Se recorta al cuadrado del centro: mejor una foto con la cara centrada.</p>
+        <div class="svc-row-actions">
+          <button class="btn-small" type="submit">Agregar barbero</button>
+        </div>
+      </form>
+    </section>
+<?php endif; ?>
 
     <div class="hours-grid">
 <?php foreach ($team as ['barber' => $b, 'hours' => $hours, 'pending' => $pending]):
@@ -120,6 +143,15 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
 <?php endif; ?>
           <span class="hours-count"><?= $b->enabled ? 'Atiende ' . $working . ' de ' . count($openDays) . ' días' : 'No figura para los clientes' ?></span>
         </header>
+<?php if ($canEdit): ?>
+        <?php // Nombre con el que figura en la app, el panel y los tickets (el slug no cambia). ?>
+        <form method="post" action="/admin/barberos/nombre" class="bp-form barber-name-edit">
+          <?= csrf_field() ?>
+          <input type="hidden" name="barber" value="<?= e($b->id) ?>">
+          <input class="bn-input" type="text" name="name" value="<?= e($b->name) ?>" minlength="2" maxlength="80" required aria-label="Nombre de <?= e($b->name) ?>">
+          <button class="btn-small" type="submit">Guardar nombre</button>
+        </form>
+<?php endif; ?>
         <?php // Foto del barbero: la que se ve en su tarjeta, al reservar y en el ticket del turno. ?>
         <div class="barber-photo-edit">
 <?php if ($b->photo): ?>
@@ -186,25 +218,4 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
     </div>
   </section>
 
-<?php if ($canEdit): ?>
-  <?php // Alta de un barbero (solo el administrador): aparece en la app al instante; la foto se recorta al cuadrado y se guarda como WebP. ?>
-  <section class="admin-card svc-edit" id="nuevo-barbero" aria-labelledby="barber-new">
-    <h2 id="barber-new">Nuevo barbero</h2>
-    <form method="post" action="/admin/barberos/nuevo" enctype="multipart/form-data" class="svc-edit">
-      <?= csrf_field() ?>
-      <div class="svc-fields">
-        <label class="wide">Nombre y apellido<input type="text" name="name" maxlength="80" required placeholder="Ej: Tomi Sosa"></label>
-        <label class="wide">Especialidad<input type="text" name="role" maxlength="80" required placeholder="Ej: Diseños y freestyle"></label>
-        <label>Años de oficio<input type="number" name="years" value="1" min="0" max="60" step="1" inputmode="numeric" required></label>
-        <label>Valoración<input type="number" name="rating" value="4.8" min="1" max="5" step="0.1" inputmode="decimal" required></label>
-        <label>Color del avatar<input class="bp-color" type="color" name="tone" value="#EB1716" required></label>
-        <label class="wide">Foto (opcional)<input class="bp-file" type="file" name="photo" accept="image/jpeg,image/png,image/webp"></label>
-      </div>
-      <p class="admin-sub">JPG, PNG o WebP de hasta 5 MB. Se recorta al cuadrado del centro: mejor una foto con la cara centrada.</p>
-      <div class="svc-row-actions">
-        <button class="btn-small" type="submit">Agregar barbero</button>
-      </div>
-    </form>
-  </section>
-<?php endif; ?>
 </main>

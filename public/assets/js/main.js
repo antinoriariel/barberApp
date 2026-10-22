@@ -12,6 +12,7 @@ import { initCatalog } from './catalog.js';
 import { initScanner } from './scanner.js';
 import { initQueue } from './queue.js';
 import { initTour } from './tour.js';
+import { initCountdowns } from './countdown.js';
 
 initTheme();
 initCatalog();
@@ -21,5 +22,6 @@ initNavigation();
 initToast();
 initBooking();
 initArcade();
+initCountdowns(); // aviso de "Hora muerta"
 initTour(); // al final: la guía puede abrirse sola y necesita la navegación ya iniciada
 registerServiceWorker();

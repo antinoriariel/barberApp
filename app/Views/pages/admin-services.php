@@ -67,7 +67,7 @@
 
   <h2 class="admin-section-title">Servicios</h2>
 
-  <section class="admin-card svc-edit" aria-labelledby="svc-new">
+  <section class="admin-card svc-edit invert" aria-labelledby="svc-new">
     <h2 id="svc-new">Agregar servicio</h2>
     <form method="post" action="/admin/servicios/guardar" class="svc-edit">
       <?= csrf_field() ?>
