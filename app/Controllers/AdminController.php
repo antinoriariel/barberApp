@@ -183,8 +183,9 @@ final class AdminController extends Controller
 
     /**
      * GET /admin/barberos?fecha=YYYY-MM-DD — cortes atendidos por barbero en la semana (lunes a domingo) de esa fecha
-     * y, debajo, el horario semanal de cada barbero (lo que usa la agenda para ofrecer turnos). Para un barbero
-     * (canEdit = false) los días del local y los horarios se muestran en modo lectura, sin formularios.
+     * y, debajo, el horario semanal de cada barbero (lo que usa la agenda para ofrecer turnos). Se listan también los
+     * deshabilitados (Barber::team) para poder volver a habilitarlos. Para un barbero (canEdit = false) los días del
+     * local, los horarios y el estado de cada barbero se muestran en modo lectura, sin formularios.
      */
     public function barbers(Request $request): void
     {
@@ -200,12 +201,34 @@ final class AdminController extends Controller
             'prev'      => date('Y-m-d', strtotime($week['from'] . ' -7 days')),
             'next'      => date('Y-m-d', strtotime($week['from'] . ' +7 days')),
             'isCurrent' => $week['from'] === Dashboard::week(date('Y-m-d'))['from'],
-            'team'      => array_map(static fn (Barber $b) => ['barber' => $b, 'hours' => BarberHours::week($b->key)], Barber::all()),
+            'team'      => array_map(static fn (Barber $b) => ['barber' => $b, 'hours' => BarberHours::week($b->key),
+                // Deshabilitado: cuántos turnos le quedan reservados (no se cancelan solos; la tarjeta avisa).
+                'pending' => $b->enabled ? 0 : Barber::upcomingCount($b->key)], Barber::team()),
             'weekdays'  => Schedule::weekdayStatus(),
             'flash'     => (string) $request->query('ok', ''),
             'error'     => (string) $request->query('error', ''),
             'stranded'  => (int) $request->query('turnos', 0),
         ]);
+    }
+
+    /**
+     * POST /admin/barberos/estado — campos: barber (slug), enabled ('1' habilitar | '0' deshabilitar). Deshabilitado,
+     * el barbero no figura en el equipo de la app ni en la reserva (ni en "cualquiera"); sigue en el panel. Los turnos
+     * que ya tenía reservados no se cancelan: su tarjeta avisa cuántos quedan para que el admin los revise en Turnos.
+     */
+    public function toggleBarber(Request $request): void
+    {
+        $user = $this->requireStaffEditor();
+        $this->requireCsrf($request);
+
+        $barber = Barber::find((string) $request->input('barber', ''), true);
+        if ($barber === null) {
+            $this->redirect('/admin/barberos?error=' . rawurlencode('Ese barbero no existe.'));
+        }
+        $enabled = $request->input('enabled') === '1';
+        Barber::setEnabled($barber->key, $enabled);
+        Audit::log($enabled ? 'admin_barber_enable' : 'admin_barber_disable', $user->id, 'barbero ' . $barber->key);
+        $this->redirect('/admin/barberos#horario-' . rawurlencode($barber->id));
     }
 
     /**
@@ -232,14 +255,15 @@ final class AdminController extends Controller
     /**
      * POST /admin/barberos/horario — campos: barber (slug), days[weekday][works|from|to]. Guarda el horario semanal
      * de un barbero; solo se aceptan los días en que el local da turnos (los demás no se usan para reservar).
-     * Los turnos ya reservados no se tocan: el cambio vale para las reservas nuevas.
+     * Los turnos ya reservados no se tocan: el cambio vale para las reservas nuevas. Un barbero deshabilitado también
+     * se puede editar (el horario queda listo para cuando se lo vuelva a habilitar).
      */
     public function saveBarberHours(Request $request): void
     {
         $user = $this->requireHoursEditor();
         $this->requireCsrf($request);
 
-        $barber = Barber::find((string) $request->input('barber', ''));
+        $barber = Barber::find((string) $request->input('barber', ''), true);
         if ($barber === null) {
             $this->redirect('/admin/barberos?error=' . rawurlencode('Ese barbero no existe.'));
         }
@@ -659,7 +683,7 @@ final class AdminController extends Controller
             'accounts'  => User::allForAdmin(),
             'deletable' => array_flip(User::deletableIds()),
             'stranded'  => (int) $request->query('turnos', 0),
-            'barbers'   => Barber::all(),
+            'barbers'   => Barber::team(),
             'flash'     => (string) $request->query('ok', ''),
             'error'     => (string) $request->query('error', ''),
         ]);

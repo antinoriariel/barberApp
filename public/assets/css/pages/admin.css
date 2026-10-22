@@ -170,6 +170,11 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .hours-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; }
 .hours-head h3 { display: flex; align-items: center; font-size: 17px; font-weight: 800; }
 .hours-count { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+/* Nombre e interruptor Habilitado/Deshabilitado en la primera línea; el resumen de días abajo. */
+.hours-head .inline-form { margin: 0 0 0 auto; }
+.hours-head .hours-count { flex-basis: 100%; }
+.hours-edit.disabled .hours-head h3 { color: var(--ink-soft); }
+.hours-edit.disabled .hours-head .dot { opacity: .45; }
 .hours-form { display: grid; gap: 12px; }
 /* Foto del barbero en su ficha: avatar (foto o inicial sobre su color) + subir/cambiar/quitar. */
 .barber-photo-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }

@@ -5,11 +5,14 @@
  * Debajo, los días que abre el local (opening_hours, se eligen con un tilde por día) y el horario semanal de cada barbero: qué días atiende y de qué hora a qué hora. La agenda solo le ofrece
  * turnos dentro de esa franja; los días que el local cierra o atiende por orden de llegada no se configuran.
  * Cada ficha permite cambiar o quitar la foto del barbero, y al final se da de alta un barbero nuevo (con foto opcional).
+ * Cada tarjeta tiene un interruptor Habilitado/Deshabilitado: deshabilitado, el barbero no figura para los clientes
+ * (equipo ni reserva) pero su horario se sigue pudiendo editar.
  * Solo el administrador los edita: un barbero con la sección habilitada ($canEdit = false) ve lo mismo en modo
- * lectura (días y franjas como texto, sin formularios).
+ * lectura (días, franjas y estado como texto, sin formularios).
  *
  * Variables: $canEdit (bool: es admin), $week (Dashboard::week), $prev/$next (YYYY-MM-DD: semana anterior/siguiente), $isCurrent (bool),
- *            $team (lista de ['barber' => Barber, 'hours' => BarberHours::week]), $weekdays (Schedule::weekdayStatus),
+ *            $team (lista de ['barber' => Barber, 'hours' => BarberHours::week, 'pending' => turnos a futuro si está
+ *            deshabilitado]), $weekdays (Schedule::weekdayStatus),
  *            $flash ('1' horario guardado | 'dias' días del local guardados | 'nuevo' barbero creado | 'foto' foto cambiada | ''),
  *            $error (string),
  *            $stranded (turnos reservados que quedaron en días ahora cerrados)
@@ -93,15 +96,29 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
     </section>
 
     <div class="hours-grid">
-<?php foreach ($team as ['barber' => $b, 'hours' => $hours]):
+<?php foreach ($team as ['barber' => $b, 'hours' => $hours, 'pending' => $pending]):
     // Resumen del encabezado: cuántos de los días con turnos atiende.
     $openDays = array_keys(array_filter($weekdays, static fn (string $st) => $st === 'open'));
     $working = count(array_filter($openDays, static fn (int $w) => $hours[$w]['works']));
 ?>
-      <section class="admin-card hours-edit" id="horario-<?= e($b->id) ?>" aria-labelledby="hours-<?= e($b->id) ?>">
+      <section class="admin-card hours-edit<?= $b->enabled ? '' : ' disabled' ?>" id="horario-<?= e($b->id) ?>" aria-labelledby="hours-<?= e($b->id) ?>">
         <header class="hours-head">
           <h3 id="hours-<?= e($b->id) ?>"><span class="dot" style="--tone: <?= e(css_color($b->tone)) ?>"></span><?= e($b->name) ?></h3>
-          <span class="hours-count">Atiende <?= $working ?> de <?= count($openDays) ?> días</span>
+          <?php /* El propio badge es el interruptor: un click lo saca de los barberos disponibles o lo vuelve a mostrar.
+                   Para un barbero (solo lectura) es una etiqueta fija. */ ?>
+<?php if ($canEdit): ?>
+          <form method="post" action="/admin/barberos/estado" class="inline-form">
+            <?= csrf_field() ?>
+            <input type="hidden" name="barber" value="<?= e($b->id) ?>">
+            <button type="submit" name="enabled" value="<?= $b->enabled ? '0' : '1' ?>"
+                    class="status toggle <?= $b->enabled ? 'done' : 'cancelled' ?>"
+                    title="<?= $b->enabled ? 'Click para que no figure en los barberos disponibles' : 'Click para que vuelva a figurar en los barberos disponibles' ?>"
+                    aria-label="<?= e($b->name) ?>: <?= $b->enabled ? 'habilitado, deshabilitar' : 'deshabilitado, habilitar' ?>"><?= $b->enabled ? 'Habilitado' : 'Deshabilitado' ?></button>
+          </form>
+<?php else: ?>
+          <span class="status <?= $b->enabled ? 'done' : 'cancelled' ?>"><?= $b->enabled ? 'Habilitado' : 'Deshabilitado' ?></span>
+<?php endif; ?>
+          <span class="hours-count"><?= $b->enabled ? 'Atiende ' . $working . ' de ' . count($openDays) . ' días' : 'No figura para los clientes' ?></span>
         </header>
         <?php // Foto del barbero: la que se ve en su tarjeta, al reservar y en el ticket del turno. ?>
         <div class="barber-photo-edit">
@@ -126,6 +143,9 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
 <?php endif; ?>
 <?php endif; ?>
         </div>
+<?php if ($pending > 0): ?>
+        <p class="admin-flash bad" role="alert">Tiene <?= $pending ?> turno<?= $pending === 1 ? '' : 's' ?> reservado<?= $pending === 1 ? '' : 's' ?> a futuro. No se cancelan solos: revisalos en Turnos.</p>
+<?php endif; ?>
 <?php if ($canEdit): ?>
         <form method="post" action="/admin/barberos/horario" class="hours-form">
           <?= csrf_field() ?>

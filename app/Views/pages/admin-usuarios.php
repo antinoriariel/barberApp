@@ -6,7 +6,7 @@
  * barbero se eligen las secciones extra del panel que ve; su ficha del equipo no se elige: se crea con el nombre de la
  * cuenta (admin-users.js oculta esos campos con otros roles; sin JS se ven siempre y el servidor los ignora).
  *
- * Variables: $user (User, el administrador), $accounts (User::allForAdmin()), $barbers (Barber::all(): nombres de las fichas),
+ * Variables: $user (User, el administrador), $accounts (User::allForAdmin()), $barbers (Barber::team(): nombres de las fichas),
  *            $deletable (array id => índice, cuentas sin historial: User::deletableIds() invertido),
  *            $flash ('1' guardado | 'clave' contraseña cambiada | 'borrado' cuenta eliminada | ''), $error (string),
  *            $stranded (turnos reservados a futuro de un barbero cuya ficha se acaba de ocultar)

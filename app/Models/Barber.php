@@ -22,25 +22,31 @@ final class Barber
         public readonly string $tone, // color del avatar (se valida con css_color() al imprimirlo)
         public readonly int $key = 0,        // clave primaria en la base (0 con driver files)
         public readonly ?string $photo = null, // ruta pública de su imagen (/img/...) o null si no tiene
+        public readonly bool $enabled = true,  // false = deshabilitado en /admin/barberos: no figura para los clientes
     ) {
     }
+
+    /** Columnas que lee fromRow(). */
+    private const COLUMNS = 'id, slug, name, role, years, rating, tone, photo, enabled';
 
     /** Arma un Barber desde una fila de `barbers` (la valoración 4.9 se muestra como "4,9"). */
     private static function fromRow(array $r): self
     {
         return new self($r['slug'], $r['name'], $r['role'], (int) $r['years'],
-            number_format((float) $r['rating'], 1, ',', ''), $r['tone'], (int) $r['id'], $r['photo'] ?? null);
+            number_format((float) $r['rating'], 1, ',', ''), $r['tone'], (int) $r['id'], $r['photo'] ?? null,
+            (bool) $r['enabled']);
     }
 
     /**
-     * Todo el equipo activo, en orden de alta (o en el orden de data/barbers.php).
+     * El equipo que ven los clientes: activo y habilitado, en orden de alta (o en el orden de data/barbers.php).
+     * Lo usan la app, la agenda y las reservas; los deshabilitados en /admin/barberos quedan afuera.
      * @return self[]
      */
     public static function all(): array
     {
         if (Database::enabled()) {
             return array_map(self::fromRow(...), Database::select(
-                'SELECT id, slug, name, role, years, rating, tone, photo FROM barbers WHERE active = 1 ORDER BY id'
+                'SELECT ' . self::COLUMNS . ' FROM barbers WHERE active = 1 AND enabled = 1 ORDER BY id'
             ));
         }
         return array_map(
@@ -49,11 +55,30 @@ final class Barber
         );
     }
 
-    /** Barbero activo por slug o null. Solo con base de datos. */
-    public static function find(string $slug): ?self
+    /**
+     * Todo el equipo activo, también los deshabilitados (para el panel: horarios, habilitar/deshabilitar y nombres de
+     * las fichas de las cuentas). Con driver files es lo mismo que all().
+     * @return self[]
+     */
+    public static function team(): array
+    {
+        if (!Database::enabled()) {
+            return self::all();
+        }
+        return array_map(self::fromRow(...), Database::select(
+            'SELECT ' . self::COLUMNS . ' FROM barbers WHERE active = 1 ORDER BY id'
+        ));
+    }
+
+    /**
+     * Barbero activo y habilitado por slug, o null. Con $withDisabled también devuelve los deshabilitados (el panel
+     * les puede editar el horario). Solo con base de datos.
+     */
+    public static function find(string $slug, bool $withDisabled = false): ?self
     {
         $r = Database::selectOne(
-            'SELECT id, slug, name, role, years, rating, tone, photo FROM barbers WHERE slug = ? AND active = 1', [$slug]
+            'SELECT ' . self::COLUMNS . ' FROM barbers WHERE slug = ? AND active = 1' . ($withDisabled ? '' : ' AND enabled = 1'),
+            [$slug]
         );
         return $r ? self::fromRow($r) : null;
     }
@@ -138,7 +163,7 @@ final class Barber
     /**
      * Ficha del equipo para una cuenta que pasa a ser barbero (alta desde /admin/usuarios), con su nombre completo.
      * Si existe una ficha inactiva con ese mismo nombre que ninguna cuenta usa (la de alguien que dejó de ser barbero
-     * y vuelve), se reactiva para conservar su historial de cortes y horario; si no, se crea una nueva: especialidad
+     * y vuelve), se reactiva (y habilita) para conservar su historial de cortes y horario; si no, se crea una nueva: especialidad
      * "Barbero", 0 años y sin valoración (se muestra como "Nuevo"), color libre y slug único sacado del nombre.
      * Devuelve barbers.id. Solo con base de datos; pensado para usarse dentro de la transacción del alta.
      */
@@ -150,7 +175,7 @@ final class Barber
               ORDER BY b.id DESC LIMIT 1', [$fullName]
         );
         if ($old !== null) {
-            Database::execute('UPDATE barbers SET active = 1 WHERE id = ?', [$old['id']]);
+            Database::execute('UPDATE barbers SET active = 1, enabled = 1 WHERE id = ?', [$old['id']]);
             return (int) $old['id'];
         }
 
@@ -195,6 +220,15 @@ final class Barber
     public static function setActive(int $key, bool $active): void
     {
         Database::execute('UPDATE barbers SET active = ? WHERE id = ?', [$active ? 1 : 0, $key]);
+    }
+
+    /**
+     * Habilita (true) o deshabilita (false) al barbero desde /admin/barberos. Deshabilitado no figura en el equipo de
+     * la app ni toma turnos nuevos; los ya reservados no se cancelan y sigue en el panel. No toca `active`.
+     */
+    public static function setEnabled(int $key, bool $enabled): void
+    {
+        Database::execute('UPDATE barbers SET enabled = ? WHERE id = ?', [$enabled ? 1 : 0, $key]);
     }
 
     /** Borra la ficha si nunca tuvo turnos (su horario se borra en cascada); si los tuvo, solo la oculta. */

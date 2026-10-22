@@ -136,7 +136,7 @@ final class SuperController extends Controller
             'ipBans'     => Ban::ips(),
             'deviceBans' => Ban::devices(),
             'bannedSet'  => Ban::deviceSet(),
-            'barbers'    => Barber::all(),
+            'barbers'    => Barber::team(),
             'myIp'       => $request->ip(),
             'myDevice'   => Device::hash(),
             'onlineFrom' => $onlineFrom,

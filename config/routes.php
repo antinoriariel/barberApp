@@ -48,6 +48,7 @@ return static function (Router $router): void {
     $router->post('/admin/turnos/estado', [AdminController::class, 'mark']);
     $router->get('/admin/barberos', [AdminController::class, 'barbers']);
     $router->post('/admin/barberos/horario', [AdminController::class, 'saveBarberHours']);
+    $router->post('/admin/barberos/estado', [AdminController::class, 'toggleBarber']);
     $router->post('/admin/barberos/dias', [AdminController::class, 'saveShopDays']);
     $router->post('/admin/barberos/nuevo', [AdminController::class, 'createBarber']);
     $router->post('/admin/barberos/foto', [AdminController::class, 'saveBarberPhoto']);

@@ -11,7 +11,7 @@
  * Variables: $accounts (cuentas a listar, ya filtradas por $listView), $total, $onlineCount, $inactive (int),
  *            $listView ('' | clave de SuperController::VIEWS), $devices (UserActivity::devicesByUser()),
  *            $actions (UserActivity::recentActions()), $history (User::historyCounts()), $ipBans (Ban::ips()),
- *            $deviceBans (Ban::devices()), $bannedSet (Ban::deviceSet()), $barbers (Barber::all()), $myIp (string),
+ *            $deviceBans (Ban::devices()), $bannedSet (Ban::deviceSet()), $barbers (Barber::team()), $myIp (string),
  *            $myDevice (sha256 del navegador del superusuario), $onlineFrom ('Y-m-d H:i:s': visto desde entonces = en línea),
  *            $notice (aviso de éxito, '' si no hay), $error (string)
  */

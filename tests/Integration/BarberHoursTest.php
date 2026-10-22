@@ -108,6 +108,31 @@ final class BarberHoursTest extends DbTestCase
     }
 
     /**
+     * Un barbero deshabilitado no figura en el equipo ni toma turnos nuevos (tampoco con "cualquiera"), el panel lo
+     * sigue encontrando y sus turnos ya reservados se conservan.
+     */
+    public function testBarberoDeshabilitadoNoFiguraNiTomaTurnos(): void
+    {
+        $day = $this->futureOpenDay();
+        $nico = Barber::find('nico');
+        Booking::create($this->makeUser('99000001'), 'corte', 'nico', $day, '10:00');
+        Barber::setEnabled($nico->key, false);
+        try {
+            $this->assertNotContains('nico', array_map(static fn (Barber $b) => $b->id, Barber::all()), 'no figura en el equipo');
+            $this->assertNull(Barber::find('nico'));
+            $this->assertFalse(Barber::find('nico', true)->enabled, 'el panel lo sigue encontrando');
+            $this->assertContains('nico', array_map(static fn (Barber $b) => $b->id, Barber::team()));
+            $this->assertSame([], array_filter(array_column(Schedule::slots($day, 'nico', 30), 'free')));
+            $this->assertSame(422, $this->statusOf(fn () => Booking::create($this->makeUser('99000002'), 'corte', 'nico', $day, '10:00')));
+            $this->assertNotSame('nico', Booking::create($this->makeUser('99000003'), 'corte', 'any', $day, '10:00')['barber_id']);
+            $this->assertSame(1, Barber::upcomingCount($nico->key), 'el turno ya reservado se conserva');
+        } finally {
+            Barber::setEnabled($nico->key, true);
+        }
+        $this->assertNotNull(Barber::find('nico'));
+    }
+
+    /**
      * BarberHours::validate rechaza franja invertida, hora con texto y día fuera de 0–6; normaliza "9:30" a "09:30"
      * y un día sin tilde queda con works = false.
      */
