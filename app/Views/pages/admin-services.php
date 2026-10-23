@@ -21,9 +21,10 @@ $tabs = ['servicios' => ['Servicios', '/admin/servicios', count($services)], 'pr
 <main class="admin">
   <?= partial('components/admin-header', ['heading' => 'Servicios y productos', 'sub' => $canEdit ? 'Los cambios se ven al instante en la app.' : 'Lo que ofrece la barbería. Los carga y edita el administrador.', 'sections' => $user->panelSections(), 'active' => 'servicios']) ?>
 
-  <nav class="admin-tabs" aria-label="Catálogo">
+  <?php // Segmented control (.seg en admin.css), no .admin-tabs: es un filtro dentro de la sección, no otro menú. ?>
+  <nav class="seg" aria-label="Catálogo">
 <?php foreach ($tabs as $key => [$label, $href, $count]): ?>
-    <a class="admin-tab" href="<?= e($href) ?>"<?= $tab === $key ? ' aria-current="page"' : '' ?>><?= e($label) ?> <small><?= $count ?></small></a>
+    <a class="seg-item" href="<?= e($href) ?>"<?= $tab === $key ? ' aria-current="page"' : '' ?>><?= e($label) ?> <span class="seg-count"><?= $count ?></span></a>
 <?php endforeach; ?>
   </nav>
 
