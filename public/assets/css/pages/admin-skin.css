@@ -2,8 +2,9 @@
    cambia la apariencia (colores, superficies, tipografía, íconos); la estructura y el responsive siguen en admin.css.
 
    Capas:
-   1. Fondo: la pared de ladrillo con los spots (img/fondoadministrativo.jpg) fija detrás de todo, con un velo que la
-      oscurece hacia abajo para que se lea lo de arriba. Va en body::before (position: fixed) y no con
+   1. Fondo: la pared de ladrillo rojo y negro (img/fondo.jpg) fija detrás de todo, con un velo parejo que la apaga
+      (el rojo de la foto es muy intenso: queda como textura y no compite con el texto ni con las cifras en rojo) y que
+      se cierra hacia abajo, donde están las tarjetas. Va en body::before (position: fixed) y no con
       background-attachment: fixed, que Safari en iPhone ignora.
    2. Contexto "sobre la foto" (cabecera, pestañas, selectores sueltos): la foto es oscura en los dos temas, así que acá
       los tokens son siempre de texto claro.
@@ -31,9 +32,9 @@ body.admin-page {
 body.admin-page::before {
   content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background:
-    radial-gradient(120% 60% at 50% 0%, transparent 40%, rgba(8, 6, 5, .55) 100%),
-    linear-gradient(180deg, rgba(10, 8, 7, .08) 0%, rgba(10, 8, 7, .5) 28%, rgba(10, 8, 7, .84) 62%, #0B0908 100%),
-    url("/img/fondoadministrativo.jpg") center top / cover no-repeat;
+    radial-gradient(130% 70% at 50% 0%, transparent 35%, rgba(8, 6, 5, .6) 100%),
+    linear-gradient(180deg, rgba(10, 8, 7, .42) 0%, rgba(10, 8, 7, .6) 30%, rgba(10, 8, 7, .82) 62%, #0B0908 100%),
+    url("/img/fondo.jpg") center top / cover no-repeat;
 }
 /* En pantallas anchas la foto (vertical, 736px) se amplía mucho: un desenfoque leve la vuelve bokeh en vez de pixelada. */
 @media (min-width: 900px) {
