@@ -34,6 +34,14 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .kpi-delta.down { color: var(--red); }
 .kpi-delta.flat { color: var(--ink-soft); }
 .kpi-prev { margin-top: 2px; color: var(--ink-soft); font-size: 13px; }
+/* Resultado del día: fila de total a todo el ancho (debajo de "Ingreso extra" cualquiera sea la cantidad de
+   columnas), con la cuenta a la izquierda y el monto a la derecha; franja verde (o roja si da negativo). */
+.kpi-total { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap;
+  border-left: 4px solid var(--ok); background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 8%, var(--paper)), var(--paper) 70%); }
+.kpi-total.is-neg { border-left-color: var(--red); background: linear-gradient(90deg, color-mix(in srgb, var(--red) 8%, var(--paper)), var(--paper) 70%); }
+.kpi-total-text { min-width: 0; }
+.kpi-total .kpi-prev { margin-top: 4px; font-variant-numeric: tabular-nums; }
+.kpi-total .kpi-value { margin-top: 0; color: var(--ok); }
 
 .table-wrap { margin-top: 12px; overflow-x: auto; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 15px; }

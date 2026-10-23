@@ -49,10 +49,13 @@ $before = array_column($yesterday['barbers'], null, 'id');
       <p class="kpi-value"><?= money($dayExtra) ?></p>
       <p class="kpi-prev"><a class="link" href="/admin/ingresos?mes=<?= e(substr($day, 0, 7)) ?>">Agregar ingreso extra</a></p>
     </article>
-    <article class="kpi">
-      <h2>Resultado del día</h2>
+    <?php /* Fila de total: ocupa todo el ancho de la grilla, debajo de las cuatro tarjetas que suma y resta. */ ?>
+    <article class="kpi kpi-total<?= $dayNet < 0 ? ' is-neg' : '' ?>">
+      <div class="kpi-total-text">
+        <h2>Resultado del día</h2>
+        <p class="kpi-prev"><?= money($today['total']) ?> + <?= money($dayExtra) ?> extra − <?= money($dayExpenses) ?> egresos</p>
+      </div>
       <p class="kpi-value <?= $dayNet < 0 ? 'neg' : '' ?>"><?= $dayNet < 0 ? '−' . money(-$dayNet) : money($dayNet) ?></p>
-      <p class="kpi-prev">Ingresos + extra − egresos</p>
     </article>
   </section>
 
