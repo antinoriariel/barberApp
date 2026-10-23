@@ -61,6 +61,8 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .status.toggle { border: 0; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; } /* badge que además es botón (servicio visible/oculto) */
 .status.toggle:hover { filter: brightness(.95); }
 .status.toggle:active { transform: scale(.96); }
+/* En pantallas táctiles el badge-botón se agranda para que se pueda tocar sin errarle. */
+@media (pointer: coarse) { .status.toggle { min-height: 34px; padding: 6px 14px; } }
 .actions { text-align: right; }
 .actions form { display: inline-flex; gap: 6px; }
 .btn-small.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
@@ -236,6 +238,13 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .admin-table.stack .actions form { display: flex; gap: 8px; width: 100%; }
 .admin-table.stack .actions .btn-small { flex: 1; text-align: center; padding: 11px 14px; } /* botones cómodos para el dedo */
 
+/* .stack.compact (Por barbero del Resumen): en celular los datos van de a dos por renglón, con el título de la columna
+   arriba del valor, en vez de un renglón por dato. */
+.admin-table.stack.compact tr { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
+.admin-table.stack.compact .cell-main { grid-column: 1 / -1; }
+.admin-table.stack.compact td { flex-wrap: wrap; justify-content: flex-start; gap: 2px 6px; text-align: left; }
+.admin-table.stack.compact td[data-label]::before { flex-basis: 100%; font-size: 11px; }
+
 /* Tabla semanal (9 columnas): se desliza de costado con el nombre del barbero fijo a la izquierda. */
 .admin-table.sticky-first th:first-child { position: sticky; left: 0; z-index: 1; background: var(--paper); min-width: 120px; }
 .admin-table.sticky-first td { padding-left: 10px; padding-right: 10px; }
@@ -260,12 +269,18 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .hours-edit.disabled .hours-head h3 { color: var(--ink-soft); }
 .hours-edit.disabled .hours-head .dot { opacity: .45; }
 .hours-form { display: grid; gap: 12px; }
-/* Foto del barbero en su ficha: avatar (foto o inicial sobre su color) + subir/cambiar/quitar. */
-.barber-photo-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.bp-avatar { flex: none; width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: var(--tone, var(--line)); }
+/* Foto del barbero en su ficha: avatar (foto o inicial sobre su color) a la izquierda y, al lado, el selector de archivo
+   arriba con "Cambiar foto" / "Quitar foto" en un renglón debajo. Los dos <form> son display: contents para que sus
+   campos se acomoden en la misma grilla (siguen enviándose como formularios separados). */
+.barber-photo-edit { display: grid; grid-template-columns: 64px repeat(2, minmax(0, 1fr)); align-items: center; gap: 8px 10px; }
+.barber-photo-edit .bp-form { display: contents; }
+.barber-photo-edit .bp-file { grid-column: 2 / -1; }
+.barber-photo-edit .btn-small { width: 100%; text-align: center; }
+.bp-avatar { flex: none; grid-row: span 2; width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: var(--tone, var(--line)); }
 .bp-avatar.empty { display: grid; place-items: center; color: #fff; font-size: 26px; font-weight: 800; }
 .bp-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
-/* Nombre del barbero editable en su ficha. */
+/* Nombre del barbero editable en su ficha: campo y botón siempre en un renglón (el campo es el que se achica). */
+.barber-name-edit { flex-wrap: nowrap; }
 .bn-input { flex: 1 1 180px; min-width: 0; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 8px; font: inherit; font-size: 15px; color: var(--ink); background: var(--paper); }
 .bp-file { max-width: 100%; min-width: 0; font: inherit; font-size: 14px; color: var(--ink-soft); }
 .bp-file::file-selector-button { margin-right: 8px; padding: 6px 10px; border: 1.5px solid var(--line); border-radius: 8px; font: inherit; font-weight: 700; color: var(--ink); background: var(--paper); cursor: pointer; }
@@ -385,6 +400,7 @@ ul.day-chips { list-style: none; margin: 0; padding: 0; }
     display: table-cell; padding: 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; text-align: left;
   }
   .admin-table.stack .num { text-align: right; }
+  .admin-table.stack.compact td { text-align: inherit; }
   .admin-table.stack td[data-label]::before { content: none; }
   .admin-table.stack .cell-main { font-size: inherit; }
   .admin-table.stack .cell-main .bar { margin-top: 6px; }

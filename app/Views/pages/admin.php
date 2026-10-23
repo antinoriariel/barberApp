@@ -93,8 +93,8 @@ $before = array_column($yesterday['barbers'], null, 'id');
   <section class="admin-card" aria-labelledby="by-barber">
     <h2 id="by-barber">Por barbero · <?= e(date_es($day)) ?></h2>
     <div class="table-wrap">
-      <?php // .stack: en celular cada barbero es una tarjeta (data-label = título de la columna); desde 720px, tabla. ?>
-      <table class="admin-table stack">
+      <?php // .stack: en celular cada barbero es una tarjeta (data-label = título de la columna), .compact: datos de a dos; desde 720px, tabla. ?>
+      <table class="admin-table stack compact">
         <thead>
           <tr><th>Barbero</th><th class="num">Cortes</th><th class="num">Ingresos</th><th class="num">Ayer</th><th class="num">Variación</th></tr>
         </thead>
