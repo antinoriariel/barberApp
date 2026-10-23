@@ -7,12 +7,25 @@
  * Un barbero con la sección habilitada ($canEdit = false) ve solo dos tablas de lo que existe, sin formularios
  * (el servidor rechaza igual cualquier cambio que no venga del administrador).
  *
+ * Con "Hora muerta" en curso ($salePct > 0) avisa arriba con la cuenta regresiva y muestra el precio de lista
+ * tachado y el precio con el descuento de cada servicio (components/price.php), igual que lo ve el cliente; los
+ * productos quedan igual. Al llegar a cero, countdown.js pone sale-over en <html> y el CSS lo vuelve a ocultar.
+ *
  * Variables: $services (Service::allForAdmin()), $products (Product::allForAdmin()), $canEdit (bool: es admin),
- *            $flash ('1'|''), $error (string)
+ *            $flash ('1'|''), $error (string), $deadHour (DeadHour::current() o null), $salePct (int, 0 sin descuento)
  */
 ?>
 <main class="admin">
   <?= partial('components/admin-header', ['heading' => 'Servicios y productos', 'sub' => $canEdit ? 'Los cambios se ven al instante en la app.' : 'Lo que ofrece la barbería. Los carga y edita el administrador.', 'sections' => $user->panelSections(), 'active' => 'servicios']) ?>
+
+<?php if ($salePct > 0): ?>
+  <p class="admin-flash svc-sale-note" role="status">
+    <span class="dh-badge"><span class="dh-pulse" aria-hidden="true"></span>Hora muerta <?= $salePct ?>% OFF</span>
+    Los servicios se muestran con el descuento (los productos no). Termina en
+    <b data-countdown="<?= (int) $deadHour['ends'] * 1000 ?>" data-now="<?= time() * 1000 ?>" data-hide=".svc-sale-note" data-end-class="sale-over"
+       role="timer" aria-live="off"><?= e(countdown_text($deadHour['ends'] - time())) ?></b>.
+  </p>
+<?php endif; ?>
 
 <?php if (!$canEdit): ?>
   <section class="admin-card" aria-labelledby="svc-list">
@@ -27,7 +40,7 @@
             <td class="cell-main"><b><?= e($s['name']) ?></b></td>
             <td data-label="Descripción"><small><?= $s['description'] !== '' ? e($s['description']) : '—' ?></small></td>
             <td class="num" data-label="Duración"><?= $s['minutes'] ?> min</td>
-            <td class="num" data-label="Precio"><b><?= money($s['price']) ?></b></td>
+            <td class="num" data-label="Precio"><b><?= partial('components/price', ['price' => $s['price'], 'pct' => $salePct]) ?></b></td>
             <td data-label="Estado"><span class="status <?= $s['active'] ? 'done' : 'cancelled' ?>"><?= $s['active'] ? 'Visible' : 'Oculto' ?></span></td>
           </tr>
 <?php endforeach; ?>
@@ -97,6 +110,7 @@
                   aria-label="<?= e($s['name']) ?>: <?= $s['active'] ? 'visible, ocultar' : 'oculto, mostrar' ?>"><?= $s['active'] ? 'Visible' : 'Oculto' ?></button>
         </form>
       </div>
+      <?php if ($salePct > 0): ?><p class="svc-sale">Con hora muerta: <b><?= partial('components/price', ['price' => $s['price'], 'pct' => $salePct]) ?></b></p><?php endif; ?>
       <form method="post" action="/admin/servicios/guardar" class="svc-edit">
         <?= csrf_field() ?>
         <input type="hidden" name="id" value="<?= $s['id'] ?>">

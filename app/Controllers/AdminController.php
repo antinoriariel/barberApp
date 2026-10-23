@@ -639,11 +639,16 @@ final class AdminController extends Controller
      * GET /admin/servicios — editor del catálogo: precio, nombre, descripción y duración de cada servicio,
      * alta de servicios nuevos y ocultar/mostrar. Para un barbero (canEdit = false) es solo una lista de lo que
      * existe, sin formularios. `ok` y `error` traen el resultado de la acción anterior.
+     * Con "Hora muerta" en curso muestra, como la app del cliente, el precio de lista tachado y el precio con el
+     * descuento de cada servicio (los productos no tienen descuento); salePct sigue la misma regla que ShellController.
      */
     public function services(Request $request): void
     {
         $user = $this->requireSection('servicios');
+        $deadHour = DeadHour::locksToday() ? DeadHour::current() : null;
         $this->view('pages/admin-services', [
+            'deadHour'  => $deadHour,
+            'salePct'   => $deadHour !== null ? (int) $deadHour['percent'] : 0,
             'title'     => 'Servicios · Barbería',
             'bodyClass' => 'admin-page',
             'user'      => $user,
