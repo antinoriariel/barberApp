@@ -72,12 +72,15 @@ body.admin-page :is(.admin-card, .kpi, .confirm-dialog) {
   --field: #FFFFFF;
   box-shadow: inset 0 1px 0 #FFFFFF, 0 22px 44px -22px rgba(0, 0, 0, .7);
 }
-/* Cards invertidas (alta de servicio/producto/barbero): pergamino en tema oscuro, espresso en tema claro. */
+/* Cards invertidas (alta de servicio/producto/barbero): arena apagada en tema oscuro (el pergamino casi blanco
+   encandilaba sobre el ladrillo), espresso en tema claro. Los campos van un tono más claro que la card para
+   distinguirse, el texto se oscurece para mantener el contraste y el borde de latón marca que es la card de alta. */
 body.admin-page .admin-card.invert {
-  --card: linear-gradient(180deg, #FBF6EE, #F1E8DA);
-  --paper: #FFFDF9; --paper-solid: #F6EFE3; --lather: rgba(70, 45, 20, .06);
-  --ink: #1E1814; --ink-soft: #6B5F53; --line: rgba(70, 45, 20, .16); --accent-ink: #8A6534; --field: #FFFFFF;
-  border-color: rgba(201, 164, 108, .55);
+  --card: linear-gradient(180deg, #D3C3A8, #C2AF90);
+  --paper: #DACCB4; --paper-solid: #CFBFA4; --lather: rgba(60, 38, 15, .08);
+  --ink: #17110D; --ink-soft: #4A3E32; --line: rgba(60, 38, 15, .22); --accent-ink: #6E4D22; --field: #E8DECC;
+  border-color: rgba(201, 164, 108, .85);
+  box-shadow: 0 0 0 1px rgba(201, 164, 108, .25), 0 22px 44px -22px rgba(0, 0, 0, .8);
 }
 :root[data-theme="light"] body.admin-page .admin-card.invert {
   --card: linear-gradient(180deg, #2C231E, #1A1411);
@@ -85,7 +88,7 @@ body.admin-page .admin-card.invert {
   --ink: #F7F1E8; --ink-soft: #BDB1A2; --line: rgba(255, 238, 214, .14); --accent-ink: var(--brass); --field: rgba(0, 0, 0, .3);
   border-color: rgba(201, 164, 108, .45);
 }
-body.admin-page .admin-card.invert .svc-fields :is(input, select, textarea) { background: var(--field); border-color: rgba(70, 45, 20, .28); color: var(--ink); }
+body.admin-page .admin-card.invert .svc-fields :is(input, select, textarea) { background: var(--field); border-color: rgba(60, 38, 15, .4); color: var(--ink); }
 :root[data-theme="light"] body.admin-page .admin-card.invert .svc-fields :is(input, select, textarea) { border-color: rgba(255, 238, 214, .2); }
 body.admin-page .admin-card.invert .svc-fields label { color: var(--ink-soft); }
 body.admin-page .admin-card.invert .svc-fields input::placeholder { color: color-mix(in srgb, var(--ink-soft) 75%, transparent); }
