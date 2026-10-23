@@ -186,6 +186,35 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .chart-legend span { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-left: 8px; }
 .chart-legend span:first-child { margin-left: 0; }
 
+/* Clientes del mes (components/admin-clients.php): dona SVG nuevos/recurrentes con el total al centro y top 3.
+   Nuevos en latón (--brass del skin del panel; rojo si no está), recurrentes en gris. */
+.clients { --c-new: var(--brass, var(--red)); --c-old: #6B6B6B; }
+.clients-chart { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; margin: 14px 0 6px; }
+.donut { position: relative; flex: none; width: 150px; height: 150px; margin: 0; }
+.donut svg { width: 100%; height: 100%; transform: rotate(-90deg); } /* los arcos arrancan arriba (12 en punto) */
+.donut circle { fill: none; stroke-width: 14; }
+.donut-track { stroke: var(--line); }
+.donut-new { stroke: var(--c-new); }
+.donut-old { stroke: var(--c-old); }
+.donut-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; line-height: 1.05; }
+.donut-center b { font-size: 34px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.donut-center span { font-size: 12px; color: var(--ink-soft); }
+.donut-legend { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; font-size: 14px; color: var(--ink-soft); }
+.donut-legend li { display: flex; align-items: center; gap: 8px; }
+.donut-legend b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.donut-legend .sw { width: 12px; height: 12px; border-radius: 3px; }
+.donut-legend .sw.new { background: var(--c-new); }
+.donut-legend .sw.old { background: var(--c-old); }
+.clients-top-title { margin: 16px 0 8px; font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); }
+.clients-top { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.clients-top li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.clients-top .rank { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; font-weight: 800; font-size: 13px; color: var(--ink-soft); box-shadow: inset 0 0 0 1.5px var(--line); }
+.clients-top .rank-1 { color: var(--c-new); box-shadow: inset 0 0 0 1.5px var(--c-new); }
+.clients-top .who { display: grid; min-width: 0; font-weight: 700; color: var(--ink); overflow-wrap: anywhere; }
+.clients-top .who small { font-weight: 500; color: var(--ink-soft); }
+.clients-top .tag-new { display: inline; margin-left: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--c-new); }
+.clients-top .num { font-variant-numeric: tabular-nums; color: var(--ink); }
+
 /* ===== Mobile first: celular como base ===== */
 .admin > * { min-width: 0; } /* que una tabla ancha no estire la grilla del panel */
 

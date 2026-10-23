@@ -1,11 +1,13 @@
 <?php
 /**
  * pages/admin.php — Resumen del administrador: cortes e ingresos del día (vs el día anterior), ingresos, egresos
- * y resultado del mes, gráfico de 6 meses y desempeño de cada barbero en el día.
+ * y resultado del mes, gráfico de 6 meses, desempeño de cada barbero en el día y, al final, la dona de clientes
+ * nuevos/recurrentes del mes con el top 3.
  *
  * Variables: $day/$prev/$next (YYYY-MM-DD), $isToday, $today/$yesterday (Dashboard::day), $dayExpenses (egresos del día),
  *            $dayExtra (ingresos extra del día), $dayNet (ingresos + extra − egresos del día), $revenueDelta/$servedDelta/
  *            $monthDelta (Dashboard::delta), $verdict (string), $finance (Dashboard::finance, el último es el mes del día)
+ *            $clients (Dashboard::clients del mes del día: nuevos vs recurrentes y top 3)
  */
 [$revClass, $revText] = delta_text($revenueDelta, true, 'ayer');
 [$cntClass, $cntText] = delta_text($servedDelta, false, 'ayer');
@@ -115,4 +117,6 @@ $before = array_column($yesterday['barbers'], null, 'id');
       </table>
     </div>
   </section>
+
+  <?= partial('components/admin-clients', ['clients' => $clients, 'id' => 'by-client', 'title' => 'Clientes de ' . month_es((int) substr($clients['month'], 5))]) ?>
 </main>
