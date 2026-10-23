@@ -6,7 +6,7 @@
  * El botón de tema lo conecta js/admin.js (que AdminController carga en todas las vistas).
  * Variables: $heading (string), $sub (string),
  *            $active ('semana'|'resumen'|'turnos'|'hora-muerta'|'fila'|'barberos'|'finanzas'|'ingresos'|'egresos'|'servicios'|'usuarios',
- *                     o en el panel del superusuario 'su'|'su-registros'|'su-seguridad'|'su-auditoria'),
+ *                     o en el panel del superusuario 'su'|'su-registros'|'su-seguridad'|'su-auditoria'|'su-uso'),
  *            $sections (string[]: secciones que la cuenta puede ver, User::panelSections(); solo esas pestañas se muestran),
  *            $role (string, opcional: quién usa el panel, User::panelRole() o "Superusuario"; va en el sello después de
  *                   "Panel"; su title lista las secciones que ve, sacadas de sus pestañas)
@@ -28,6 +28,7 @@ $tabs = [ // clave => [ruta, texto, ícono]
     'su-registros' => ['/su/registros', 'Registros', 'id'],
     'su-seguridad' => ['/su/seguridad', 'Seguridad', 'shield'],
     'su-auditoria' => ['/su/auditoria', 'Auditoría', 'list'],
+    'su-uso'       => ['/su/uso', 'Uso de la app', 'chart'],
 ];
 $tabs = array_intersect_key($tabs, array_flip($sections ?? []));
 $role ??= '';

@@ -22,7 +22,7 @@ $page = min($page, $result['pages']);
 $weekAgo = date('Y-m-d', time() - 7 * 86400);
 ?>
 <main class="admin su">
-  <?= partial('components/admin-header', ['heading' => 'Registros', 'sub' => 'Cuentas creadas desde la app: una por navegador', 'role' => 'Superusuario', 'sections' => ['su', 'su-registros', 'su-seguridad', 'su-auditoria'], 'active' => 'su-registros']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Registros', 'sub' => 'Cuentas creadas desde la app: una por navegador', 'role' => 'Superusuario', 'sections' => \App\Controllers\SuperController::TABS, 'active' => 'su-registros']) ?>
 
   <?php if ($notice !== '' || $error !== ''): ?>
   <div class="admin-flashes" id="aviso">

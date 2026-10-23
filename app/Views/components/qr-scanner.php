@@ -8,9 +8,9 @@
 <dialog class="scanner" id="scanner" aria-labelledby="scanner-title">
   <div class="scanner-bar">
     <h2 id="scanner-title">Escaneá el QR del mostrador</h2>
-    <button type="button" class="scanner-close" id="scanner-close">Salir</button>
+    <button type="button" class="scanner-close" id="scanner-close" data-track="scanner.salir">Salir</button>
   </div>
-  <div class="scanner-stage">
+  <div class="scanner-stage" data-track="scanner.camara">
     <video id="scanner-video" playsinline muted></video>
     <span class="scanner-frame" aria-hidden="true"></span>
   </div>

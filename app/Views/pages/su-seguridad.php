@@ -21,7 +21,7 @@ $when = static fn (?string $dt): string => $dt ? date('d/m/Y H:i', strtotime($dt
 $knownNew = array_values(array_filter($newDevices, static fn (array $d) => (bool) $d['known']));
 ?>
 <main class="admin su">
-  <?= partial('components/admin-header', ['heading' => 'Seguridad', 'sub' => 'Alertas de las últimas 24 horas', 'role' => 'Superusuario', 'sections' => ['su', 'su-registros', 'su-seguridad', 'su-auditoria'], 'active' => 'su-seguridad']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Seguridad', 'sub' => 'Alertas de las últimas 24 horas', 'role' => 'Superusuario', 'sections' => \App\Controllers\SuperController::TABS, 'active' => 'su-seguridad']) ?>
 
   <?php if ($notice !== '' || $error !== ''): ?>
   <div class="admin-flashes" id="aviso">

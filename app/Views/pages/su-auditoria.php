@@ -19,7 +19,7 @@ $query = static function (array $over = []) use ($filters): string {
 $page = min($page, $result['pages']);
 ?>
 <main class="admin su">
-  <?= partial('components/admin-header', ['heading' => 'Auditoría', 'sub' => 'Todo lo que pasó en la app, quién, cuándo y desde dónde', 'role' => 'Superusuario', 'sections' => ['su', 'su-registros', 'su-seguridad', 'su-auditoria'], 'active' => 'su-auditoria']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Auditoría', 'sub' => 'Todo lo que pasó en la app, quién, cuándo y desde dónde', 'role' => 'Superusuario', 'sections' => \App\Controllers\SuperController::TABS, 'active' => 'su-auditoria']) ?>
 
   <?php if ($notice !== '' || $error !== ''): ?>
   <div class="admin-flashes" id="aviso">

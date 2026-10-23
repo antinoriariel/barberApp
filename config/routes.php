@@ -12,6 +12,7 @@ use App\Controllers\PwaController;
 use App\Controllers\QueueController;
 use App\Controllers\ShellController;
 use App\Controllers\SuperController;
+use App\Controllers\UsageController;
 use App\Core\Router;
 
 return static function (Router $router): void {
@@ -95,6 +96,12 @@ return static function (Router $router): void {
     $router->post('/su/permaban/quitar', [SuperController::class, 'unbanDevice']);
     $router->get('/su/registros', [SuperController::class, 'registrations']);
     $router->post('/su/registros/liberar', [SuperController::class, 'releaseRegistration']);
+    // Uso de la app (mapa de calor).
+    $router->get('/su/uso', [SuperController::class, 'usage']);
+    $router->post('/su/uso/limpiar', [SuperController::class, 'purgeUsage']);
+
+    // Medición del uso de la interfaz (track.js por sendBeacon; sesión + CSRF en el cuerpo).
+    $router->post('/api/uso', [UsageController::class, 'collect']);
 
     // Minijuegos de la pantalla de inicio (JSON; sesión + CSRF). Tiempo y puntaje los valida el servidor.
     $router->post('/juegos/iniciar', [GameController::class, 'start']);

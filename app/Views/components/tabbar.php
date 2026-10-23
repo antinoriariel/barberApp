@@ -8,17 +8,17 @@
  */
 ?>
 <nav class="tabbar" aria-label="Navegación principal">
-  <a href="#inicio" class="tab" data-tab="inicio"><?= icon('home') ?><span>Inicio</span></a>
-  <a href="#servicios" class="tab" data-tab="servicios"><?= icon('scissors') ?><span>Servicios</span></a>
+  <a href="#inicio" class="tab" data-tab="inicio" data-track="tabbar.inicio"><?= icon('home') ?><span>Inicio</span></a>
+  <a href="#servicios" class="tab" data-tab="servicios" data-track="tabbar.servicios"><?= icon('scissors') ?><span>Servicios</span></a>
   <?php // Círculo central: abre la cámara para escanear el QR del mostrador y tomar número (components/qr-scanner, js/scanner.js). ?>
-  <button type="button" class="fab" id="scan-open" aria-label="Escanear el QR del local para tomar número">
+  <button type="button" class="fab" id="scan-open" data-track="tabbar.qr" aria-label="Escanear el QR del local para tomar número">
     <span class="fab-disc"><?= icon('qr') ?></span>
     <span class="fab-label">Tomar número</span>
     <?php // Aviso flotante al pasar el mouse (solo CSS, ver .fab-tip en tabbar.css). ?>
     <span class="fab-tip" aria-hidden="true">Reserva de turno</span>
   </button>
-  <a href="#barberos" class="tab" data-tab="barberos"><?= icon('chair') ?><span>Barberos</span></a>
-  <a href="#perfil" class="tab" data-tab="perfil"><?= icon('user') ?><span>Perfil</span></a>
+  <a href="#barberos" class="tab" data-tab="barberos" data-track="tabbar.barberos"><?= icon('chair') ?><span>Barberos</span></a>
+  <a href="#perfil" class="tab" data-tab="perfil" data-track="tabbar.perfil"><?= icon('user') ?><span>Perfil</span></a>
 
   <div class="side-user">
     <span class="avatar sm" style="--tone:#EB1716"><?= initials($user->fullName) ?></span>

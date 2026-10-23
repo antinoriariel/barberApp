@@ -5,7 +5,7 @@
  * Variables: $service (Models\Service), $salePct (opcional: % de la hora muerta en curso, tacha el precio)
  */
 ?>
-<button class="rail-card" data-book-service="<?= e($service->id) ?>">
+<button class="rail-card" data-book-service="<?= e($service->id) ?>" data-track="inicio.popular" data-track-item="<?= e($service->id) ?>" data-track-to="#reservar">
   <span class="rail-price"><?= partial('components/price', ['price' => $service->price, 'pct' => $salePct ?? 0]) ?></span>
   <span class="rail-name"><?= e($service->name) ?></span>
 </button>
