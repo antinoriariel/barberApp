@@ -16,8 +16,12 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .admin-head-end .theme-toggle { width: 40px; }
 .admin-head-end .btn-small { display: inline-flex; align-items: center; padding: 0 16px; white-space: nowrap; }
 .admin-head-end :is(.theme-toggle, .btn-small):hover { border-color: var(--ink-soft); }
-.admin-nav { display: flex; flex-wrap: wrap; gap: 8px; }
-.admin-nav .btn-small { flex: 1 1 auto; text-align: center; } /* en celular los botones de anterior/siguiente se reparten el ancho */
+/* Anterior / siguiente: en celular dos columnas parejas en un renglón; "Hoy" / "Esta semana" / "Este mes" (el del
+   medio, cuando está) baja a todo el ancho. En las semanas el texto corto ("Anterior") reemplaza al largo hasta 720px. */
+.admin-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.admin-nav .btn-small { min-width: 0; text-align: center; white-space: nowrap; }
+.admin-nav .btn-small:nth-child(2):nth-last-child(2) { grid-column: 1 / -1; order: 1; }
+.nav-long { display: none; }
 .admin-back { background: var(--blue); }
 
 .admin-flash { padding: 12px 14px; border-radius: 12px; font-weight: 600; font-size: 14px; }
@@ -375,10 +379,35 @@ ul.day-chips { list-style: none; margin: 0; padding: 0; }
   .hours-time { min-height: 40px; }
 }
 
+/* Mi semana (barbero): total de cortes e ingresos en dos casillas y una tira de 7 días que entra entera en el celular. */
+.my-week-totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.my-week-totals p { display: grid; gap: 4px; min-width: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--lather); }
+.my-week-totals b { font-family: var(--display); font-weight: 900; font-size: clamp(24px, 7vw, 40px); line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.my-week-totals span { font-size: 12px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .06em; }
+.my-week-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 12px 0 0; padding: 0; list-style: none; }
+.my-week-days li { display: grid; justify-items: center; gap: 2px; min-width: 0; padding: 8px 0 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.mw-day { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); }
+.mw-date { font-size: 12px; color: var(--ink-soft); }
+.my-week-days b { margin-top: 4px; font-family: var(--display); font-weight: 900; font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; }
+.my-week-days li.zero b { color: var(--ink-soft); opacity: .5; }
+.my-week-days li.today { border-color: var(--red); }
+
+/* Servicios y productos en solo lectura (barbero, tabla .stack): en la tarjeta del celular la descripción va debajo
+   de su rótulo, alineada a la izquierda, en vez de apretada a la derecha. */
+@media (max-width: 719px) {
+  .admin-table.svc-ro td[data-label="Descripción"] { display: grid; gap: 2px; text-align: left; }
+}
+
 /* ===== Tablet / escritorio ===== */
 @media (min-width: 720px) {
   .admin { padding-left: 24px; padding-right: 24px; gap: 16px; }
+  .admin-nav { display: flex; flex-wrap: wrap; }
   .admin-nav .btn-small { flex: none; }
+  .admin-nav .btn-small:nth-child(2):nth-last-child(2) { order: 0; }
+  .nav-long { display: inline; }
+  .nav-short { display: none; }
+  .my-week-days { gap: 8px; }
+  .my-week-days b { font-size: 28px; }
   .svc-fields { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
   .day-chips { grid-template-columns: repeat(7, minmax(0, 1fr)); }
   .perm-chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
