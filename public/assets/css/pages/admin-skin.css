@@ -149,6 +149,52 @@ body.admin-page .admin-card.invert .svc-fields input::placeholder { color: color
 .admin-page .admin-tabs a[aria-current="page"] .ic { color: var(--brass-hi); transform: translateY(-1px); }
 .admin-page .admin-tabs a:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
 
+/* Ícono de cada sección al pasar el mouse (o al llegar con el teclado): un gesto propio de lo que representa, corto y
+   con un rebote al final. La animación sale de --tab-anim según data-tab; las secciones sin gesto propio (las del
+   superusuario) usan el salto genérico. Con mouse solamente (hover: hover), así en el celular no queda "pegado". */
+.admin-page .admin-tabs a { --tab-anim: tab-lift; }
+.admin-page .admin-tabs a[data-tab="resumen"] { --tab-anim: tab-bars; }
+.admin-page .admin-tabs a:is([data-tab="turnos"], [data-tab="semana"]) { --tab-anim: tab-page; }
+.admin-page .admin-tabs a[data-tab="hora-muerta"] { --tab-anim: tab-turn; }
+.admin-page .admin-tabs a[data-tab="fila"] { --tab-anim: tab-ticket; }
+.admin-page .admin-tabs a[data-tab="barberos"] { --tab-anim: tab-rock; }
+.admin-page .admin-tabs a[data-tab="finanzas"] { --tab-anim: tab-shake; }
+.admin-page .admin-tabs a[data-tab="ingresos"] { --tab-anim: tab-hop; }
+.admin-page .admin-tabs a[data-tab="egresos"] { --tab-anim: tab-print; }
+.admin-page .admin-tabs a[data-tab="servicios"] { --tab-anim: tab-snip; }
+.admin-page .admin-tabs a[data-tab="usuarios"] { --tab-anim: tab-pop; }
+@media (hover: hover) {
+  .admin-page .admin-tabs a:hover .ic { animation: var(--tab-anim) .7s cubic-bezier(.3, 1.3, .5, 1) both; }
+}
+.admin-page .admin-tabs a:focus-visible .ic { animation: var(--tab-anim) .7s cubic-bezier(.3, 1.3, .5, 1) both; }
+
+@keyframes tab-lift  { 40% { transform: translateY(-4px) scale(1.1); } 100% { transform: translateY(-2px) scale(1.04); } }
+/* Resumen: las barras del gráfico crecen desde la base. */
+@keyframes tab-bars  { 0% { transform: scaleY(1); transform-origin: 50% 85%; } 35% { transform: scaleY(.65); transform-origin: 50% 85%; }
+                       70% { transform: scaleY(1.18); transform-origin: 50% 85%; } 100% { transform: scaleY(1); transform-origin: 50% 85%; } }
+/* Turnos: la hoja del calendario se da vuelta. */
+@keyframes tab-page  { 30% { transform: perspective(60px) rotateX(35deg) translateY(-2px); } 100% { transform: perspective(60px) rotateX(0) translateY(-2px); } }
+/* Hora muerta: el reloj de arena gira media vuelta, como cuando se lo da vuelta. */
+@keyframes tab-turn  { 0% { transform: rotate(0); } 100% { transform: rotate(180deg); } }
+/* Fila: el ticket sale de la máquina, inclinado. */
+@keyframes tab-ticket { 35% { transform: translate(3px, -3px) rotate(-14deg); } 100% { transform: translate(0, -2px) rotate(-6deg); } }
+/* Barberos: el sillón se hamaca sobre su base. */
+@keyframes tab-rock  { 0%, 100% { transform: rotate(0); transform-origin: 50% 95%; } 25% { transform: rotate(-12deg); transform-origin: 50% 95%; }
+                       55% { transform: rotate(9deg); transform-origin: 50% 95%; } 80% { transform: rotate(-4deg); transform-origin: 50% 95%; } }
+/* Finanzas: la billetera tintinea. */
+@keyframes tab-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-3px) rotate(-4deg); } 40% { transform: translateX(3px) rotate(4deg); }
+                       60% { transform: translateX(-2px) rotate(-2deg); } 80% { transform: translateX(1px); } }
+/* Ingreso extra: el frasco de propinas da un saltito. */
+@keyframes tab-hop   { 0%, 100% { transform: translateY(0) scale(1); } 30% { transform: translateY(-6px) scale(1.05, .95); }
+                       55% { transform: translateY(0) scale(1.1, .88); } 75% { transform: translateY(-2px) scale(1); } }
+/* Egresos: el recibo se imprime (sube y se estira un poco). */
+@keyframes tab-print { 0% { transform: translateY(3px) scaleY(.85); } 60% { transform: translateY(-3px) scaleY(1.08); } 100% { transform: translateY(-1px) scaleY(1); } }
+/* Servicios: la tijera hace dos cortes. */
+@keyframes tab-snip  { 0%, 100% { transform: rotate(0); } 15% { transform: rotate(-22deg) scale(1.08); } 30% { transform: rotate(6deg); }
+                       45% { transform: rotate(-22deg) scale(1.08); } 65% { transform: rotate(4deg); } }
+/* Usuarios: el grupo se asoma y vuelve. */
+@keyframes tab-pop   { 0% { transform: scale(1); } 40% { transform: scale(1.22) translateY(-2px); } 70% { transform: scale(.94); } 100% { transform: scale(1.04) translateY(-1px); } }
+
 /* ===== Tarjetas por dentro ===== */
 .admin-page :is(.admin-card, .kpi) { padding: 18px; }
 /* Títulos de tarjeta como "eyebrow": versalitas espaciadas en latón con un filete delante. */
@@ -260,6 +306,7 @@ body.admin-page .seg-item[aria-current="page"] .seg-count { background: var(--br
 @media (prefers-reduced-motion: reduce) {
   .admin-page .admin > * { animation: none; }
   .admin-page .admin-tabs a, .admin-page .admin-tabs a .ic { transition: none; }
+  .admin-page .admin-tabs a .ic { animation: none !important; } /* sin los gestos de los íconos */
 }
 
 /* Celular angosto: "Salir" queda solo con el ícono (redondo como el del tema) para que el sello entre en un renglón. */

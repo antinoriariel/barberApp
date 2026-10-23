@@ -49,7 +49,8 @@ $tabs = array_intersect_key($tabs, array_flip($sections ?? []));
 <?php if (count($tabs) > 1): ?>
 <nav class="admin-tabs" aria-label="Secciones del panel">
 <?php foreach ($tabs as $key => [$href, $label, $ic]): ?>
-  <a href="<?= e($href) ?>"<?= $key === $active ? ' aria-current="page"' : '' ?>><?= icon($ic) ?><span><?= e($label) ?></span></a>
+  <?php // data-tab elige la animación del ícono al pasar el mouse (admin-skin.css). ?>
+  <a href="<?= e($href) ?>" data-tab="<?= e($key) ?>"<?= $key === $active ? ' aria-current="page"' : '' ?>><?= icon($ic) ?><span><?= e($label) ?></span></a>
 <?php endforeach; ?>
 </nav>
 <?php endif; ?>
