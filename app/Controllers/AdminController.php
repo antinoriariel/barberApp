@@ -638,7 +638,8 @@ final class AdminController extends Controller
     /**
      * GET /admin/servicios — editor del catálogo: precio, nombre, descripción y duración de cada servicio,
      * alta de servicios nuevos y ocultar/mostrar. Para un barbero (canEdit = false) es solo una lista de lo que
-     * existe, sin formularios. `ok` y `error` traen el resultado de la acción anterior.
+     * existe, sin formularios. `ok` y `error` traen el resultado de la acción anterior. `tab` elige la pestaña
+     * (servicios por defecto, o productos); las acciones sobre productos vuelven con ?tab=productos.
      * Con "Hora muerta" en curso muestra, como la app del cliente, el precio de lista tachado y el precio con el
      * descuento de cada servicio (los productos no tienen descuento); salePct sigue la misma regla que ShellController.
      */
@@ -656,6 +657,7 @@ final class AdminController extends Controller
             'canEdit'   => $user->isAdmin,
             'services'  => Service::allForAdmin(),
             'products'  => Product::allForAdmin(),
+            'tab'       => $request->query('tab') === 'productos' ? 'productos' : 'servicios',
             'flash'     => (string) $request->query('ok', ''),
             'error'     => (string) $request->query('error', ''),
         ]);
@@ -716,18 +718,18 @@ final class AdminController extends Controller
             'name' => $request->input('name'), 'description' => $request->input('description'), 'price' => $request->input('price'),
         ]);
         if ($error !== null) {
-            $this->redirect('/admin/servicios?error=' . rawurlencode($error) . '#productos');
+            $this->redirect('/admin/servicios?tab=productos&error=' . rawurlencode($error));
         }
         if ($id > 0) {
             if (!Product::update($id, $data)) {
-                $this->redirect('/admin/servicios?error=' . rawurlencode('Ese producto no existe.') . '#productos');
+                $this->redirect('/admin/servicios?tab=productos&error=' . rawurlencode('Ese producto no existe.'));
             }
             Audit::log('admin_product_update', $user->id, 'producto ' . $id . ' · $' . $data['price']);
         } else {
             $id = Product::create($data);
             Audit::log('admin_product_create', $user->id, 'producto ' . $id . ' · ' . $data['name']);
         }
-        $this->redirect('/admin/servicios?ok=1#producto-' . $id);
+        $this->redirect('/admin/servicios?tab=productos&ok=1#producto-' . $id);
     }
 
     /** POST /admin/productos/estado — oculta ('0') o muestra ('1') un producto en la app. */
@@ -742,7 +744,7 @@ final class AdminController extends Controller
             Product::setActive($id, $active);
             Audit::log($active ? 'admin_product_show' : 'admin_product_hide', $user->id, 'producto ' . $id);
         }
-        $this->redirect('/admin/servicios?ok=1#producto-' . $id);
+        $this->redirect('/admin/servicios?tab=productos&ok=1#producto-' . $id);
     }
 
     /**

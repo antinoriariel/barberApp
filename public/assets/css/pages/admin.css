@@ -97,6 +97,12 @@ body.admin-page { background: var(--lather); min-height: 100dvh; }
 .admin-card.invert .svc-fields input:focus, .admin-card.invert .svc-fields select:focus,
 .admin-card.invert .svc-fields textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(235, 23, 22, .18); }
 .admin > .admin-section-title { margin-top: 12px; scroll-margin-top: 16px; } /* Servicios / Productos en /admin/servicios */
+/* Pestañas Servicios | Productos de /admin/servicios: mismo molde que .catalog-tabs de la app (son links ?tab=). */
+.admin-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); }
+.admin-tab { padding: 10px 12px; border-radius: 999px; text-align: center; font-weight: 700; font-size: 15px; color: var(--ink-soft); text-decoration: none; transition: background .15s, color .15s; }
+.admin-tab small { font-weight: 600; opacity: .75; }
+.admin-tab:hover { color: var(--ink); }
+.admin-tab[aria-current="page"] { background: var(--red); color: #fff; }
 .admin > .svc-edit { scroll-margin-top: 16px; } /* #producto-N tras guardar */
 .svc-edit-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .svc-edit-head strong { font-size: 17px; }

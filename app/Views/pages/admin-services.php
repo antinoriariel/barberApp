@@ -1,24 +1,33 @@
 <?php
 /**
- * pages/admin-services.php — Editor del catálogo para el administrador: cambia nombre, descripción, precio y
- * duración (la duración no se muestra al cliente, pero la agenda la usa para calcular horarios), oculta o muestra
- * servicios y agrega nuevos (el formulario de alta va primero). Debajo, los productos que se venden en el local
- * (nombre, descripción y precio; se agregan, editan y ocultan igual que los servicios).
- * Un barbero con la sección habilitada ($canEdit = false) ve solo dos tablas de lo que existe, sin formularios
- * (el servidor rechaza igual cualquier cambio que no venga del administrador).
- *
- * Con "Hora muerta" en curso ($salePct > 0) avisa arriba con la cuenta regresiva y muestra el precio de lista
- * tachado y el precio con el descuento de cada servicio (components/price.php), igual que lo ve el cliente; los
- * productos quedan igual. Al llegar a cero, countdown.js pone sale-over en <html> y el CSS lo vuelve a ocultar.
+ * pages/admin-services.php — Editor del catálogo para el administrador, en dos pestañas: Servicios (nombre,
+ * descripción, precio y duración; la duración no se muestra al cliente, pero la agenda la usa para calcular
+ * horarios) y Productos que se venden en el local (nombre, descripción y precio). En las dos se agregan (el
+ * formulario de alta va primero), se editan y se ocultan/muestran.
+ * Las pestañas son links (?tab=productos), así funcionan sin JavaScript y las acciones vuelven a la pestaña
+ * en la que se estaba.
+ * Un barbero con la sección habilitada ($canEdit = false) ve, con las mismas pestañas, solo la tabla de lo que
+ * existe, sin formularios (el servidor rechaza igual cualquier cambio que no venga del administrador).
+ * Con "Hora muerta" en curso ($salePct > 0) la pestaña Servicios avisa con la cuenta regresiva y muestra el precio
+ * de lista tachado y el precio con el descuento de cada servicio (components/price.php), igual que lo ve el cliente;
+ * los productos quedan igual. Al llegar a cero, countdown.js pone sale-over en <html> y el CSS lo vuelve a ocultar.
  *
  * Variables: $services (Service::allForAdmin()), $products (Product::allForAdmin()), $canEdit (bool: es admin),
- *            $flash ('1'|''), $error (string), $deadHour (DeadHour::current() o null), $salePct (int, 0 sin descuento)
+ *            $tab ('servicios'|'productos'), $flash ('1'|''), $error (string),
+ *            $deadHour (DeadHour::current() o null), $salePct (int, 0 sin descuento)
  */
+$tabs = ['servicios' => ['Servicios', '/admin/servicios', count($services)], 'productos' => ['Productos', '/admin/servicios?tab=productos', count($products)]];
 ?>
 <main class="admin">
   <?= partial('components/admin-header', ['heading' => 'Servicios y productos', 'sub' => $canEdit ? 'Los cambios se ven al instante en la app.' : 'Lo que ofrece la barbería. Los carga y edita el administrador.', 'sections' => $user->panelSections(), 'active' => 'servicios']) ?>
 
-<?php if ($salePct > 0): ?>
+  <nav class="admin-tabs" aria-label="Catálogo">
+<?php foreach ($tabs as $key => [$label, $href, $count]): ?>
+    <a class="admin-tab" href="<?= e($href) ?>"<?= $tab === $key ? ' aria-current="page"' : '' ?>><?= e($label) ?> <small><?= $count ?></small></a>
+<?php endforeach; ?>
+  </nav>
+
+<?php if ($salePct > 0 && $tab === 'servicios'): ?>
   <p class="admin-flash svc-sale-note" role="status">
     <span class="dh-badge"><span class="dh-pulse" aria-hidden="true"></span>Hora muerta <?= $salePct ?>% OFF</span>
     Los servicios se muestran con el descuento (los productos no). Termina en
@@ -28,6 +37,7 @@
 <?php endif; ?>
 
 <?php if (!$canEdit): ?>
+<?php if ($tab === 'servicios'): ?>
   <section class="admin-card" aria-labelledby="svc-list">
     <h2 id="svc-list">Servicios</h2>
     <div class="table-wrap">
@@ -48,7 +58,7 @@
       </table>
     </div>
   </section>
-
+<?php else: ?>
   <section class="admin-card" aria-labelledby="prod-list">
     <h2 id="prod-list">Productos</h2>
 <?php if (!$products): ?>
@@ -72,14 +82,14 @@
     </div>
 <?php endif; ?>
   </section>
+<?php endif; ?>
 </main>
 <?php return; endif; ?>
 
   <?php if ($flash === '1'): ?><p class="admin-flash ok" role="status">Cambios guardados.</p><?php endif; ?>
   <?php if ($error !== ''): ?><p class="admin-flash bad" role="alert"><?= e($error) ?></p><?php endif; ?>
 
-  <h2 class="admin-section-title">Servicios</h2>
-
+<?php if ($tab === 'servicios'): ?>
   <section class="admin-card svc-edit invert" aria-labelledby="svc-new">
     <h2 id="svc-new">Agregar servicio</h2>
     <form method="post" action="/admin/servicios/guardar" class="svc-edit">
@@ -126,8 +136,7 @@
       </form>
     </section>
   <?php endforeach; ?>
-
-  <h2 class="admin-section-title" id="productos">Productos</h2>
+<?php else: ?>
   <p class="admin-sub">Se muestran en la pestaña Productos de la app y se pagan en el local.</p>
 
   <section class="admin-card svc-edit invert" aria-labelledby="prod-new">
@@ -172,4 +181,5 @@
       </form>
     </section>
   <?php endforeach; ?>
+<?php endif; ?>
 </main>
