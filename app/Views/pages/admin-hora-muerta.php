@@ -11,7 +11,7 @@
 use App\Models\DeadHour;
 ?>
 <main class="admin">
-  <?= partial('components/admin-header', ['heading' => 'Hora muerta', 'sub' => 'Descuento por tiempo limitado para llenar las horas sin clientes', 'sections' => $user->panelSections(), 'active' => 'hora-muerta']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Hora muerta', 'sub' => 'Descuento por tiempo limitado para llenar las horas sin clientes', 'sections' => $user->panelSections(), 'role' => $user->panelRole(), 'active' => 'hora-muerta']) ?>
 
   <?php if ($flash === 'inicio'): ?><p class="admin-flash ok" role="status">Hora muerta activada. Los clientes ya ven el descuento.</p><?php endif; ?>
   <?php if ($flash === 'fin'): ?><p class="admin-flash ok" role="status">Hora muerta terminada.</p><?php endif; ?>

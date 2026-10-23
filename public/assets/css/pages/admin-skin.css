@@ -123,6 +123,11 @@ body.admin-page .admin-card.invert .dh-chip input:focus-visible + span { outline
   -webkit-mask: url("/img/C.png") center / contain no-repeat; mask: url("/img/C.png") center / contain no-repeat;
 }
 .admin-brand-tag { padding-left: 10px; border-left: 1px solid rgba(201, 164, 108, .45); color: rgba(247, 241, 232, .6); }
+/* Quién usa el panel ("— Administrador", "— Barbero · acceso limitado"): en crema para que se lea primero. Si no entra
+   al lado de "Panel" (celular angosto, rol largo) baja entero al renglón siguiente, alineado con el sello. */
+.admin-brand { flex-wrap: wrap; row-gap: 6px; }
+.admin-brand-role { white-space: nowrap; letter-spacing: .16em; color: #F3E7D3; cursor: default; }
+.admin-brand-role > span { color: var(--brass); }
 .admin-page .admin-head h1 {
   font-size: clamp(36px, 11vw, 56px); font-weight: 900; line-height: .92; letter-spacing: .005em; text-transform: uppercase;
   color: #FBF6EE; text-shadow: 0 2px 28px rgba(0, 0, 0, .65);
@@ -357,6 +362,9 @@ body.admin-page .seg-item[aria-current="page"] .seg-count { border-color: var(--
 @media (max-width: 479px) {
   .admin-page .admin-head-end .btn-small.ghost { width: 42px; padding: 0; justify-content: center; }
   .admin-page .admin-head-end .btn-small.ghost span { display: none; }
+  /* El rol no entra al lado de "Panel": va siempre en su renglón, sin el guion y alineado bajo "BarberShop". */
+  .admin-brand-role { flex-basis: 100%; margin-top: -4px; padding-left: 40px; }
+  .admin-brand-role > span { display: none; }
 }
 
 /* Mi semana: el día de hoy con filete de latón (el rojo queda para las acciones). */

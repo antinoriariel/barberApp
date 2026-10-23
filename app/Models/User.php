@@ -102,6 +102,20 @@ final class User
         return array_values(array_filter($keys, $this->canSee(...)));
     }
 
+    /**
+     * Quién está usando el panel, para el sello de la cabecera ("Panel — Administrador"): el administrador lo ve todo;
+     * un barbero solo "Mi semana" y lo que se le habilitó, por eso lleva "acceso limitado" (el detalle de qué ve lo
+     * arma la cabecera con sus pestañas). Un cliente no entra al panel: '' por si acaso.
+     */
+    public function panelRole(): string
+    {
+        return match ($this->role()) {
+            'admin'   => self::ROLES['admin'],
+            'barbero' => self::ROLES['barbero'] . ' · acceso limitado',
+            default   => '',
+        };
+    }
+
     /** ¿Entra al panel /admin? (administrador, o barbero: siempre tiene al menos "Mi semana"). */
     public function hasPanel(): bool
     {

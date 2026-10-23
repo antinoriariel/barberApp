@@ -10,7 +10,7 @@ $cur = $finance[5];
 $net = $cur['net'];
 ?>
 <main class="admin">
-  <?= partial('components/admin-header', ['heading' => 'Finanzas', 'sub' => ucfirst(month_es((int) substr($month, 5))) . ' ' . substr($month, 0, 4) . ($isCurrent ? ' · mes en curso' : ''), 'sections' => $user->panelSections(), 'active' => 'finanzas']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Finanzas', 'sub' => ucfirst(month_es((int) substr($month, 5))) . ' ' . substr($month, 0, 4) . ($isCurrent ? ' · mes en curso' : ''), 'sections' => $user->panelSections(), 'role' => $user->panelRole(), 'active' => 'finanzas']) ?>
 
   <nav class="admin-nav" aria-label="Cambiar de mes">
     <a class="btn-small" href="/admin/finanzas?mes=<?= e($prev) ?>">← Mes anterior</a>

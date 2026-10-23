@@ -1,13 +1,15 @@
 <?php
 /**
- * components/admin-header.php — Cabecera del panel: sello de la marca (navaja de img/C.png + "BarberShop · Panel"), título,
+ * components/admin-header.php — Cabecera del panel: sello de la marca (navaja de img/C.png + "BarberShop · Panel — <rol>"), título,
  * subtítulo, selector de tema claro/oscuro, cierre de sesión y pestañas de las vistas, cada una con su ícono
  * (ICON_PATHS en helpers.php). Va sobre la foto de fondo del panel (admin.css), por eso su texto es siempre claro.
  * El botón de tema lo conecta js/admin.js (que AdminController carga en todas las vistas).
  * Variables: $heading (string), $sub (string),
  *            $active ('semana'|'resumen'|'turnos'|'hora-muerta'|'fila'|'barberos'|'finanzas'|'ingresos'|'egresos'|'servicios'|'usuarios',
  *                     o en el panel del superusuario 'su'|'su-registros'|'su-seguridad'|'su-auditoria'),
- *            $sections (string[]: secciones que la cuenta puede ver, User::panelSections(); solo esas pestañas se muestran)
+ *            $sections (string[]: secciones que la cuenta puede ver, User::panelSections(); solo esas pestañas se muestran),
+ *            $role (string, opcional: quién usa el panel, User::panelRole() o "Superusuario"; va en el sello después de
+ *                   "Panel"; su title lista las secciones que ve, sacadas de sus pestañas)
  */
 $tabs = [ // clave => [ruta, texto, ícono]
     'semana'      => ['/admin/mi-semana', 'Mi semana', 'calendar'],
@@ -28,10 +30,12 @@ $tabs = [ // clave => [ruta, texto, ícono]
     'su-auditoria' => ['/su/auditoria', 'Auditoría', 'list'],
 ];
 $tabs = array_intersect_key($tabs, array_flip($sections ?? []));
+$role ??= '';
+$roleTitle = $tabs ? 'Puede ver: ' . implode(', ', array_column($tabs, 1)) : $role; // al pasar el mouse: qué secciones tiene
 ?>
 <header class="admin-head">
   <div>
-    <p class="admin-brand"><span class="admin-brand-mark"><span class="admin-brand-logo"></span></span><span>BarberShop</span><span class="admin-brand-tag">Panel</span></p>
+    <p class="admin-brand"><span class="admin-brand-mark"><span class="admin-brand-logo"></span></span><span>BarberShop</span><span class="admin-brand-tag">Panel</span><?php if ($role !== ''): ?><span class="admin-brand-role" title="<?= e($roleTitle) ?>"><span aria-hidden="true">— </span><?= e($role) ?></span><?php endif; ?></p>
     <h1><?= e($heading) ?></h1>
     <p class="admin-sub"><?= e($sub) ?></p>
   </div>

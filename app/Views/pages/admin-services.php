@@ -22,7 +22,7 @@ $tabs = [ // clave => [texto, ruta, cantidad, ícono]
 ];
 ?>
 <main class="admin">
-  <?= partial('components/admin-header', ['heading' => 'Servicios y productos', 'sub' => $canEdit ? 'Los cambios se ven al instante en la app.' : 'Lo que ofrece la barbería. Los carga y edita el administrador.', 'sections' => $user->panelSections(), 'active' => 'servicios']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Servicios y productos', 'sub' => $canEdit ? 'Los cambios se ven al instante en la app.' : 'Lo que ofrece la barbería. Los carga y edita el administrador.', 'sections' => $user->panelSections(), 'role' => $user->panelRole(), 'active' => 'servicios']) ?>
 
   <?php // Segmented control (.seg en admin.css), no .admin-tabs: es un filtro dentro de la sección, no otro menú. ?>
   <nav class="seg" aria-label="Catálogo">

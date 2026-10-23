@@ -58,7 +58,7 @@ $roleFields = static function (?User $account): void {
 };
 ?>
 <main class="admin">
-  <?= partial('components/admin-header', ['heading' => 'Usuarios', 'sub' => count($accounts) . ' cuentas · altas, bajas, roles y contraseñas', 'sections' => $user->panelSections(), 'active' => 'usuarios']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Usuarios', 'sub' => count($accounts) . ' cuentas · altas, bajas, roles y contraseñas', 'sections' => $user->panelSections(), 'role' => $user->panelRole(), 'active' => 'usuarios']) ?>
 
   <?php // #aviso: todos los formularios de la página vuelven acá (ver AdminController), así el resultado queda a la vista. ?>
   <?php if ($flash !== '' || $stranded > 0 || $error !== ''): ?>

@@ -14,7 +14,7 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
     . ' al ' . date('j', strtotime($week['to'])) . ' de ' . month_es((int) date('n', strtotime($week['to'])));
 ?>
 <main class="admin">
-  <?= partial('components/admin-header', ['heading' => 'Mi semana', 'sub' => 'Semana del ' . $range . ($isCurrent ? ' · esta semana' : ''), 'sections' => $user->panelSections(), 'active' => 'semana']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Mi semana', 'sub' => 'Semana del ' . $range . ($isCurrent ? ' · esta semana' : ''), 'sections' => $user->panelSections(), 'role' => $user->panelRole(), 'active' => 'semana']) ?>
 
   <nav class="admin-nav" aria-label="Cambiar de semana">
     <a class="btn-small" href="/admin/mi-semana?fecha=<?= e($prev) ?>" aria-label="Semana anterior">← <span class="nav-long">Semana anterior</span><span class="nav-short">Anterior</span></a>

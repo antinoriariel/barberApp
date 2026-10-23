@@ -12,7 +12,7 @@ $today = date('Y-m-d');
 $defaultDate = substr($today, 0, 7) === $month ? $today : $month . '-01';
 ?>
 <main class="admin">
-  <?= partial('components/admin-header', ['heading' => 'Ingreso extra', 'sub' => ucfirst(month_es((int) substr($month, 5))) . ' ' . substr($month, 0, 4) . ($isCurrent ? ' · mes en curso' : ''), 'sections' => $user->panelSections(), 'active' => 'ingresos']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Ingreso extra', 'sub' => ucfirst(month_es((int) substr($month, 5))) . ' ' . substr($month, 0, 4) . ($isCurrent ? ' · mes en curso' : ''), 'sections' => $user->panelSections(), 'role' => $user->panelRole(), 'active' => 'ingresos']) ?>
 
   <nav class="admin-nav" aria-label="Cambiar de mes">
     <a class="btn-small" href="/admin/ingresos?mes=<?= e($prev) ?>">← Mes anterior</a>

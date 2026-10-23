@@ -11,7 +11,7 @@ $statusClass = ['waiting' => 'booked', 'called' => 'done', 'done' => 'done', 'no
 $waiting = count(array_filter($tickets, static fn (array $t) => $t['status'] === 'waiting'));
 ?>
 <main class="admin">
-  <?= partial('components/admin-header', ['heading' => 'Fila', 'sub' => ucfirst(date_es(date('Y-m-d'))) . ' · por orden de llegada', 'sections' => $user->panelSections(), 'active' => 'fila']) ?>
+  <?= partial('components/admin-header', ['heading' => 'Fila', 'sub' => ucfirst(date_es(date('Y-m-d'))) . ' · por orden de llegada', 'sections' => $user->panelSections(), 'role' => $user->panelRole(), 'active' => 'fila']) ?>
 
   <?php if ($flash === 'vacia'): ?><p class="admin-flash bad" role="status">No hay nadie esperando.</p><?php endif; ?>
 
