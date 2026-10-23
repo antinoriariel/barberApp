@@ -1,6 +1,6 @@
 <?php
 /**
- * components/admin-header.php — Cabecera del panel: sello de la marca (navaja + "Navaja & Co. · Panel"), título,
+ * components/admin-header.php — Cabecera del panel: sello de la marca (navaja de img/C.png + "BarberShop · Panel"), título,
  * subtítulo, selector de tema claro/oscuro, cierre de sesión y pestañas de las vistas, cada una con su ícono
  * (ICON_PATHS en helpers.php). Va sobre la foto de fondo del panel (admin.css), por eso su texto es siempre claro.
  * El botón de tema lo conecta js/admin.js (que AdminController carga en todas las vistas).
@@ -31,7 +31,7 @@ $tabs = array_intersect_key($tabs, array_flip($sections ?? []));
 ?>
 <header class="admin-head">
   <div>
-    <p class="admin-brand"><span class="admin-brand-mark"><?= icon('razor') ?></span><span>Navaja &amp; Co.</span><span class="admin-brand-tag">Panel</span></p>
+    <p class="admin-brand"><span class="admin-brand-mark"><span class="admin-brand-logo"></span></span><span>BarberShop</span><span class="admin-brand-tag">Panel</span></p>
     <h1><?= e($heading) ?></h1>
     <p class="admin-sub"><?= e($sub) ?></p>
   </div>
