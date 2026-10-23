@@ -4,10 +4,12 @@
  * Son radios ocultos (servicios: casillas, se pueden combinar varios en un turno): el CSS pinta la opción
  * elegida y assets/js/booking.js lee las selecciones.
  *
- * Variables: $services (Service[]), $barbers (Barber[]), $days (array), $slots (array)
+ * Variables: $services (Service[]), $barbers (Barber[]), $days (array), $slots (array),
+ *            $onlyToday (bool, opcional: hora muerta en curso, $days trae solo hoy),
+ *            $salePct (int, opcional: % de la hora muerta; booking.js lo usa para tachar el total del resumen)
  */
 ?>
-<div class="reserve-steps">
+<div class="reserve-steps" data-discount="<?= (int) ($salePct ?? 0) ?>">
   <fieldset class="step">
     <legend>Servicios <small class="step-hint">podés elegir hasta <?= \App\Services\Booking::MAX_SERVICES ?></small></legend>
     <div class="chips" data-max="<?= \App\Services\Booking::MAX_SERVICES ?>">
@@ -56,7 +58,11 @@
 
   <fieldset class="step">
     <legend>Día</legend>
-    <p class="step-note">Los miércoles no se dan turnos: atendemos por orden de llegada. Escaneá el QR de la fila en el local.</p>
+    <?php if (!empty($onlyToday)): ?>
+      <p class="step-note">Hora muerta en curso: mientras dura solo se reservan turnos para hoy, con descuento.</p>
+    <?php else: ?>
+      <p class="step-note">Los miércoles no se dan turnos: atendemos por orden de llegada. Escaneá el QR de la fila en el local.</p>
+    <?php endif; ?>
     <div class="days">
       <?php foreach ($days as $i => $d): ?>
         <label class="day">

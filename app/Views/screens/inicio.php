@@ -3,7 +3,8 @@
  * screens/inicio.php — Pantalla de inicio (mobile first): saludo, turno, fidelidad,
  * servicios más pedidos, minijuegos plegados y datos del local.
  * Variables: $user, $shop (Shop), $loyalty (LoyaltyCard), $next (array|null), $queue (QueueTicket::currentFor|null), $popular (Service[]),
- *            $games (config/games.php), $rewards (premios vigentes del cliente), $deadHour (DeadHour::current() o null)
+ *            $games (config/games.php), $rewards (premios vigentes del cliente), $deadHour (DeadHour::current() o null),
+ *            $salePct (% de la hora muerta que se puede usar ahora, 0 si no hay)
  */
 ?>
 <section class="view" id="view-inicio" data-title="Inicio" data-skel="inicio" hidden>
@@ -33,7 +34,7 @@
   </div>
   <div class="rail">
     <?php foreach ($popular as $service): ?>
-      <?= partial('components/service-card', compact('service')) ?>
+      <?= partial('components/service-card', compact('service', 'salePct')) ?>
     <?php endforeach; ?>
   </div>
 

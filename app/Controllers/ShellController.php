@@ -40,6 +40,11 @@ final class ShellController extends Controller
         }
         $services = Service::all();
         $days = Schedule::openDays(7);
+        // Durante la hora muerta solo se ofrece hoy (Booking rechaza cualquier otro día mientras corre).
+        $onlyToday = DeadHour::locksToday() && $days && $days[0]['iso'] === date('Y-m-d');
+        if ($onlyToday) {
+            $days = [$days[0]];
+        }
 
         $this->view('pages/shell', [
             'title'       => 'Barbería',
@@ -58,6 +63,9 @@ final class ShellController extends Controller
             'deadHour'    => DeadHour::current(), // "Hora muerta" vigente (aviso en Inicio y Perfil) o null
             'barbers'     => Barber::all(),
             'days'        => $days,
+            'onlyToday'   => $onlyToday, // hora muerta en curso: Reservar muestra solo hoy y lo avisa
+            // % de la hora muerta que se puede usar ahora (hoy se reserva): tacha los precios de los servicios.
+            'salePct'     => $onlyToday ? (int) DeadHour::current()['percent'] : 0,
             // Horarios del primer día con el primer servicio y "cualquier barbero" (la selección inicial);
             // booking.js los recarga desde /api/disponibilidad al cambiar servicio, barbero o día.
             'slots'       => $days && $services ? Schedule::slots($days[0]['iso'], 'any', $services[0]->minutes) : [],

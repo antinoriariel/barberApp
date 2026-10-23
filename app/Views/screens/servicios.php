@@ -2,7 +2,8 @@
 /**
  * screens/servicios.php — Catálogo en dos pestañas: Servicios (se reservan) y Productos (estáticos, se compran
  * en el local). El cambio de pestaña lo hace assets/js/catalog.js; sin JS se ve solo Servicios.
- * Variables: $services (Service[]), $products (Product[])
+ * Variables: $services (Service[]), $products (Product[]), $salePct (% de la hora muerta en curso, 0 si no hay;
+ *            tacha el precio de los servicios, no el de los productos)
  */
 ?>
 <section class="view" id="view-servicios" data-title="Servicios" data-skel="list" hidden>
@@ -25,7 +26,7 @@
               <small><?= e($s->description) ?></small>
             </span>
             <span class="svc-foot">
-              <b class="svc-price"><?= money($s->price) ?></b>
+              <b class="svc-price"><?= partial('components/price', ['price' => $s->price, 'pct' => $salePct]) ?></b>
               <span class="svc-cta">Reservar <?= icon('plus') ?></span>
             </span>
           </button>

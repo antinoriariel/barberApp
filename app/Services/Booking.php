@@ -105,6 +105,9 @@ final class Booking
         if (!Schedule::isDate($date) || $date < date('Y-m-d') || $date > date('Y-m-d', strtotime("+{$window} days"))) {
             throw new BookingException("Elegí un día dentro de los próximos {$window} días.");
         }
+        if ($date !== date('Y-m-d') && DeadHour::locksToday()) {
+            throw new BookingException('Durante la hora muerta solo se reservan turnos para hoy.');
+        }
         if (Schedule::isWalkInOnly($date)) {
             throw new BookingException('Los miércoles no se dan turnos: atendemos por orden de llegada (escaneá el QR de la fila en el local).');
         }

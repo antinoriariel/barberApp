@@ -4,7 +4,7 @@
  * navigation.js (cargado por main.js) muestra una pantalla por vez según el hash (#inicio, #servicios…).
  *
  * Variables: $user, $shop, $loyalty, $next, $queue (número de la fila o null), $history, $services, $popular,
- *            $games, $rewards, $barbers, $days, $slots (las arma ShellController).
+ *            $games, $rewards, $barbers, $days, $slots, $onlyToday, $salePct (las arma ShellController).
  */
 ?>
 <div class="app">
@@ -13,9 +13,9 @@
   <main>
     <?= partial('components/skeletons') ?>
 
-    <?= partial('screens/inicio', compact('user', 'shop', 'loyalty', 'next', 'popular', 'games', 'rewards', 'queue', 'deadHour')) ?>
-    <?= partial('screens/servicios', compact('services', 'products')) ?>
-    <?= partial('screens/reservar', compact('services', 'barbers', 'days', 'slots')) ?>
+    <?= partial('screens/inicio', compact('user', 'shop', 'loyalty', 'next', 'popular', 'games', 'rewards', 'queue', 'deadHour', 'salePct')) ?>
+    <?= partial('screens/servicios', compact('services', 'products', 'salePct')) ?>
+    <?= partial('screens/reservar', compact('services', 'barbers', 'days', 'slots', 'onlyToday', 'salePct')) ?>
     <?= partial('screens/barberos', compact('barbers')) ?>
     <?= partial('screens/perfil', compact('user', 'loyalty', 'history', 'deadHour')) ?>
   </main>

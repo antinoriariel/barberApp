@@ -29,6 +29,27 @@ const checked = (name) => document.querySelector(`input[name="${name}"]:checked`
 /** 12000 → "$12.000" */
 const money = (n) => '$' + Number(n).toLocaleString('es-AR');
 
+/** % de la "Hora muerta" en curso (data-discount de booking-steps; 0 si no hay o si ya terminó: clase sale-over). */
+const discount = () => document.documentElement.classList.contains('sale-over')
+  ? 0
+  : Number(document.querySelector('.reserve-steps')?.dataset.discount || 0);
+
+/**
+ * Nodos del precio para el resumen: el total tal cual o, con hora muerta, el de lista tachado y el descontado
+ * (redondeado al peso sobre el total, la misma cuenta que hace el servidor al guardar el turno).
+ */
+function priceNodes(total) {
+  const pct = discount();
+  if (!pct) return [money(total)];
+  const old = document.createElement('s');
+  old.className = 'price-old';
+  old.textContent = money(total);
+  const now = document.createElement('b');
+  now.className = 'price-new';
+  now.textContent = money(Math.round(total * (100 - pct) / 100));
+  return [old, ' ', now];
+}
+
 /**
  * Servicios elegidos (casillas: puede haber varios) resumidos como si fueran una sola opción:
  * value "corte,cejas" (lo que esperan la API y /turnos), label "Corte clásico + Perfilado de cejas" y precio sumado.
@@ -67,12 +88,12 @@ function renderSummary() {
   confirmBtn.textContent = rescheduleId === null ? 'Confirmar turno' : 'Confirmar cambio';
   if (!t) {
     line.textContent = rescheduleId === null ? 'Elegí un horario' : 'Elegí el nuevo horario';
-    sub.textContent = s ? `${s.dataset.label} · ${money(s.dataset.price)}` : '';
+    sub.replaceChildren(...(s ? [`${s.dataset.label} · `, ...priceNodes(s.dataset.price)] : []));
     confirmBtn.disabled = true;
     return;
   }
   line.textContent = `${d.dataset.label} a las ${t.dataset.label}`;
-  sub.textContent = `${s.dataset.label} · ${b.dataset.label} · ${money(s.dataset.price)}`;
+  sub.replaceChildren(`${s.dataset.label} · ${b.dataset.label} · `, ...priceNodes(s.dataset.price));
   confirmBtn.disabled = false;
 }
 

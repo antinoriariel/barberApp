@@ -4,7 +4,8 @@
  * Cada elemento con data-countdown (fin en ms epoch) y data-now (hora del servidor en ms al renderizar) muestra el
  * tiempo que falta como "m:ss" o "h:mm:ss". Se corrige con la diferencia entre el reloj del servidor y el del
  * teléfono, así un reloj mal puesto no cambia el tiempo. Al llegar a cero: data-reload recarga la página (panel) y
- * data-hide="<selector>" oculta el ancestro que coincide (aviso del cliente).
+ * data-hide="<selector>" oculta el ancestro que coincide (aviso del cliente) y data-end-class="<clase>" se la pone a
+ * <html> (sale-over: los precios tachados de los servicios vuelven al precio de lista).
  */
 
 /** Formatea milisegundos restantes como "m:ss" o, desde una hora, "h:mm:ss" (mismo formato que countdown_text en PHP). */
@@ -35,6 +36,10 @@ export function initCountdowns() {
       c.done = true;
       if ('reload' in c.el.dataset) setTimeout(() => location.reload(), 1500);
       if (c.el.dataset.hide) c.el.closest(c.el.dataset.hide)?.setAttribute('hidden', '');
+      if (c.el.dataset.endClass) {
+        document.documentElement.classList.add(c.el.dataset.endClass);
+        document.dispatchEvent(new CustomEvent('countdown:end'));
+      }
     }
   };
   tick();

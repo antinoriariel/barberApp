@@ -21,6 +21,15 @@ function money(int $n): string
 }
 
 /**
+ * Precio con el descuento de la "Hora muerta" ($pct %), redondeado al peso: misma cuenta que Appointment::insert,
+ * que la aplica sobre el total del turno. Con $pct 0 devuelve el precio tal cual.
+ */
+function sale_price(int $price, int $pct): int
+{
+    return $pct > 0 ? (int) round($price * (100 - $pct) / 100) : $price;
+}
+
+/**
  * Pesos en formato corto para lugares angostos (gráfico del panel en celular):
  * 1234567 → "$1,2M", 85000 → "$85k", 950 → "$950". El monto completo va aparte (title / tabla).
  */

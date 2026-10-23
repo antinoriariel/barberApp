@@ -13,7 +13,7 @@
   </div>
   <div class="dead-hour-end">
     <small>Termina en</small>
-    <span class="dead-hour-clock" data-countdown="<?= (int) $promo['ends'] * 1000 ?>" data-now="<?= time() * 1000 ?>" data-hide=".dead-hour"
+    <span class="dead-hour-clock" data-countdown="<?= (int) $promo['ends'] * 1000 ?>" data-now="<?= time() * 1000 ?>" data-hide=".dead-hour" data-end-class="sale-over"
           role="timer" aria-live="off"><?= e(countdown_text($promo['ends'] - time())) ?></span>
     <a class="dead-hour-cta" href="#reservar">Reservar</a>
   </div>

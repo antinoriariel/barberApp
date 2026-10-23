@@ -9,7 +9,7 @@ use App\Core\Database;
  * "Hora muerta" (tabla dead_hours, solo con base de datos): descuento de un X% durante N minutos que el administrador
  * activa con un botón cuando el local está sin clientes. Hay a lo sumo una vigente: activar otra corta la anterior.
  * Mientras dura, la app de clientes la muestra con una cuenta regresiva (Inicio y Perfil) y Booking aplica el
- * descuento a los turnos de ese mismo día que se reservan en ese lapso.
+ * descuento a los turnos de ese mismo día que se reservan en ese lapso; mientras corre no se reservan otros días.
  */
 final class DeadHour
 {
@@ -53,6 +53,17 @@ final class DeadHour
     public static function percentFor(string $date): int
     {
         return $date === date('Y-m-d') ? (self::current()['percent'] ?? 0) : 0;
+    }
+
+    /**
+     * ¿La hora muerta vigente limita las reservas a hoy? Sí mientras corre y hoy se dan turnos (abierto y no es día por
+     * orden de llegada): en ese lapso solo se reserva para el día en que se activó. Si hoy no se toman turnos el
+     * descuento no se puede usar, así que no se traba nada.
+     */
+    public static function locksToday(): bool
+    {
+        $today = date('Y-m-d');
+        return self::current() !== null && Schedule::isOpen($today) && !Schedule::isWalkInOnly($today);
     }
 
     /**

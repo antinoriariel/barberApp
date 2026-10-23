@@ -45,3 +45,11 @@
 .dh-chip input:focus-visible + span { outline: 3px solid color-mix(in srgb, var(--red) 45%, transparent); outline-offset: 2px; }
 :root[data-theme="light"] .admin-card.invert .dh-chip span { background: #262626; border-color: #5A5A5A; color: #fff; }
 :root[data-theme="light"] .admin-card.invert .dh-chip input:checked + span { background: var(--red); border-color: var(--red); }
+
+/* --- Precios de servicios con hora muerta (components/price.php y resumen de booking.js): lista tachada + precio
+   con descuento en rojo. Al terminar la cuenta regresiva (html.sale-over) queda solo el precio de lista. --- */
+.price-old { font-size: .62em; font-weight: 700; color: var(--ink-soft); text-decoration-thickness: 2px; margin-right: 2px; }
+.price-new { color: var(--red); }
+.summary-sub .price-new { font-weight: 800; }
+.sale-over .price-new { display: none; }
+.sale-over .price-old { font-size: inherit; font-weight: inherit; color: inherit; text-decoration: none; margin: 0; }

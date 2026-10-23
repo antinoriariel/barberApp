@@ -16,11 +16,13 @@
 .barber-avatar { position: absolute; top: 40px; left: 18px; width: 72px; height: 72px; margin: 0; font-size: 28px; box-shadow: 0 0 0 4px var(--paper); z-index: 2; }
 .barber-body { display: grid; gap: 4px; padding: 44px 18px 18px; }
 .barber-info { display: grid; gap: 4px; min-width: 0; }
-/* Con imagen: texto (nombre, especialidad, años) en la columna izquierda e imagen en la derecha,
-   ocupando esas tres filas y centrada con ellas; queda dentro del relleno de la tarjeta. */
-.barber.has-photo .barber-info { grid-template-columns: minmax(0, 1fr) auto; column-gap: 14px; align-items: center; }
-.barber.has-photo .barber-info > :not(.barber-photo) { grid-column: 1; }
-.barber-photo { grid-column: 2; grid-row: 1 / span 3; align-self: center; width: clamp(84px, 28vw, 128px); height: auto; aspect-ratio: 1; object-fit: contain; } /* fluida: 84px en celulares chicos, 128px máx. */
+/* Con imagen: el avatar es la imagen del barbero (más grande que el de iniciales), recortada en círculo sobre fondo
+   oscuro para que las ilustraciones con transparencia se vean igual que las fotos subidas. */
+.barber-photo {
+  width: 104px; height: 104px; top: 30px; border-radius: 50%; object-fit: cover;
+  background: #111; border: 3px solid var(--tone); box-shadow: 0 0 0 4px var(--paper);
+}
+.barber.has-photo .barber-body { padding-top: 62px; }
 .barber-body h2 { font-family: var(--display); font-weight: 900; font-size: 28px; line-height: 1; }
 .barber-role { align-self: start; justify-self: start; margin-top: 4px; padding: 3px 10px; border-radius: 99px; background: var(--lather); font-size: 13px; font-weight: 700; }
 .barber-years { color: var(--ink-soft); font-size: 14px; }
