@@ -12,7 +12,7 @@ use App\Core\Session;
 use App\Services\Auth;
 use App\Support\Dni;
 
-/** Login, alta de cuenta, "Olvidé mi contraseña" (WhatsApp de soporte) y cierre de sesión. */
+/** Login, alta de cuenta, "Olvidé mi contraseña" (DNI + celular del registro) y cierre de sesión. */
 final class AuthController extends Controller
 {
     /** GET /login — muestra el formulario (o redirige a la app si ya hay sesión). */
@@ -92,13 +92,43 @@ final class AuthController extends Controller
     }
 
     /**
-     * GET /recuperar — la contraseña no se recupera desde la app: manda al WhatsApp de soporte con el mensaje ya escrito
-     * (Auth::supportWhatsappUrl). El login enlaza directo a WhatsApp; esta ruta queda para enlaces viejos o guardados.
+     * GET /recuperar — formulario de "Olvidé mi contraseña": DNI, el celular que dio al registrarse y la contraseña
+     * nueva (dos veces). Sin base de datos (driver files) no hay dónde guardarla, así que manda al WhatsApp de soporte.
      */
     public function showForgot(Request $request): void
     {
-        header('Location: ' . Auth::supportWhatsappUrl(), true, 302);
-        exit;
+        if (!Database::enabled()) {
+            header('Location: ' . Auth::supportWhatsappUrl(), true, 302);
+            exit;
+        }
+        if (Auth::user()) {
+            $this->redirect('/');
+        }
+        $this->renderForgot();
+    }
+
+    /**
+     * POST /recuperar — delega en Auth::recover (límite de intentos, DNI + celular del registro). Éxito → entra con la
+     * contraseña nueva. Error → vuelve al formulario con el DNI y el celular escritos (nunca las contraseñas).
+     */
+    public function forgot(Request $request): void
+    {
+        $this->requireDatabase();
+        $this->requireCsrf($request);
+
+        $values = [
+            'dni'   => Dni::normalize($request->string('dni')),
+            'phone' => $request->string('phone', '', 30),
+        ];
+        $error = Auth::recover($values['dni'], $values['phone'], $request->string('password'),
+            $request->string('password2'), $request->ip());
+
+        if ($error === null) {
+            $user = Auth::user();
+            $this->redirect($user?->hasPanel() ? '/admin' : '/');
+        }
+        $this->throttleHeaders($error);
+        $this->renderForgot($error, $values);
     }
 
     /** POST /logout — cierra la sesión (POST + CSRF: un enlace de otro sitio no puede desloguear al usuario). */
@@ -161,7 +191,17 @@ final class AuthController extends Controller
             'error'     => $error,
             'dni'       => $dni,
             'canSignUp' => Auth::canRegisterHere(),
-            'forgotUrl' => Auth::supportWhatsappUrl(),
+            'forgotUrl' => Database::enabled() ? '/recuperar' : Auth::supportWhatsappUrl(),
+        ]));
+    }
+
+    /** Renderiza "Olvidé mi contraseña" con lo ya escrito y el WhatsApp de soporte como plan B. */
+    private function renderForgot(string $error = '', array $values = []): void
+    {
+        $this->view('pages/forgot', $this->authPage('Recuperar contraseña', [
+            'error'      => $error,
+            'values'     => $values + ['dni' => '', 'phone' => ''],
+            'supportUrl' => Auth::supportWhatsappUrl(),
         ]));
     }
 
@@ -175,7 +215,7 @@ final class AuthController extends Controller
             'error'     => $error,
             'values'    => $values + ['dni' => '', 'full_name' => '', 'phone' => ''],
             'allowed'   => Auth::canRegisterHere(),
-            'forgotUrl' => Auth::supportWhatsappUrl(),
+            'forgotUrl' => '/recuperar',
         ]));
     }
 }

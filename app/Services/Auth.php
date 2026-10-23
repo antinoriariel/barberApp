@@ -17,7 +17,7 @@ use App\Support\Phone;
 
 /**
  * Autenticación por DNI + contraseña y alta de cuentas (con celular argentino, una por navegador). La contraseña
- * olvidada no se recupera por la app: "Olvidé mi contraseña" abre un WhatsApp de soporte (supportWhatsappUrl).
+ * olvidada se recupera en /recuperar con el DNI y el mismo celular del registro (recover); sin él, WhatsApp de soporte.
  *
  * - Un único mensaje de error en el login (ERROR_CREDENTIALS) para DNI inválido, inexistente o contraseña
  *   incorrecta, y se verifica un hash falso cuando el DNI no existe, así no se enumeran cuentas ni por el
@@ -303,9 +303,87 @@ final class Auth
         return Database::enabled() && !Registration::deviceUsed(Device::hash());
     }
 
+    /** Mensaje único cuando el DNI y el celular no corresponden a una cuenta activa (no revela cuál de los dos falló). */
+    public const ERROR_RECOVER = 'El DNI y el celular no coinciden con ninguna cuenta.';
+
     /**
-     * Enlace de WhatsApp de soporte para "Olvidé mi contraseña": el número y el mensaje salen de config (support.*).
-     * La contraseña no se recupera sola: la cambia el administrador (o el superusuario) desde el panel.
+     * "Olvidé mi contraseña": quien escribe el DNI y el MISMO celular que dio al registrarse pone una contraseña nueva
+     * y entra. No hay SMS: el celular funciona como dato de verificación, por eso se limita fuerte.
+     *
+     *  1. Primero se valida la contraseña nueva (largo y que coincidan): un error de tipeo no gasta intentos.
+     *  2. Reserva el intento de forma atómica por IP y por DNI (como attempt) con security.recover_max_attempts_*.
+     *     Pasado el límite → mensaje de bloqueo con el tiempo de espera.
+     *  3. Busca la cuenta: tiene que existir, estar activa (una cuenta suspendida por el administrador no se reactiva
+     *     así) y tener un celular guardado igual al escrito (ambos normalizados con Phone::normalize, así da lo mismo
+     *     "+54 9 3781 40-1440" que "3781401440"). Cualquier fallo da ERROR_RECOVER más los intentos que quedan.
+     *  4. Éxito → guarda el hash nuevo, cierra todas las sesiones de la cuenta (si alguien la estaba usando, queda
+     *     afuera), limpia los contadores de recuperación y de login de ese DNI (si estaba bloqueado por contraseñas
+     *     malas, ya puede entrar) e inicia sesión.
+     * Requiere base de datos (con driver files no hay dónde guardar la contraseña).
+     *
+     * @return string|null null si salió bien, o el mensaje de error
+     */
+    public static function recover(string $rawDni, string $rawPhone, string $password, string $confirm, string $ip): ?string
+    {
+        if ($error = Password::validate($password)) {
+            return $error;
+        }
+        if (!hash_equals($password, $confirm)) {
+            return 'Las contraseñas no coinciden.';
+        }
+
+        $dni = Dni::normalize(substr($rawDni, 0, 32));
+        $validDni = Dni::isValid($dni);
+        $window = (int) Config::get('security.login_window');
+        $ipKey = 'recover:ip:' . RateLimiter::ipBucket($ip);
+        $dniKey = 'recover:dni:' . $dni;
+        $maxIp = (int) Config::get('security.recover_max_attempts_ip');
+        $maxDni = (int) Config::get('security.recover_max_attempts_dni');
+        self::$retryAfter = 0;
+
+        $ipCount = RateLimiter::hit($ipKey, $window);
+        $dniCount = $validDni ? RateLimiter::hit($dniKey, $window) : 0;
+        if ($ipCount > $maxIp || $dniCount > $maxDni) {
+            RateLimiter::release($ipKey);
+            if ($validDni) {
+                RateLimiter::release($dniKey);
+            }
+            Audit::log('password_reset_throttled', null, mb_substr($dni, 0, 12));
+            return self::throttled($ipKey, $validDni ? $dniKey : null);
+        }
+
+        $phone = Phone::normalize(substr($rawPhone, 0, 30));
+        $user = $validDni ? User::find($dni) : null;
+        $ok = $user !== null && $user->active && $phone !== null && $user->phone !== '' && hash_equals($user->phone, $phone);
+
+        if (!$ok) {
+            Audit::log('password_reset_fail', $user?->id ?: null, mb_substr($dni, 0, 12));
+            $left = $maxIp - $ipCount;
+            if ($validDni) {
+                $left = min($left, $maxDni - $dniCount);
+            }
+            if ($left <= 0) {
+                return self::throttled($ipKey, $validDni ? $dniKey : null);
+            }
+            return self::ERROR_RECOVER . ' ' . ($left === 1 ? 'Te queda 1 intento.' : "Te quedan $left intentos.");
+        }
+
+        Database::transaction(static function () use ($user, $password) {
+            User::setPassword($user->id, Password::hash($password));
+            DbSessionHandler::revokeUser($user->id);
+        });
+        RateLimiter::release($ipKey);
+        RateLimiter::clear($dniKey);
+        RateLimiter::clear('login:dni:' . $dni);
+        self::startSession($user);
+        Audit::log('password_reset', $user->id);
+        return null;
+    }
+
+    /**
+     * Enlace de WhatsApp de soporte (el número y el mensaje salen de config, support.*). Queda como plan B en
+     * /recuperar para quien cambió de celular o se registró sin uno: a esa cuenta la contraseña la cambia el
+     * administrador (o el superusuario) desde el panel.
      */
     public static function supportWhatsappUrl(): string
     {

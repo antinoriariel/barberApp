@@ -16,8 +16,9 @@ El DNI se acepta con o sin puntos (`33202388` o `33.202.388`). Los celulares son
 
 **Registro** (`/registro`): pide nombre, DNI, celular argentino (único por cuenta) y contraseña. Se permite **una sola
 cuenta por navegador**: para probar otra alta desde el mismo navegador, liberarlo en `/su/registros` o borrar la cookie
-`navaja_dev`. **"Olvidé mi contraseña"** abre WhatsApp (`support.whatsapp` en `config/app.php`); la contraseña nueva la
-pone el administrador en `/admin/usuarios`.
+`navaja_dev`. **"Olvidé mi contraseña"** (`/recuperar`) pide DNI + el celular del registro + contraseña nueva. Las
+cuentas sin celular cargado usan el WhatsApp de esa página (`support.whatsapp`) y la contraseña nueva la pone el
+administrador en `/admin/usuarios`.
 
 **Superusuario**: en el campo DNI se escribe `superuser`. No viene de la semilla: la contraseña se fija con
 `php bin/superuser.php` (sin argumento genera una aleatoria y la muestra una sola vez) o `php bin/superuser.php <contraseña>`.

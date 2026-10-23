@@ -73,6 +73,10 @@ return [
         // Cuentas creadas por IP cada 24 h (además del límite de una por navegador). Bajo para frenar spam, pero
         // no 1: en un wifi compartido o con la IP compartida de las compañías de celular puede haber varias personas.
         'register_max_ip_day'      => 3,
+        // "Olvidé mi contraseña" (DNI + celular del registro): intentos fallidos por ventana, por IP y por DNI. Más
+        // bajos que el login: el celular es el único dato que se verifica.
+        'recover_max_attempts_ip'  => 5,
+        'recover_max_attempts_dni' => 3,
         // HSTS (solo se envía bajo HTTPS): segundos que el navegador recordará usar solo HTTPS.
         'hsts_max_age'           => 60 * 60 * 24 * 180,
         // Segundos sin actividad tras los que la sesión del superusuario se cierra sola (2 horas).

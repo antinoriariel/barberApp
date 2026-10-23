@@ -24,10 +24,11 @@ return static function (Router $router): void {
     $router->post('/logout', [AuthController::class, 'logout']);
     $router->post('/logout-todo', [AuthController::class, 'logoutAll']);
 
-    // Alta de cuenta (requiere base de datos; una por navegador). /recuperar redirige al WhatsApp de soporte.
+    // Alta de cuenta (requiere base de datos; una por navegador). /recuperar: nueva contraseña con DNI + celular del registro.
     $router->get('/registro', [AuthController::class, 'showRegister']);
     $router->post('/registro', [AuthController::class, 'register']);
     $router->get('/recuperar', [AuthController::class, 'showForgot']);
+    $router->post('/recuperar', [AuthController::class, 'forgot']);
 
     // API de turnos (JSON; requiere sesión y, las POST, token CSRF).
     $router->get('/api/disponibilidad', [AppointmentController::class, 'availability']);

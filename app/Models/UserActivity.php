@@ -18,6 +18,8 @@ final class UserActivity
         'register_blocked_device' => 'Alta rechazada: el navegador ya creó una cuenta',
         'register_blocked_ip' => 'Alta rechazada: tope de cuentas por IP',
         'password_reset_request' => 'Pidió recuperar la contraseña', 'password_reset' => 'Cambió la contraseña (recuperación)',
+        'password_reset_fail' => 'Recuperación fallida: DNI y celular no coinciden',
+        'password_reset_throttled' => 'Recuperación bloqueada por intentos',
         'appointment_create' => 'Reservó un turno', 'appointment_cancel' => 'Canceló un turno',
         'appointment_reschedule' => 'Reprogramó un turno',
         'admin_user_create' => 'Creó una cuenta', 'admin_user_update' => 'Editó una cuenta',

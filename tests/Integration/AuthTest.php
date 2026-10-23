@@ -239,6 +239,44 @@ final class AuthTest extends DbTestCase
         $this->assertNotNull(Database::selectOne("SELECT id FROM audit_log WHERE event = 'register_blocked_ip' AND detail = ?", ['DNI 69990049']));
     }
 
+    /**
+     * Recuperar con DNI + celular del registro: el celular se acepta escrito de otra forma, cambia la contraseña,
+     * cierra las otras sesiones de la cuenta y deja la sesión iniciada; un celular distinto o un DNI inexistente dan
+     * el mismo mensaje, y las contraseñas que no coinciden no gastan intentos.
+     */
+    public function testRecuperarConDniYCelular(): void
+    {
+        $user = $this->makeUser('69990061', '3794330061');
+        Database::execute("INSERT INTO sessions (id, user_id, data, updated_at) VALUES ('recover-test-sess', ?, '', NOW())", [$user->id]);
+
+        $this->assertSame('Las contraseñas no coinciden.', Auth::recover('69990061', '3794330061', 'nueva-clave-1', 'otra-clave-1', '10.0.0.20'));
+        $this->assertSame(Auth::ERROR_RECOVER . ' Te quedan 2 intentos.', Auth::recover('69990061', '3794330099', 'nueva-clave-1', 'nueva-clave-1', '10.0.0.20'));
+        $this->assertSame(Auth::ERROR_RECOVER . ' Te quedan 2 intentos.', Auth::recover('99999998', '3794330061', 'nueva-clave-1', 'nueva-clave-1', '10.0.0.20'), 'DNI inexistente: mismo mensaje');
+        $this->assertNull(Session::get('dni'));
+
+        $this->assertNull(Auth::recover('69.990.061', '+54 9 379 433-0061', 'nueva-clave-1', 'nueva-clave-1', '10.0.0.20'));
+        $this->assertSame('69990061', Session::get('dni'));
+        $this->assertNull(Database::selectOne("SELECT id FROM sessions WHERE id = 'recover-test-sess'"), 'cierra las otras sesiones');
+        $this->assertTrue(\App\Support\Password::verify('nueva-clave-1', (string) User::passwordHash('69990061')));
+        $this->assertNotNull(Database::selectOne("SELECT id FROM audit_log WHERE event = 'password_reset' AND user_id = ?", [$user->id]));
+    }
+
+    /** Sin celular cargado o con la cuenta suspendida no se recupera; al tercer fallo por DNI queda bloqueado. */
+    public function testRecuperarRechazaCuentasSinCelularOSuspendidasYBloquea(): void
+    {
+        $this->makeUser('69990062');
+        $suspended = $this->makeUser('69990063', '3794330063');
+        User::setActive($suspended->id, false);
+
+        $this->assertStringStartsWith(Auth::ERROR_RECOVER, (string) Auth::recover('69990062', '3794330062', 'nueva-clave-1', 'nueva-clave-1', '10.0.0.21'));
+        $this->assertStringStartsWith(Auth::ERROR_RECOVER, (string) Auth::recover('69990063', '3794330063', 'nueva-clave-1', 'nueva-clave-1', '10.0.0.22'));
+
+        // El intento con la cuenta suspendida ya contó para ese DNI (3 por DNI).
+        $this->assertSame(Auth::ERROR_RECOVER . ' Te queda 1 intento.', Auth::recover('69990063', '3794330000', 'nueva-clave-1', 'nueva-clave-1', '10.0.0.23'));
+        $this->assertStringStartsWith(Auth::THROTTLED_PREFIX, (string) Auth::recover('69990063', '3794330001', 'nueva-clave-1', 'nueva-clave-1', '10.0.0.23'));
+        $this->assertStringStartsWith(Auth::THROTTLED_PREFIX, (string) Auth::recover('69990063', '3794330063', 'nueva-clave-1', 'nueva-clave-1', '10.0.0.24'));
+    }
+
     /** "Olvidé mi contraseña" arma el enlace wa.me al soporte con el mensaje ya escrito. */
     public function testOlvideMiContrasenaAbreWhatsapp(): void
     {

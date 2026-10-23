@@ -4,7 +4,7 @@
  * Si este navegador ya creó una cuenta ($allowed = false) no muestra el formulario: solo el aviso y el enlace al login
  * (el servidor lo frena igual en Auth::register).
  * Variables: $error (string), $values (array dni, full_name, phone: lo ya escrito), $allowed (bool),
- *            $forgotUrl (string: WhatsApp de soporte).
+ *            $forgotUrl (string: /recuperar, DNI + celular del registro).
  * El DNI lleva el rango aceptado (Dni::MIN_REGISTRO..MAX_REGISTRO) en data-min/data-max para que login.js
  * avise antes de enviar; el servidor lo vuelve a validar en Auth::register.
  */
@@ -22,7 +22,7 @@
       <p class="field-error" role="alert">Desde este navegador ya se creó una cuenta, y solo se permite una por navegador.</p>
       <a class="btn-primary block" href="/login">Ingresar con mi DNI</a>
       <p class="auth-links">
-        <a class="link" href="<?= e($forgotUrl) ?>" target="_blank" rel="noopener noreferrer">Olvidé mi contraseña</a>
+        <a class="link" href="<?= e($forgotUrl) ?>">Olvidé mi contraseña</a>
       </p>
     </div>
   <?php else: ?>

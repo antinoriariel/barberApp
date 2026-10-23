@@ -45,8 +45,10 @@ En producción, ver [`docs/seguridad.md`](docs/seguridad.md).
 Se entra con **DNI + contraseña** (el DNI se acepta con o sin puntos). Con base de datos cualquiera puede crear una
 cuenta en `/registro` con nombre, DNI, **celular argentino** (único: no puede haber dos cuentas con el mismo número) y
 contraseña; se permite **una sola cuenta por navegador** (y hasta 3 por IP cada 24 h), y el superusuario las audita en
-`/su/registros`. **"Olvidé mi contraseña"** abre WhatsApp al número de soporte (`support.whatsapp` en `config/app.php`,
-o `SUPPORT_WHATSAPP` en `.env`) con el mensaje ya escrito; la contraseña nueva la pone el administrador en
+`/su/registros`. **"Olvidé mi contraseña"** (`/recuperar`) pide el DNI, el **mismo celular que se dio al registrarse** y
+la contraseña nueva: si coinciden con una cuenta activa la cambia, cierra las demás sesiones y entra (3 intentos por DNI y
+5 por IP cada 15 minutos). Quien cambió de número o no tiene uno cargado usa el enlace a WhatsApp de esa página
+(`support.whatsapp` en `config/app.php`, o `SUPPORT_WHATSAPP` en `.env`) y la contraseña nueva la pone el administrador en
 `/admin/usuarios`. Las sesiones viven en la tabla `sessions` y desde el perfil se puede cerrar la sesión en todos los
 dispositivos.
 
@@ -159,7 +161,8 @@ docs/            Arquitectura, seguridad y plan de base de datos
 | GET    | `/login`                | `AuthController@showLogin`   | |
 | POST   | `/login`                | `AuthController@login`       | Campos `dni`, `password` y `_csrf`; 419 sin token, 429 si hay demasiados intentos |
 | GET/POST | `/registro`           | `AuthController@showRegister` / `register` | Alta de cuenta (solo con base de datos; celular argentino único, una por navegador) |
-| GET    | `/recuperar`            | `AuthController@showForgot`  | Redirige al WhatsApp de soporte con el mensaje de "Olvidé mi contraseña" |
+| GET    | `/recuperar`            | `AuthController@showForgot`  | "Olvidé mi contraseña": DNI + celular del registro + contraseña nueva |
+| POST   | `/recuperar`            | `AuthController@forgot`      | Cambia la contraseña si DNI y celular coinciden (con límite de intentos) y entra |
 | POST   | `/logout-todo`          | `AuthController@logoutAll`   | Cierra la sesión en todos los dispositivos |
 | POST   | `/logout`               | `AuthController@logout`      | Requiere token CSRF (`_csrf`) |
 | GET    | `/api/disponibilidad`   | `AppointmentController@availability` | JSON. Query `fecha`, `barbero` (slug o `any`), `servicio`. 401 sin sesión |

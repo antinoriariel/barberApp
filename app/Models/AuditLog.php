@@ -26,11 +26,12 @@ final class AuditLog
 
     /** Eventos de login y cuenta (incluye los del superusuario). */
     private const LOGIN_EVENTS = ['login_ok', 'login_fail', 'login_throttled', 'logout', 'logout_all', 'register',
-        'register_blocked_device', 'register_blocked_ip', 'password_reset_request', 'password_reset', 'su_login_ok', 'su_logout'];
+        'register_blocked_device', 'register_blocked_ip', 'password_reset_request', 'password_reset', 'password_reset_fail', 'password_reset_throttled', 'su_login_ok',
+        'su_logout'];
 
     /** Grupos del filtro "Tipo" (clave => [etiqueta, condición SQL sobre a.event sin datos del usuario]). */
     public const GROUPS = [
-        'fallos'  => ['Logins fallidos y bloqueos', "a.event IN ('login_fail', 'login_throttled')"],
+        'fallos'  => ['Logins fallidos y bloqueos', "a.event IN ('login_fail', 'login_throttled', 'password_reset_fail', 'password_reset_throttled')"],
         'login'   => ['Ingresos, salidas y contraseñas', 'LOGIN'],
         'registro' => ['Altas de cuenta y rechazos', "(a.event LIKE 'register%' OR a.event = 'su_registration_release')"],
         'turnos'  => ['Turnos', "(a.event LIKE 'appointment\\_%' OR a.event LIKE 'admin\\_appointment\\_%')"],

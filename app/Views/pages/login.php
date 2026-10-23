@@ -3,7 +3,7 @@
  * pages/login.php — Ingreso con DNI y contraseña.
  * Variables: $error (string, vacío si no hay), $dni (último DNI ingresado),
  *            $canSignUp (bool: hay base de datos y este navegador todavía no creó una cuenta),
- *            $forgotUrl (string: chat de WhatsApp de soporte con el mensaje ya escrito).
+ *            $forgotUrl (string: /recuperar, o el WhatsApp de soporte si no hay base de datos).
  */
 ?>
 <div class="login">
@@ -35,9 +35,9 @@
 
       <button class="btn-primary block" type="submit">Entrar</button>
 
-      <?php // "Olvidé mi contraseña" abre WhatsApp (soporte); "Crear cuenta" solo si este navegador no creó una ya. ?>
+      <?php // "Olvidé mi contraseña" va a /recuperar (o a WhatsApp sin base); "Crear cuenta" solo si este navegador no creó una ya. ?>
       <p class="auth-links">
-        <a class="link" href="<?= e($forgotUrl) ?>" target="_blank" rel="noopener noreferrer">Olvidé mi contraseña</a>
+        <a class="link" href="<?= e($forgotUrl) ?>"<?= str_starts_with($forgotUrl, 'https://') ? ' target="_blank" rel="noopener noreferrer"' : '' ?>>Olvidé mi contraseña</a>
         <?php if ($canSignUp): ?><a class="link" href="/registro">Crear cuenta</a><?php endif; ?>
       </p>
     </form>
