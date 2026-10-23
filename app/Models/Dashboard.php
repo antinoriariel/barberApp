@@ -92,6 +92,34 @@ final class Dashboard
     }
 
     /**
+     * Clientes del mes de `$day`: los que tuvieron al menos un turno atendido ('done') en ese mes, separados en nuevos
+     * (su primer turno atendido de toda la historia cae en este mes) y recurrentes (ya habían venido antes). "top" son
+     * los `$top` que más gastaron en el mes (desempata por visitas y luego por nombre). Los ingresos extra sin turno
+     * no tienen cliente, así que no cuentan.
+     * @return array{month: string, new: int, returning: int, total: int, top: array<int, array{name: string, visits: int, spent: int, isNew: bool}>}
+     */
+    public static function clients(string $day, int $top = 3): array
+    {
+        $month = substr($day, 0, 7);
+        $from = $month . '-01 00:00:00';
+        $rows = Database::select(
+            "SELECT u.full_name AS name, COUNT(*) AS visits, SUM(a.price) AS spent,
+                    (SELECT MIN(p.starts_at) FROM appointments p WHERE p.user_id = a.user_id AND p.status = 'done') AS first_at
+               FROM appointments a
+               JOIN users u ON u.id = a.user_id
+              WHERE a.status = 'done' AND a.starts_at >= ? AND a.starts_at < ?
+              GROUP BY a.user_id, u.full_name",
+            [$from, date('Y-m-01', strtotime($month . '-01 +1 month')) . ' 00:00:00']
+        );
+        $clients = array_map(static fn (array $r) => [
+            'name' => $r['name'], 'visits' => (int) $r['visits'], 'spent' => (int) $r['spent'], 'isNew' => $r['first_at'] >= $from,
+        ], $rows);
+        $new = count(array_filter($clients, static fn (array $c) => $c['isNew']));
+        usort($clients, static fn (array $a, array $b) => [$b['spent'], $b['visits'], $a['name']] <=> [$a['spent'], $a['visits'], $b['name']]);
+        return ['month' => $month, 'new' => $new, 'returning' => count($clients) - $new, 'total' => count($clients), 'top' => array_slice($clients, 0, $top)];
+    }
+
+    /**
      * Cortes atendidos por barbero en la semana (lunes a domingo) que contiene `$day`.
      * @return array{from: string, to: string, days: string[], total: int, barbers: array<int, array{id: int, name: string, tone: string, perDay: int[], total: int, revenue: int}>}
      *         "days" son las 7 fechas YYYY-MM-DD; "barbers" va de más a menos cortes

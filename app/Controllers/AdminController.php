@@ -102,7 +102,8 @@ final class AdminController extends Controller
     /**
      * GET /admin?fecha=YYYY-MM-DD — resumen: cortes e ingresos del día frente al anterior, egresos e ingresos
      * extra del día y resultado del día (ingresos + extra − egresos), ingresos y egresos del mes, resultado y
-     * gráfico de los últimos 6 meses, y desempeño de los barberos en el día.
+     * gráfico de los últimos 6 meses, desempeño de los barberos en el día y, al final, clientes nuevos contra
+     * recurrentes del mes con el top 3 de los que más gastaron.
      */
     public function dashboard(Request $request): void
     {
@@ -129,6 +130,7 @@ final class AdminController extends Controller
             'revenueDelta' => Dashboard::delta($today['total'], $yesterday['total']),
             'servedDelta'  => Dashboard::delta($today['served'], $yesterday['served']),
             'verdict'      => Dashboard::verdict($today, $yesterday),
+            'clients'      => Dashboard::clients($day),
         ]);
     }
 
