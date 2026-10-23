@@ -1,0 +1,270 @@
+/* Piel del panel (/admin y /su, body.admin-page): "barbería de autor". Se carga después de admin.css y su.css y solo
+   cambia la apariencia (colores, superficies, tipografía, íconos); la estructura y el responsive siguen en admin.css.
+
+   Capas:
+   1. Fondo: la pared de ladrillo con los spots (img/fondoadministrativo.jpg) fija detrás de todo, con un velo que la
+      oscurece hacia abajo para que se lea lo de arriba. Va en body::before (position: fixed) y no con
+      background-attachment: fixed, que Safari en iPhone ignora.
+   2. Contexto "sobre la foto" (cabecera, pestañas, selectores sueltos): la foto es oscura en los dos temas, así que acá
+      los tokens son siempre de texto claro.
+   3. Tarjetas (.admin-card, .kpi, diálogo): vidrio ahumado en tema oscuro y vidrio crema en tema claro; redefinen los
+      tokens (--paper, --ink, --line…) para su interior, así el resto de admin.css sigue funcionando sin cambios.
+   Acentos: latón (--brass) para íconos, filetes y estados de selección; el rojo de la marca queda para las acciones. */
+
+body.admin-page {
+  --brass: #C9A46C;
+  --brass-hi: #E6CB98;
+  --serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  /* Contexto sobre la foto (igual en los dos temas). */
+  --ink: #F7F1E8;
+  --ink-soft: rgba(247, 241, 232, .7);
+  --line: rgba(255, 238, 214, .14);
+  --paper: rgba(14, 11, 9, .55);
+  --paper-solid: #16110E;
+  --lather: rgba(255, 238, 214, .07);
+  --accent-ink: var(--brass);
+  --field: rgba(0, 0, 0, .3);
+  background: #0B0908;
+  color: var(--ink);
+  font-family: var(--body);
+}
+body.admin-page::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(120% 60% at 50% 0%, transparent 40%, rgba(8, 6, 5, .55) 100%),
+    linear-gradient(180deg, rgba(10, 8, 7, .08) 0%, rgba(10, 8, 7, .5) 28%, rgba(10, 8, 7, .84) 62%, #0B0908 100%),
+    url("/img/fondoadministrativo.jpg") center top / cover no-repeat;
+}
+/* En pantallas anchas la foto (vertical, 736px) se amplía mucho: un desenfoque leve la vuelve bokeh en vez de pixelada. */
+@media (min-width: 900px) {
+  body.admin-page::before { filter: blur(1.5px) saturate(1.05); transform: scale(1.02); }
+}
+
+/* ===== Tarjetas: vidrio ahumado (oscuro) / crema (claro) ===== */
+body.admin-page :is(.admin-card, .kpi, .confirm-dialog) {
+  --card: linear-gradient(180deg, rgba(36, 28, 23, .8), rgba(18, 14, 12, .86));
+  --paper: rgba(255, 238, 214, .05);
+  --paper-solid: #1D1714;
+  --lather: rgba(255, 238, 214, .06);
+  --ink: #F7F1E8;
+  --ink-soft: #B9AD9D;
+  --line: rgba(255, 238, 214, .11);
+  --accent-ink: var(--brass);
+  --field: rgba(0, 0, 0, .32);
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 238, 214, .07), 0 22px 44px -22px rgba(0, 0, 0, .75);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  backdrop-filter: blur(14px) saturate(1.15);
+}
+:root[data-theme="light"] body.admin-page :is(.admin-card, .kpi, .confirm-dialog) {
+  --card: linear-gradient(180deg, rgba(255, 252, 247, .94), rgba(249, 243, 234, .92));
+  --paper: rgba(255, 255, 255, .7);
+  --paper-solid: #F8F2EA;
+  --lather: rgba(70, 45, 20, .06);
+  --ink: #1E1814;
+  --ink-soft: #6B5F53;
+  --line: rgba(70, 45, 20, .13);
+  --accent-ink: #8A6534;
+  --field: #FFFFFF;
+  box-shadow: inset 0 1px 0 #FFFFFF, 0 22px 44px -22px rgba(0, 0, 0, .7);
+}
+/* Cards invertidas (alta de servicio/producto/barbero): pergamino en tema oscuro, espresso en tema claro. */
+body.admin-page .admin-card.invert {
+  --card: linear-gradient(180deg, #FBF6EE, #F1E8DA);
+  --paper: #FFFDF9; --paper-solid: #F6EFE3; --lather: rgba(70, 45, 20, .06);
+  --ink: #1E1814; --ink-soft: #6B5F53; --line: rgba(70, 45, 20, .16); --accent-ink: #8A6534; --field: #FFFFFF;
+  border-color: rgba(201, 164, 108, .55);
+}
+:root[data-theme="light"] body.admin-page .admin-card.invert {
+  --card: linear-gradient(180deg, #2C231E, #1A1411);
+  --paper: #2E2520; --paper-solid: #221B17; --lather: rgba(255, 238, 214, .07);
+  --ink: #F7F1E8; --ink-soft: #BDB1A2; --line: rgba(255, 238, 214, .14); --accent-ink: var(--brass); --field: rgba(0, 0, 0, .3);
+  border-color: rgba(201, 164, 108, .45);
+}
+body.admin-page .admin-card.invert .svc-fields :is(input, select, textarea) { background: var(--field); border-color: rgba(70, 45, 20, .28); color: var(--ink); }
+:root[data-theme="light"] body.admin-page .admin-card.invert .svc-fields :is(input, select, textarea) { border-color: rgba(255, 238, 214, .2); }
+body.admin-page .admin-card.invert .svc-fields label { color: var(--ink-soft); }
+body.admin-page .admin-card.invert .svc-fields input::placeholder { color: color-mix(in srgb, var(--ink-soft) 75%, transparent); }
+
+/* ===== Cabecera sobre la foto ===== */
+.admin-page .admin { padding-top: calc(34px + env(safe-area-inset-top, 0px)); gap: 16px; }
+.admin-page .admin-head { align-items: flex-start; }
+.admin-brand {
+  display: inline-flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; white-space: nowrap; color: var(--brass-hi);
+}
+.admin-brand-mark {
+  display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid rgba(201, 164, 108, .6); background: radial-gradient(circle at 30% 25%, rgba(230, 203, 152, .28), rgba(14, 11, 9, .6));
+  color: var(--brass-hi); box-shadow: 0 0 18px rgba(230, 203, 152, .25);
+}
+.admin-brand-mark .ic { width: 15px; height: 15px; }
+.admin-brand-tag { padding-left: 10px; border-left: 1px solid rgba(201, 164, 108, .45); color: rgba(247, 241, 232, .6); }
+.admin-page .admin-head h1 {
+  font-size: clamp(36px, 11vw, 56px); font-weight: 900; line-height: .92; letter-spacing: .005em; text-transform: uppercase;
+  color: #FBF6EE; text-shadow: 0 2px 28px rgba(0, 0, 0, .65);
+}
+.admin-page .admin-sub { font-family: var(--serif); font-style: italic; font-weight: 500; font-size: 18px; line-height: 1.3; color: var(--ink-soft); }
+.admin-page .admin-head .admin-sub { margin-top: 6px; font-size: 20px; color: var(--brass-hi); text-shadow: 0 1px 12px rgba(0, 0, 0, .6); }
+
+/* Tema y salir: botones de vidrio redondos. */
+.admin-page .admin-head-end .theme-toggle,
+.admin-page .admin-head-end .btn-small.ghost {
+  height: 42px; border: 1px solid rgba(255, 238, 214, .2); background: rgba(14, 11, 9, .5); color: #F7F1E8;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: none;
+}
+.admin-page .admin-head-end .theme-toggle { width: 42px; border-radius: 50%; }
+.admin-page .admin-head-end .btn-small.ghost { gap: 8px; padding: 0 16px 0 13px; border-radius: 999px; font-weight: 700; }
+.admin-page .admin-head-end .btn-small .ic { width: 17px; height: 17px; }
+.admin-page .admin-head-end :is(.theme-toggle, .btn-small):hover { border-color: rgba(201, 164, 108, .7); color: var(--brass-hi); }
+
+/* ===== Pestañas de secciones: riel de vidrio con ícono arriba (celular) o al lado (escritorio) ===== */
+.admin-page .admin-tabs {
+  gap: 4px; padding: 6px; border: 1px solid rgba(255, 238, 214, .12); border-radius: 18px;
+  background: rgba(12, 10, 8, .58); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: 0 16px 34px -20px rgba(0, 0, 0, .8);
+  scroll-snap-type: x proximity;
+}
+.admin-page .admin-tabs a {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-width: 74px;
+  padding: 9px 10px 8px; margin: 0; border: 0; border-radius: 13px; scroll-snap-align: start;
+  font-size: 12px; font-weight: 700; letter-spacing: .02em; white-space: nowrap; color: rgba(247, 241, 232, .62);
+  transition: color .2s, background-color .2s, box-shadow .2s;
+}
+.admin-page .admin-tabs a .ic { width: 21px; height: 21px; color: rgba(201, 164, 108, .75); transition: color .2s, transform .2s; }
+.admin-page .admin-tabs a:hover { color: #F7F1E8; background: rgba(255, 238, 214, .05); }
+.admin-page .admin-tabs a:hover .ic { color: var(--brass-hi); }
+.admin-page .admin-tabs a[aria-current="page"] {
+  color: #FBF6EE; background: linear-gradient(180deg, rgba(201, 164, 108, .26), rgba(201, 164, 108, .08));
+  box-shadow: inset 0 0 0 1px rgba(201, 164, 108, .5), 0 6px 18px -8px rgba(201, 164, 108, .55);
+}
+.admin-page .admin-tabs a[aria-current="page"] .ic { color: var(--brass-hi); transform: translateY(-1px); }
+.admin-page .admin-tabs a:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+/* ===== Tarjetas por dentro ===== */
+.admin-page :is(.admin-card, .kpi) { padding: 18px; }
+/* Títulos de tarjeta como "eyebrow": versalitas espaciadas en latón con un filete delante. */
+.admin-page :is(.kpi, .admin-card) h2:not(.dh-percent) {
+  display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 800; letter-spacing: .16em; color: var(--accent-ink);
+}
+.admin-page .admin-card h2:not(.dh-percent)::before { content: ""; flex: none; width: 18px; height: 1px; background: currentColor; opacity: .8; }
+.admin-page .admin-section-title { font-size: 30px; text-transform: uppercase; letter-spacing: .01em; color: #FBF6EE; text-shadow: 0 2px 18px rgba(0, 0, 0, .6); }
+
+/* KPI: medallón de latón con el ícono arriba a la derecha y la cifra grande en la display condensada. */
+.admin-page .kpi { position: relative; overflow: hidden; }
+.admin-page .kpi::after { /* reflejo cálido de los spots en la esquina */
+  content: ""; position: absolute; inset: -40% -30% auto auto; width: 70%; height: 90%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(230, 203, 152, .12), transparent);
+}
+.admin-page .kpi h2 { padding-right: 48px; }
+.kpi-ic {
+  position: absolute; top: 14px; right: 14px; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+  color: var(--accent-ink); background: radial-gradient(circle at 30% 25%, rgba(230, 203, 152, .22), rgba(201, 164, 108, .06));
+  box-shadow: inset 0 0 0 1px rgba(201, 164, 108, .45);
+}
+.kpi-ic .ic { width: 19px; height: 19px; }
+.admin-page .kpi-value { margin-top: 10px; font-size: clamp(38px, 11vw, 50px); letter-spacing: .005em; color: var(--ink); }
+.admin-page .kpi-prev { color: var(--ink-soft); }
+.admin-page .kpi-prev .link { color: var(--accent-ink); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, var(--accent-ink) 45%, transparent); }
+/* Resultado del día: fila de total con el medallón a la izquierda y la cifra a la derecha. */
+.admin-page .kpi-total { flex-wrap: nowrap; border-left: 3px solid var(--ok); background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 10%, transparent), transparent 60%), var(--card); }
+.admin-page .kpi-total.is-neg { border-left-color: var(--red); background: linear-gradient(90deg, color-mix(in srgb, var(--red) 12%, transparent), transparent 60%), var(--card); }
+.admin-page .kpi-total .kpi-ic { position: static; flex: none; }
+.admin-page .kpi-total-text { flex: 1; }
+.admin-page .kpi-total h2 { padding-right: 0; }
+
+/* Veredicto del día: cita en serif itálica con filete de latón. */
+.admin-page .admin-verdict {
+  padding: 16px 18px 16px 20px; border-radius: 16px; border: 1px solid rgba(255, 238, 214, .12); border-left: 3px solid var(--brass);
+  background: rgba(14, 11, 9, .62); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  font-family: var(--serif); font-style: italic; font-size: 20px; font-weight: 500; line-height: 1.35; color: #F3E7D3;
+}
+
+/* Avisos (guardado / error): vidrio con su color de estado. */
+.admin-page .admin-flash { border-radius: 14px; border: 1px solid currentColor; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.admin-page .admin-flash.ok { background: rgba(18, 48, 31, .82); color: #7BE3A4; }
+.admin-page .admin-flash.bad { background: rgba(58, 16, 16, .85); color: #FF8A86; }
+
+/* Tablas */
+.admin-page .admin-table thead th { font-size: 11px; font-weight: 800; letter-spacing: .14em; color: var(--accent-ink); }
+.admin-page .admin-table tbody tr { transition: background-color .15s; }
+.admin-page .admin-table tbody tr:hover { background: var(--lather); }
+.admin-page .admin-table.oneline :is(th, td):first-child,
+.admin-page .admin-table.sticky-first th:first-child { background: var(--paper-solid); } /* la columna fija tapa lo que pasa por debajo */
+.admin-page .bar { background: var(--lather); }
+.admin-page .bar i { background: linear-gradient(90deg, var(--red), #F26A3D); }
+
+/* Campos */
+.admin-page :is(.svc-fields input, .svc-fields select, .svc-fields textarea, .user-search, .hours-time, .bn-input) {
+  background: var(--field); border-color: var(--line); color: var(--ink); border-radius: 12px;
+}
+.admin-page :is(.svc-fields input, .svc-fields select, .svc-fields textarea, .user-search, .hours-time, .bn-input):focus {
+  border-color: var(--brass); box-shadow: 0 0 0 3px rgba(201, 164, 108, .22); outline: none;
+}
+.admin-page .svc-fields label, .admin-page .perm-box legend { letter-spacing: .02em; }
+
+/* Botones: rojo de la marca con brillo arriba; los del selector de día van de vidrio porque están sobre la foto. */
+.admin-page .btn-small:not(.ghost) {
+  background: linear-gradient(180deg, #F23533, #C81111); color: #fff; font-weight: 700; letter-spacing: .02em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 8px 18px -8px rgba(235, 23, 22, .7);
+}
+.admin-page .btn-small:not(.ghost):hover { filter: brightness(1.07); }
+.admin-page .btn-small.ghost { border-color: var(--line); color: var(--ink); }
+.admin-page .admin-nav .btn-small {
+  background: rgba(14, 11, 9, .55); border: 1px solid rgba(255, 238, 214, .16); color: #F7F1E8; box-shadow: none;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.admin-page .admin-nav .btn-small:hover { border-color: rgba(201, 164, 108, .7); color: var(--brass-hi); filter: none; }
+
+/* Estados de selección (días del local, permisos): latón en vez del rojo, que queda para acciones. */
+.admin-page .day-chip:has(input:checked), .admin-page .day-chip.static.on, .admin-page .perm-chip:has(input:checked) {
+  border-color: var(--brass); background: color-mix(in srgb, var(--brass) 14%, transparent);
+}
+.admin-page .day-chip:has(input:checked) .day-chip-state, .admin-page .day-chip.static.on .day-chip-state { color: var(--accent-ink); }
+.admin-page :is(.hours-day, .perm-chip) input { accent-color: var(--brass); }
+.admin-page .user-more summary { color: var(--accent-ink); }
+
+/* Selector Servicios / Productos: va sobre la foto, así que en los dos temas es de vidrio oscuro. */
+body.admin-page .seg,
+:root[data-theme="light"] body.admin-page .seg {
+  --seg-track: rgba(12, 10, 8, .58); --seg-thumb: linear-gradient(180deg, rgba(201, 164, 108, .28), rgba(201, 164, 108, .1));
+  --seg-shadow: inset 0 0 0 1px rgba(201, 164, 108, .5);
+  border: 1px solid rgba(255, 238, 214, .12); border-radius: 16px; padding: 4px;
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 12px 28px -18px rgba(0, 0, 0, .8);
+}
+body.admin-page .seg-item { border-radius: 12px; color: rgba(247, 241, 232, .65); }
+body.admin-page .seg-item[aria-current="page"] { color: #FBF6EE; }
+body.admin-page .seg-count { background: rgba(255, 238, 214, .1); color: rgba(247, 241, 232, .7); }
+body.admin-page .seg-item[aria-current="page"] .seg-count { background: var(--brass-hi); color: #1E1814; }
+
+/* Diálogo de confirmación */
+.admin-page .confirm-dialog { border-radius: 18px; }
+.admin-page .confirm-dialog::backdrop { background: rgba(8, 6, 5, .6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+
+/* Entrada: las piezas del panel suben y aparecen en cascada (corto, una sola vez al cargar). */
+@keyframes admin-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.admin-page .admin > * { animation: admin-rise .5s cubic-bezier(.2, .7, .2, 1) both; }
+.admin-page .admin > :nth-child(2) { animation-delay: .05s; }
+.admin-page .admin > :nth-child(3) { animation-delay: .1s; }
+.admin-page .admin > :nth-child(4) { animation-delay: .15s; }
+.admin-page .admin > :nth-child(5) { animation-delay: .2s; }
+.admin-page .admin > :nth-child(n+6) { animation-delay: .25s; }
+@media (prefers-reduced-motion: reduce) {
+  .admin-page .admin > * { animation: none; }
+  .admin-page .admin-tabs a, .admin-page .admin-tabs a .ic { transition: none; }
+}
+
+/* Celular angosto: "Salir" queda solo con el ícono (redondo como el del tema) para que el sello entre en un renglón. */
+@media (max-width: 479px) {
+  .admin-page .admin-head-end .btn-small.ghost { width: 42px; padding: 0; justify-content: center; }
+  .admin-page .admin-head-end .btn-small.ghost span { display: none; }
+}
+
+/* ===== Escritorio: las secciones forman un dock de un renglón (ícono arriba, repartidas a todo el ancho) ===== */
+@media (min-width: 900px) {
+  .admin-page .admin { padding-top: 48px; gap: 18px; }
+  .admin-page .admin-tabs a { flex: 1 0 auto; min-width: 0; padding: 10px 8px 9px; font-size: 12.5px; }
+}

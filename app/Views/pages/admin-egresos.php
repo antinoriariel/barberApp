@@ -24,11 +24,13 @@ $defaultDate = substr($today, 0, 7) === $month ? $today : $month . '-01';
 
   <section class="admin-kpis" aria-label="Totales del mes">
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('receipt') ?></span>
       <h2>Egresos del mes</h2>
       <p class="kpi-value"><?= money($totals['expenses']) ?></p>
       <p class="kpi-prev"><?= count($expenses) ?> <?= count($expenses) === 1 ? 'gasto' : 'gastos' ?></p>
     </article>
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('wallet') ?></span>
       <h2>Resultado</h2>
       <p class="kpi-value <?= $net < 0 ? 'neg' : '' ?>"><?= $net < 0 ? '−' . money(-$net) : money($net) ?></p>
       <p class="kpi-prev">Ingresos (<?= money($totals['revenue'] + $totals['extra']) ?>, con extra) menos egresos</p>

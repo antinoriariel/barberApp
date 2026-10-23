@@ -40,6 +40,7 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
 
   <section class="admin-kpis" aria-label="Total de la semana">
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('scissors') ?></span>
       <h2>Cortes de la semana</h2>
       <p class="kpi-value"><?= $week['total'] ?></p>
       <p class="kpi-prev">Turnos atendidos entre todos los barberos</p>

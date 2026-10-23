@@ -20,21 +20,25 @@ $net = $cur['net'];
 
   <section class="admin-kpis" aria-label="Totales del mes">
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('trend-up') ?></span>
       <h2>Ingresos</h2>
       <p class="kpi-value"><?= money($cur['revenue']) ?></p>
       <p class="kpi-prev"><?= $cur['served'] ?> cortes atendidos</p>
     </article>
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('jar') ?></span>
       <h2>Ingresos extra</h2>
       <p class="kpi-value"><?= money($cur['extra']) ?></p>
       <p class="kpi-prev"><a class="link" href="/admin/ingresos?mes=<?= e($month) ?>">Cargar o ver ingresos extra</a></p>
     </article>
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('receipt') ?></span>
       <h2>Egresos</h2>
       <p class="kpi-value"><?= money($cur['expenses']) ?></p>
       <p class="kpi-prev"><?= count($expenses) ?> movimientos</p>
     </article>
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('wallet') ?></span>
       <h2>Resultado</h2>
       <p class="kpi-value <?= $net < 0 ? 'neg' : '' ?>"><?= $net < 0 ? '−' . money(-$net) : money($net) ?></p>
       <p class="kpi-prev">Ingresos + extra − egresos</p>

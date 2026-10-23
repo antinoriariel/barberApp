@@ -17,6 +17,7 @@ $waiting = count(array_filter($tickets, static fn (array $t) => $t['status'] ===
 
   <section class="admin-kpis" aria-label="Estado de la fila">
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('chair') ?></span>
       <h2>Atendiendo</h2>
       <p class="kpi-value"><?= $serving ?? '—' ?></p>
       <form method="post" action="/admin/fila/llamar" class="queue-call">
@@ -25,6 +26,7 @@ $waiting = count(array_filter($tickets, static fn (array $t) => $t['status'] ===
       </form>
     </article>
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('ticket') ?></span>
       <h2>Esperando</h2>
       <p class="kpi-value"><?= $waiting ?></p>
       <p class="kpi-prev"><?= count($tickets) ?> números entregados hoy</p>

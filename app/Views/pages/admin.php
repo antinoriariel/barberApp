@@ -28,29 +28,34 @@ $before = array_column($yesterday['barbers'], null, 'id');
 
   <section class="admin-kpis" aria-label="Totales del día">
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('scissors') ?></span>
       <h2>Cortes del día</h2>
       <p class="kpi-value"><?= $today['served'] ?></p>
       <p class="kpi-delta <?= e($cntClass) ?>"><?= e($cntText) ?></p>
       <p class="kpi-prev">Ticket promedio: <?= money($today['ticket']) ?></p>
     </article>
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('trend-up') ?></span>
       <h2>Ingresos del día</h2>
       <p class="kpi-value"><?= money($today['total']) ?></p>
       <p class="kpi-delta <?= e($revClass) ?>"><?= e($revText) ?></p>
       <p class="kpi-prev">Día anterior: <?= money($yesterday['total']) ?></p>
     </article>
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('receipt') ?></span>
       <h2>Egresos del día</h2>
       <p class="kpi-value"><?= money($dayExpenses) ?></p>
       <p class="kpi-prev"><a class="link" href="/admin/egresos?mes=<?= e(substr($day, 0, 7)) ?>">Agregar gasto</a></p>
     </article>
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('jar') ?></span>
       <h2>Ingreso extra del día</h2>
       <p class="kpi-value"><?= money($dayExtra) ?></p>
       <p class="kpi-prev"><a class="link" href="/admin/ingresos?mes=<?= e(substr($day, 0, 7)) ?>">Agregar ingreso extra</a></p>
     </article>
     <?php /* Fila de total: ocupa todo el ancho de la grilla, debajo de las cuatro tarjetas que suma y resta. */ ?>
     <article class="kpi kpi-total<?= $dayNet < 0 ? ' is-neg' : '' ?>">
+      <span class="kpi-ic"><?= icon('wallet') ?></span>
       <div class="kpi-total-text">
         <h2>Resultado del día</h2>
         <p class="kpi-prev"><?= money($today['total']) ?> + <?= money($dayExtra) ?> extra − <?= money($dayExpenses) ?> egresos</p>
@@ -61,17 +66,20 @@ $before = array_column($yesterday['barbers'], null, 'id');
 
   <section class="admin-kpis" aria-label="Totales del mes">
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('trend-up') ?></span>
       <h2>Ingresos de <?= e(month_es((int) substr($cur['month'], 5))) ?></h2>
       <p class="kpi-value"><?= money($cur['revenue']) ?></p>
       <p class="kpi-delta <?= e($monClass) ?>"><?= e($monText) ?></p>
       <p class="kpi-prev"><?= $cur['served'] ?> cortes atendidos en el mes</p>
     </article>
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('receipt') ?></span>
       <h2>Egresos del mes</h2>
       <p class="kpi-value"><?= money($cur['expenses']) ?></p>
       <p class="kpi-prev"><a class="link" href="/admin/egresos?mes=<?= e($cur['month']) ?>">Cargar o ver egresos</a></p>
     </article>
     <article class="kpi">
+      <span class="kpi-ic"><?= icon('wallet') ?></span>
       <h2>Resultado del mes</h2>
       <p class="kpi-value <?= $cur['net'] < 0 ? 'neg' : '' ?>"><?= $cur['net'] < 0 ? '−' . money(-$cur['net']) : money($cur['net']) ?></p>
       <p class="kpi-prev">Ingresos + extra (<?= money($cur['extra']) ?>) − egresos</p>

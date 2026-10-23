@@ -80,9 +80,10 @@ return [
     ],
 
     'assets' => [
-        // Big Shoulders (títulos) + Figtree (texto).
+        // Big Shoulders (títulos) + Figtree (texto) + Cormorant Garamond itálica (subtítulos del panel).
         'fonts_url' => 'https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900'
-                     . '&family=Figtree:wght@400;500;600;700&display=swap',
+                     . '&family=Figtree:wght@400;500;600;700'
+                     . '&family=Cormorant+Garamond:ital,wght@1,500;1,600&display=swap',
 
         // Hojas de estilo en orden de cascada (relativas a public/assets/).
         // Mobile first: una sola interfaz móvil (en PC se muestra centrada, con el ancho de un celular).
@@ -109,6 +110,7 @@ return [
             'css/pages/login.css',
             'css/pages/admin.css',
             'css/pages/su.css',
+            'css/pages/admin-skin.css', // piel del panel (fondo de ladrillo, vidrio, latón): después de admin.css y su.css
             'css/pages/error.css',
             'css/a11y.css',
         ],
