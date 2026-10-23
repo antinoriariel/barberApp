@@ -16,15 +16,18 @@
  *            $tab ('servicios'|'productos'), $flash ('1'|''), $error (string),
  *            $deadHour (DeadHour::current() o null), $salePct (int, 0 sin descuento)
  */
-$tabs = ['servicios' => ['Servicios', '/admin/servicios', count($services)], 'productos' => ['Productos', '/admin/servicios?tab=productos', count($products)]];
+$tabs = [ // clave => [texto, ruta, cantidad, ícono]
+    'servicios' => ['Servicios', '/admin/servicios', count($services), 'scissors'],
+    'productos' => ['Productos', '/admin/servicios?tab=productos', count($products), 'tag'],
+];
 ?>
 <main class="admin">
   <?= partial('components/admin-header', ['heading' => 'Servicios y productos', 'sub' => $canEdit ? 'Los cambios se ven al instante en la app.' : 'Lo que ofrece la barbería. Los carga y edita el administrador.', 'sections' => $user->panelSections(), 'active' => 'servicios']) ?>
 
   <?php // Segmented control (.seg en admin.css), no .admin-tabs: es un filtro dentro de la sección, no otro menú. ?>
   <nav class="seg" aria-label="Catálogo">
-<?php foreach ($tabs as $key => [$label, $href, $count]): ?>
-    <a class="seg-item" href="<?= e($href) ?>"<?= $tab === $key ? ' aria-current="page"' : '' ?>><?= e($label) ?> <span class="seg-count"><?= $count ?></span></a>
+<?php foreach ($tabs as $key => [$label, $href, $count, $ic]): ?>
+    <a class="seg-item" href="<?= e($href) ?>"<?= $tab === $key ? ' aria-current="page"' : '' ?>><?= icon($ic) ?><span><?= e($label) ?></span> <span class="seg-count"><?= $count ?></span></a>
 <?php endforeach; ?>
   </nav>
 

@@ -302,18 +302,38 @@ body.admin-page .admin-card.invert .dh-chip input:focus-visible + span { outline
 .admin-page :is(.hours-day, .perm-chip) input { accent-color: var(--brass); }
 .admin-page .user-more summary { color: var(--accent-ink); }
 
-/* Selector Servicios / Productos: va sobre la foto, así que en los dos temas es de vidrio oscuro. */
+/* Selector Servicios / Productos: riel de vidrio oscuro a todo el ancho (alineado con las tarjetas), va sobre la foto
+   así que es igual en los dos temas. Cada opción lleva su ícono en latón; la activa se ilumina en latón como la pestaña
+   activa de arriba, con un filete debajo que la marca aun de reojo. El contador es una pastilla que en la activa se
+   vuelve latón macizo. Contraste (WCAG): texto inactivo 8.9:1, activo 12:1, contadores 8.6:1 y 11:1. */
 body.admin-page .seg,
 :root[data-theme="light"] body.admin-page .seg {
-  --seg-track: rgba(12, 10, 8, .58); --seg-thumb: linear-gradient(180deg, rgba(201, 164, 108, .28), rgba(201, 164, 108, .1));
-  --seg-shadow: inset 0 0 0 1px rgba(201, 164, 108, .5);
-  border: 1px solid rgba(255, 238, 214, .12); border-radius: 16px; padding: 4px;
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 12px 28px -18px rgba(0, 0, 0, .8);
+  --seg-track: rgba(12, 10, 8, .62);
+  --seg-thumb: linear-gradient(180deg, rgba(230, 203, 152, .24), rgba(201, 164, 108, .07));
+  --seg-shadow: inset 0 0 0 1px rgba(201, 164, 108, .55), inset 0 1px 0 rgba(255, 238, 214, .16), 0 8px 20px -10px rgba(201, 164, 108, .55);
+  max-width: none; gap: 5px; padding: 5px; border: 1px solid rgba(255, 238, 214, .12); border-radius: 18px;
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 16px 34px -20px rgba(0, 0, 0, .8);
 }
-body.admin-page .seg-item { border-radius: 12px; color: rgba(247, 241, 232, .65); }
-body.admin-page .seg-item[aria-current="page"] { color: #FBF6EE; }
-body.admin-page .seg-count { background: rgba(255, 238, 214, .1); color: rgba(247, 241, 232, .7); }
-body.admin-page .seg-item[aria-current="page"] .seg-count { background: var(--brass-hi); color: #1E1814; }
+body.admin-page .seg-item {
+  position: relative; gap: 9px; min-height: 50px; padding: 0 12px; border-radius: 13px;
+  font-size: 15px; letter-spacing: .02em; color: rgba(247, 241, 232, .72);
+}
+body.admin-page .seg-item .ic { flex: none; width: 19px; height: 19px; color: rgba(201, 164, 108, .7); transition: color .18s, transform .18s; }
+body.admin-page .seg-item:hover { color: #F7F1E8; background: rgba(255, 238, 214, .05); }
+body.admin-page .seg-item:hover .ic { color: var(--brass-hi); }
+body.admin-page .seg-item[aria-current="page"] { color: #FBF6EE; background: var(--seg-thumb); }
+body.admin-page .seg-item[aria-current="page"] .ic { color: var(--brass-hi); transform: translateY(-1px); }
+body.admin-page .seg-item[aria-current="page"]::after { /* filete de latón bajo la opción activa */
+  content: ""; position: absolute; left: 50%; bottom: 6px; width: 26px; height: 2px; margin-left: -13px; border-radius: 2px;
+  background: var(--brass-hi); box-shadow: 0 0 8px rgba(230, 203, 152, .7);
+}
+body.admin-page .seg-item:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+body.admin-page .seg-count {
+  min-width: 24px; padding: 0 8px; line-height: 20px; font-size: 12px;
+  border: 1px solid rgba(255, 238, 214, .14); background: rgba(255, 238, 214, .07); color: rgba(247, 241, 232, .75);
+}
+body.admin-page .seg-item[aria-current="page"] .seg-count { border-color: var(--brass-hi); background: var(--brass-hi); color: #1E1814; }
+@media (prefers-reduced-motion: reduce) { body.admin-page .seg-item .ic { transition: none; } }
 
 /* Diálogo de confirmación */
 .admin-page .confirm-dialog { border-radius: 18px; }
