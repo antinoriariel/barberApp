@@ -42,8 +42,8 @@ $tabs = ['servicios' => ['Servicios', '/admin/servicios', count($services)], 'pr
   <section class="admin-card" aria-labelledby="svc-list">
     <h2 id="svc-list">Servicios</h2>
     <div class="table-wrap">
-      <?php // .oneline: cada servicio ocupa un solo renglón también en celular; se desliza de costado con el nombre fijo (ver admin.css). ?>
-      <table class="admin-table oneline">
+      <?php // .stack: en celular cada servicio es una tarjeta (nombre arriba, cada dato con su rótulo); tabla común desde 720px (ver admin.css). ?>
+      <table class="admin-table stack svc-ro">
         <thead><tr><th>Servicio</th><th>Descripción</th><th class="num">Duración</th><th class="num">Precio</th><th>Estado</th></tr></thead>
         <tbody>
 <?php foreach ($services as $s): ?>
@@ -66,8 +66,8 @@ $tabs = ['servicios' => ['Servicios', '/admin/servicios', count($services)], 'pr
     <p class="admin-empty">No hay productos cargados.</p>
 <?php else: ?>
     <div class="table-wrap">
-      <?php // .oneline: cada producto ocupa un solo renglón también en celular; se desliza de costado con el nombre fijo (ver admin.css). ?>
-      <table class="admin-table oneline">
+      <?php // .stack: en celular cada producto es una tarjeta (nombre arriba, cada dato con su rótulo); tabla común desde 720px (ver admin.css). ?>
+      <table class="admin-table stack svc-ro">
         <thead><tr><th>Producto</th><th>Descripción</th><th class="num">Precio</th><th>Estado</th></tr></thead>
         <tbody>
 <?php foreach ($products as $p): ?>

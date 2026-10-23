@@ -33,9 +33,9 @@ $range = date('j', strtotime($week['from'])) . ' de ' . month_es((int) date('n',
   <?php if ($error !== ''): ?><p class="admin-flash bad" role="alert"><?= e($error) ?></p><?php endif; ?>
 
   <nav class="admin-nav" aria-label="Cambiar de semana">
-    <a class="btn-small" href="/admin/barberos?fecha=<?= e($prev) ?>">← Semana anterior</a>
+    <a class="btn-small" href="/admin/barberos?fecha=<?= e($prev) ?>" aria-label="Semana anterior">← <span class="nav-long">Semana anterior</span><span class="nav-short">Anterior</span></a>
     <?php if (!$isCurrent): ?><a class="btn-small" href="/admin/barberos">Esta semana</a><?php endif; ?>
-    <a class="btn-small" href="/admin/barberos?fecha=<?= e($next) ?>">Semana siguiente →</a>
+    <a class="btn-small" href="/admin/barberos?fecha=<?= e($next) ?>" aria-label="Semana siguiente"><span class="nav-long">Semana siguiente</span><span class="nav-short">Siguiente</span> →</a>
   </nav>
 
   <section class="admin-kpis" aria-label="Total de la semana">

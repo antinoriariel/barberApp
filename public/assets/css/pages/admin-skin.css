@@ -328,6 +328,21 @@ body.admin-page .seg-item[aria-current="page"] .seg-count { background: var(--br
   .admin-page .admin-head-end .btn-small.ghost span { display: none; }
 }
 
+/* Mi semana: el día de hoy con filete de latón (el rojo queda para las acciones). */
+.admin-page .my-week-days li.today { border-color: var(--brass); box-shadow: inset 0 0 0 1px rgba(201, 164, 108, .45); }
+.admin-page .my-week-days li.today .mw-day { color: var(--accent-ink); }
+
+/* Pocas secciones (un barbero con algunas habilitadas, hasta 6): en vez del riel que se desliza y esconde las últimas
+   pestañas fuera de la pantalla, todas quedan a la vista repartidas en el ancho; de 5 a 6 en el celular angosto van en
+   dos renglones de 3. El admin (7 o más) sigue con el riel deslizable. */
+@media (max-width: 899px) {
+  .admin-page .admin-tabs:not(:has(> a:nth-child(7))) { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); overflow: visible; }
+  .admin-page .admin-tabs:not(:has(> a:nth-child(7))) a { min-width: 0; }
+}
+@media (max-width: 599px) {
+  .admin-page .admin-tabs:has(> a:nth-child(5)):not(:has(> a:nth-child(7))) { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
 /* ===== Escritorio: las secciones forman un dock de un renglón (ícono arriba, repartidas a todo el ancho) ===== */
 @media (min-width: 900px) {
   .admin-page .admin { padding-top: 48px; gap: 18px; }
