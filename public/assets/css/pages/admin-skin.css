@@ -92,6 +92,17 @@ body.admin-page .admin-card.invert .svc-fields :is(input, select, textarea) { ba
 :root[data-theme="light"] body.admin-page .admin-card.invert .svc-fields :is(input, select, textarea) { border-color: rgba(255, 238, 214, .2); }
 body.admin-page .admin-card.invert .svc-fields label { color: var(--ink-soft); }
 body.admin-page .admin-card.invert .svc-fields input::placeholder { color: color-mix(in srgb, var(--ink-soft) 75%, transparent); }
+/* Chips de % y duración de la hora muerta: mismo tono que los campos de la card (el gris casi blanco de dead-hour.css
+   encandilaba) y la opción elegida en latón, porque el rojo queda solo para el botón de activar. */
+body.admin-page .admin-card.invert .dh-chip span { background: var(--field); border-color: rgba(60, 38, 15, .4); color: var(--ink); }
+body.admin-page .admin-card.invert .dh-chip input:checked + span {
+  background: linear-gradient(180deg, #8A6534, #6E4D22); border-color: #5A3E1B; color: #F7F1E8;
+}
+body.admin-page .admin-card.invert .dh-chip input:focus-visible + span { outline-color: color-mix(in srgb, var(--brass) 70%, transparent); }
+:root[data-theme="light"] body.admin-page .admin-card.invert .dh-chip span { border-color: rgba(255, 238, 214, .2); }
+:root[data-theme="light"] body.admin-page .admin-card.invert .dh-chip input:checked + span {
+  background: var(--brass); border-color: var(--brass); color: #17110D;
+}
 
 /* ===== Cabecera sobre la foto ===== */
 .admin-page .admin { padding-top: calc(34px + env(safe-area-inset-top, 0px)); gap: 16px; }

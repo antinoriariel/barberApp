@@ -147,7 +147,7 @@ $tabs = ['servicios' => ['Servicios', '/admin/servicios', count($services)], 'pr
       <div class="svc-fields">
         <label class="wide">Nombre<input type="text" name="name" maxlength="80" required placeholder="Ej: Shampoo para barba"></label>
         <label class="wide">Descripción<input type="text" name="description" maxlength="190" placeholder="Para qué sirve"></label>
-        <label>Precio ($)<input type="number" name="price" min="0" max="10000000" step="1" inputmode="numeric" required></label>
+        <label class="wide">Precio ($)<input type="number" name="price" min="0" max="10000000" step="1" inputmode="numeric" required></label>
       </div>
       <div class="svc-row-actions">
         <button class="btn-small" type="submit">Agregar</button>
@@ -174,7 +174,7 @@ $tabs = ['servicios' => ['Servicios', '/admin/servicios', count($services)], 'pr
         <div class="svc-fields">
           <label class="wide">Nombre<input type="text" name="name" value="<?= e($p['name']) ?>" maxlength="80" required></label>
           <label class="wide">Descripción<input type="text" name="description" value="<?= e($p['description']) ?>" maxlength="190"></label>
-          <label>Precio ($)<input type="number" name="price" value="<?= $p['price'] ?>" min="0" max="10000000" step="1" inputmode="numeric" required></label>
+          <label class="wide">Precio ($)<input type="number" name="price" value="<?= $p['price'] ?>" min="0" max="10000000" step="1" inputmode="numeric" required></label>
         </div>
         <div class="svc-row-actions">
           <button class="btn-small" type="submit">Guardar</button>
